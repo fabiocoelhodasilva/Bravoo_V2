@@ -3,15 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { supabase } from "@/lib/supabaseClient";
 
 type Role = "aluno" | "professor";
-
-type HeaderItem =
-  | { key: "ajuda"; label: string; href: string }
-  | { key: "escola"; label: string; href: string }
-  | { key: "objetivos"; label: string; href: string }
-  | { key: "cadastro"; label: string; href: string }
-  | { key: "logout"; label: string };
 
 interface HeaderProps {
   role?: Role;
@@ -25,15 +19,15 @@ interface HeaderProps {
   hrefCadastro?: string;
   hrefObjetivos?: string;
 
-  /** Callback do logout (obrigatório) */
-  onLogoutClick: () => void;
+  /** Callback do logout (AGORA OPCIONAL) */
+  onLogoutClick?: () => void | Promise<void>;
 
   /** Itens extras opcionais (ex: só professor) */
   extraItems?: Array<{ label: string; href: string; show?: boolean }>;
 }
 
 /**
- * Header Bravoo (adaptado do seu antigo React)
+ * Header Bravoo
  * - ThemeToggle à esquerda
  * - Links à direita
  * - Ajuda/Escola alternando por showHelp
@@ -45,7 +39,8 @@ export default function Header({
   showHelp = false,
   hrefAjuda = "/ajuda",
   hrefEscola = "/escola",
-  hrefCadastro = "/cadastro",
+  // 👇 troquei o default para uma rota que você já citou/usa no fluxo
+  hrefCadastro = "/cadastro-complementar",
   hrefObjetivos = "/objetivos",
   onLogoutClick,
   extraItems = [],
@@ -55,6 +50,18 @@ export default function Header({
   const linkClass =
     "text-[12px] font-semibold no-underline hover:underline transition-all text-[var(--color-2)]";
 
+  async function handleLogout() {
+    try {
+      if (onLogoutClick) {
+        await onLogoutClick();
+      } else {
+        await supabase.auth.signOut();
+      }
+    } finally {
+      router.replace("/login");
+    }
+  }
+
   return (
     <header className="w-full px-5 py-2.5 flex justify-between items-center box-border">
       {/* Theme toggle on the left */}
@@ -62,22 +69,17 @@ export default function Header({
 
       {/* Navigation links on the right */}
       <nav className="flex gap-5 items-center">
-        {/* Alterna Ajuda/Escola como no componente antigo */}
+        {/* Alterna Ajuda/Escola */}
         {showHelp ? (
           <Link href={hrefAjuda} className={linkClass} data-testid="link-ajuda">
             Ajuda
           </Link>
         ) : (
-          <Link
-            href={hrefEscola}
-            className={linkClass}
-            data-testid="link-escola"
-          >
+          <Link href={hrefEscola} className={linkClass} data-testid="link-escola">
             Escola
           </Link>
         )}
 
-        {/* (opcional) Objetivos fixo, se você quiser */}
         <Link
           href={hrefObjetivos}
           className={linkClass}
@@ -86,7 +88,7 @@ export default function Header({
           Objetivos
         </Link>
 
-        {/* Itens extras (ex.: professor) */}
+        {/* Itens extras */}
         {extraItems
           .filter((i) => i.show !== false)
           .map((i) => (
@@ -95,7 +97,6 @@ export default function Header({
             </Link>
           ))}
 
-        {/* Cadastro sempre */}
         <Link
           href={hrefCadastro}
           className={linkClass}
@@ -104,14 +105,9 @@ export default function Header({
           Cadastro
         </Link>
 
-        {/* Logout sempre */}
         <button
           type="button"
-          onClick={async () => {
-            await onLogoutClick();
-            // se seu logout já faz router.push, pode remover esta linha
-            router.push("/login");
-          }}
+          onClick={handleLogout}
           className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}
           data-testid="link-logout"
         >
