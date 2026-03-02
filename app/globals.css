@@ -24,3 +24,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* =========================
+   BRAVOO - tokens globais
+   ========================= */
+:root{
+  --color-1:#c94a4a; --color-2:#e9891d; --color-3:#f1e6a7;
+  --color-4:#5dc6a1; --color-5:#3d7a99; --color-6:#a35bdc; --color-7:#ff8c42;
+}
+
+/* =========================
+   BRAVOO - header (igual antigo)
+   Objetivos | Cadastro | Logout
+   ========================= */
+.bravoo-header{
+  width:100%;
+  padding:10px 20px;
+  display:flex;
+  justify-content:flex-end;
+  gap:20px;
+  box-sizing:border-box;
+}
+
+.bravoo-header a{
+  color:var(--color-2);
+  font-size:12px;
+  font-weight:600;
+  text-decoration:none;
+}
+
+.bravoo-header a:hover{
+  text-decoration:underline;
+}
+
+/* =========================
+   Gradient Title (Bravoo)
+   ========================= */
+
+.gradient-text {
+  background: radial-gradient(
+    circle,
+    var(--color-1),
+    var(--color-2),
+    var(--color-5),
+    var(--color-4)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Header usa isso */
+.text-edu-agenda{
+  color: var(--color-2);
+}

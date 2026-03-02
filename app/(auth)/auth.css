@@ -1,0 +1,117 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap");
+
+:root {
+  --color-1: #c94a4a;
+  --color-2: #e9891d; /* Bravoo Orange */
+  --color-3: #f1e6a7;
+  --color-4: #5dc6a1;
+  --color-5: #3d7a99;
+}
+
+* { box-sizing: border-box; }
+
+.authBody {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background-color: #000;
+  color: #fff;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.brand {
+  margin: 0 0 30px 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: radial-gradient(circle at 30% 40%, var(--color-1), var(--color-2), var(--color-5));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 350px;
+}
+
+.label {
+  width: 100%;
+  font-size: 0.9rem;
+  margin: 6px 0 4px;
+}
+
+.input {
+  padding: 12px;
+  margin: 6px 0 12px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+  font-size: 16px;
+  background-color: #1c1c1c;
+  color: #fff;
+  outline: none;
+}
+
+.input:focus { border-color: var(--color-2); }
+.input::placeholder { color: #bfbfbf; }
+
+.button {
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background-color: var(--color-2);
+  color: #fff;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  transition: background-color .2s, opacity .2s;
+}
+
+.button:hover { background-color: var(--color-5); }
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.link {
+  color: var(--color-2);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.link:hover { text-decoration: underline; }
+
+.mensagem {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--color-4);
+  min-height: 24px;
+  text-align: center;
+  max-width: 350px;
+}
+
+@media (max-width: 480px) {
+  .brand { font-size: 1.9rem; }
+  .input, .button { font-size: 15px; }
+}
