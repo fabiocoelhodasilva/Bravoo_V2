@@ -2,78 +2,126 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
-
+import { ObjetivosPageView } from "@/components/objetivos/ObjetivosPageView";
 import {
-  calcularMetricas,
-  calcularRankingCategorias,
-  ordemCategoria
-} from "@/lib/objetivos-utils";
-
-import { CategoriaSection } from "@/components/objetivos/CategoriaSection";
-import { ResumoGeral } from "@/components/objetivos/ResumoGeral";
+  deleteObjetivo,
+  fetchObjetivosByUser,
+  getCurrentSessionOrThrow,
+  signOutObjetivos,
+  updateObjetivoProgress,
+} from "@/lib/objetivos/objetivos.service";
+import { clampProgress } from "@/lib/objetivos/objetivos.utils";
+import type { Objetivo } from "@/types/objetivos";
 
 export default function ObjetivosPage() {
   const router = useRouter();
 
   const [checking, setChecking] = useState(true);
-  const [objetivos, setObjetivos] = useState<any[]>([]);
-  const [metricas, setMetricas] = useState<any>(null);
-  const [ranking, setRanking] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+  const [loadingMessage, setLoadingMessage] = useState("Carregando objetivos...");
+  const [savingIds, setSavingIds] = useState<string[]>([]);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    carregarPagina();
+    void initializePage();
   }, []);
 
-  async function carregarPagina() {
+  async function initializePage() {
     try {
+      const session = await getCurrentSessionOrThrow();
+      const currentUserId = session.user.id;
 
-      /* -------------------------
-      Verificar sessão
-      ------------------------- */
+      setUserId(currentUserId);
 
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error || !data.session) {
+      const objetivosData = await fetchObjetivosByUser(currentUserId);
+      setObjetivos(objetivosData);
+      setLoadingMessage(objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : "");
+    } catch (error) {
+      if (error instanceof Error && error.message === "NO_SESSION") {
         router.replace("/login");
         return;
       }
 
-      const user = data.session.user;
-
-      /* -------------------------
-      Buscar objetivos
-      ------------------------- */
-
-      const { data: objetivosData, error: objetivosErro } = await supabase
-        .from("objetivos")
-        .select("*")
-        .eq("usuario_id", user.id);
-
-      if (objetivosErro) {
-        console.error("Erro ao buscar objetivos:", objetivosErro);
-        return;
-      }
-
-      const lista = objetivosData || [];
-
-      setObjetivos(lista);
-
-      /* -------------------------
-      Calcular métricas
-      ------------------------- */
-
-      const m = calcularMetricas(lista);
-      const r = calcularRankingCategorias(lista);
-
-      setMetricas(m);
-      setRanking(r);
-
-    } catch (erro) {
-      console.error("Erro ao carregar página de objetivos:", erro);
+      console.error("Erro ao carregar objetivos:", error);
+      setLoadingMessage("Erro ao carregar.");
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function reloadObjetivos() {
+    if (!userId) return;
+
+    try {
+      const objetivosData = await fetchObjetivosByUser(userId);
+      setObjetivos(objetivosData);
+      setLoadingMessage(objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : "");
+    } catch (error) {
+      console.error("Erro ao recarregar objetivos:", error);
+      setLoadingMessage("Erro ao carregar.");
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await signOutObjetivos();
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
+  }
+
+  async function handleSaveProgress(objetivoId: string, progresso: number) {
+    if (!userId) return;
+
+    const safeProgress = clampProgress(progresso);
+    setSavingIds((prev) => [...prev, objetivoId]);
+
+    try {
+      await updateObjetivoProgress({
+        objetivoId,
+        userId,
+        progresso: safeProgress,
+      });
+
+      setObjetivos((prev) =>
+        prev.map((item) =>
+          item.id === objetivoId
+            ? { ...item, progresso_percentual: safeProgress }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao salvar progresso:", error);
+      alert("Não foi possível salvar o progresso.");
+    } finally {
+      setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
+    }
+  }
+
+  async function handleDelete(objetivoId: string) {
+    if (!userId) return;
+
+    const confirmed = window.confirm("Excluir este objetivo?");
+    if (!confirmed) return;
+
+    setDeletingIds((prev) => [...prev, objetivoId]);
+
+    try {
+      await deleteObjetivo({
+        objetivoId,
+        userId,
+      });
+
+      await reloadObjetivos();
+    } catch (error) {
+      console.error("Erro ao excluir objetivo:", error);
+      alert("Não foi possível excluir.");
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== objetivoId));
     }
   }
 
@@ -86,67 +134,14 @@ export default function ObjetivosPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center px-4">
-
-      {/* Header */}
-
-      <header className="w-full max-w-5xl flex justify-end gap-5 py-4 text-xs font-semibold">
-
-        <Link
-          href="/aluno"
-          className="text-[var(--color-2)]"
-        >
-          Voltar
-        </Link>
-
-      </header>
-
-      {/* Título */}
-
-      <h1
-        className="text-4xl font-semibold mt-4 mb-8"
-        style={{
-          background:
-            "radial-gradient(circle,var(--color-1),var(--color-2),var(--color-5))",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}
-      >
-        Objetivos
-      </h1>
-
-      {/* Resumo geral */}
-
-      {metricas && (
-        <ResumoGeral
-          metricas={metricas}
-          ranking={ranking}
-        />
-      )}
-
-      {/* Lista de categorias */}
-
-      <div className="w-full max-w-5xl mt-10 space-y-10">
-
-        {ordemCategoria.map((categoria) => {
-
-          const itens = objetivos.filter(
-            (o) => o.categoria === categoria
-          );
-
-          return (
-            <CategoriaSection
-              key={categoria}
-              categoria={categoria}
-              objetivos={itens}
-              onAtualizar={carregarPagina}
-            />
-          );
-
-        })}
-
-      </div>
-
-    </main>
+    <ObjetivosPageView
+      objetivos={objetivos}
+      loadingMessage={loadingMessage}
+      savingIds={savingIds}
+      deletingIds={deletingIds}
+      onLogout={handleLogout}
+      onSaveProgress={handleSaveProgress}
+      onDelete={handleDelete}
+    />
   );
 }
