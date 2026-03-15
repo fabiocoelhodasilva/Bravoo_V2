@@ -8,7 +8,7 @@ import {
   calcularMetricas,
   calcularRankingCategorias,
   getObjetivosPageCssVars,
-} from "@/lib/objetivos/objetivos.utils";
+} from "@/lib/objetivos/objetivos-utils";
 import { ObjetivosResumo } from "./ObjetivosResumo";
 import { ObjetivosCategoriaCard } from "./ObjetivosCategoriaCard";
 
@@ -32,8 +32,14 @@ export function ObjetivosPageView({
   onDelete,
 }: Props) {
   const metricas = useMemo(() => calcularMetricas(objetivos), [objetivos]);
-  const ranking = useMemo(() => calcularRankingCategorias(objetivos), [objetivos]);
-  const grupos = useMemo(() => agruparObjetivosPorCategoria(objetivos), [objetivos]);
+  const ranking = useMemo(
+    () => calcularRankingCategorias(objetivos),
+    [objetivos]
+  );
+  const grupos = useMemo(
+    () => agruparObjetivosPorCategoria(objetivos),
+    [objetivos]
+  );
 
   return (
     <main
@@ -93,7 +99,9 @@ export function ObjetivosPageView({
           )}
 
           {loadingMessage ? (
-            <div className="text-[0.85rem] text-[#aaa] mb-3">{loadingMessage}</div>
+            <div className="text-[0.85rem] text-[#aaa] mb-3">
+              {loadingMessage}
+            </div>
           ) : null}
 
           <div className="flex flex-col gap-[14px]">

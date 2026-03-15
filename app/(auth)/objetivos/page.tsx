@@ -9,8 +9,8 @@ import {
   getCurrentSessionOrThrow,
   signOutObjetivos,
   updateObjetivoProgress,
-} from "@/lib/objetivos/objetivos.service";
-import { clampProgress } from "@/lib/objetivos/objetivos.utils";
+} from "@/lib/objetivos/objetivos-service";
+import { clampProgress } from "@/lib/objetivos/objetivos-utils";
 import type { Objetivo } from "@/types/objetivos";
 
 export default function ObjetivosPage() {
@@ -36,7 +36,10 @@ export default function ObjetivosPage() {
 
       const objetivosData = await fetchObjetivosByUser(currentUserId);
       setObjetivos(objetivosData);
-      setLoadingMessage(objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : "");
+
+      setLoadingMessage(
+        objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
+      );
     } catch (error) {
       if (error instanceof Error && error.message === "NO_SESSION") {
         router.replace("/login");
@@ -56,7 +59,10 @@ export default function ObjetivosPage() {
     try {
       const objetivosData = await fetchObjetivosByUser(userId);
       setObjetivos(objetivosData);
-      setLoadingMessage(objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : "");
+
+      setLoadingMessage(
+        objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
+      );
     } catch (error) {
       console.error("Erro ao recarregar objetivos:", error);
       setLoadingMessage("Erro ao carregar.");

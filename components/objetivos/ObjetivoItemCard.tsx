@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Objetivo } from "@/types/objetivos";
-import { clampProgress } from "@/lib/objetivos/objetivos.utils";
+import { clampProgress } from "@/lib/objetivos/objetivos-utils";
 
 type Props = {
   objetivo: Objetivo;

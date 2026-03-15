@@ -8,7 +8,7 @@ import {
   BRAVOO_COLORS,
   CATEGORY_COLOR_FALLBACK,
   CATEGORY_ORDER_FALLBACK,
-} from "./objetivos.constants";
+} from "./objetivos-constants";
 
 export function normalizeText(value: unknown) {
   return String(value ?? "")
