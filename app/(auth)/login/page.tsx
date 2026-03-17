@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import BrandLogo from "@/components/ui/BrandLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,26 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     await logar();
+  }
+
+  async function buscarNomeUsuario(usuarioId: string) {
+    const usuarioNextResp = await supabase
+      .from("usuarios_next")
+      .select("nome")
+      .eq("id", usuarioId)
+      .maybeSingle();
+
+    if (usuarioNextResp.data?.nome) {
+      return usuarioNextResp.data.nome;
+    }
+
+    const usuarioResp = await supabase
+      .from("usuarios")
+      .select("nome")
+      .eq("id", usuarioId)
+      .maybeSingle();
+
+    return usuarioResp.data?.nome || "";
   }
 
   async function logar() {
@@ -32,7 +53,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1) Login
       const { data, error } = await supabase.auth.signInWithPassword({
         email: em,
         password: pw,
@@ -50,16 +70,8 @@ export default function LoginPage() {
         return;
       }
 
-      // 2) Busca nome do usuário
-      const usuarioResp = await supabase
-        .from("usuarios")
-        .select("nome")
-        .eq("id", usuarioId)
-        .single();
+      const nome = await buscarNomeUsuario(usuarioId);
 
-      const nome = usuarioResp.data?.nome || "";
-
-      // 3) Busca dados de professor
       const profResp = await supabase
         .from("professores")
         .select("aprovado")
@@ -68,16 +80,12 @@ export default function LoginPage() {
 
       const prof = profResp.data;
 
-      // 4) Decide redirecionamento
-
-      // Professor aprovado
       if (prof && prof.aprovado === true) {
         setMensagem("Login realizado com sucesso! Redirecionando…");
         setTimeout(() => router.replace("/professor"), 900);
         return;
       }
 
-      // Professor em análise
       if (prof && prof.aprovado !== true) {
         const msg = `Bem-vindo ${nome}, seu pedido de cadastro como professor está em análise.`;
         try {
@@ -88,10 +96,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Usuário comum (aluno)
       setMensagem("Login realizado com sucesso! Redirecionando…");
       setTimeout(() => router.replace("/aluno"), 900);
-
     } catch (e) {
       console.error("Erro inesperado ao fazer login:", e);
       setMensagem("Erro inesperado ao fazer login.");
@@ -102,9 +108,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className="brand" aria-label="Bravoo">
-        Bravoo
-      </h1>
+      <BrandLogo />
 
       <form
         className="form"

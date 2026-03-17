@@ -46,7 +46,7 @@ export function ObjetivosPageView({
       className="min-h-screen bg-black text-white flex flex-col"
       style={getObjetivosPageCssVars()}
     >
-      <header className="w-full px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-[#333]">
+      <header className="w-full px-4 sm:px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-[#333]">
         <div
           className="text-[1.4rem] font-bold"
           style={{
@@ -70,9 +70,9 @@ export function ObjetivosPageView({
         </div>
       </header>
 
-      <div className="flex-1 w-full max-w-[1100px] mx-auto mt-5 px-4 pb-10">
+      <div className="flex-1 w-full max-w-[1100px] mx-auto mt-5 px-3 sm:px-4 pb-10">
         <div className="flex justify-between items-center gap-3 mb-1 flex-wrap">
-          <h2 className="m-0 text-[1.6rem] font-semibold">
+          <h2 className="m-0 text-[1.5rem] sm:text-[1.6rem] font-semibold">
             Objetivos em {new Date().getFullYear()}
           </h2>
 
@@ -84,11 +84,11 @@ export function ObjetivosPageView({
           </Link>
         </div>
 
-        <p className="text-[0.95rem] text-[#ccc] mb-[18px]">
+        <p className="text-[0.92rem] sm:text-[0.95rem] text-[#ccc] mb-[18px]">
           Arraste a barra para ajustar o progresso.
         </p>
 
-        <section className="bg-[#111] rounded-[18px] border border-[#333] p-[18px]">
+        <section className="bg-[#111] rounded-[18px] border border-[#333] p-4 sm:p-[18px]">
           {objetivos.length > 0 && (
             <ObjetivosResumo
               media={metricas.media}
