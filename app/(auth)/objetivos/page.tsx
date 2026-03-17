@@ -11,7 +11,7 @@ import {
   updateObjetivoProgress,
 } from "@/lib/objetivos/objetivos-service";
 import { clampProgress } from "@/lib/objetivos/objetivos-utils";
-import type { Objetivo } from "../../../types/objetivos";
+import type { Objetivo } from "@/types/objetivos";
 
 export default function ObjetivosPage() {
   const router = useRouter();
