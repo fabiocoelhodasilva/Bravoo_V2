@@ -45,7 +45,12 @@ export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> 
 
   if (error) throw error;
 
-  return (data ?? []) as Objetivo[];
+  return (data ?? []).map((item: any) => ({
+    ...item,
+    objetivos_categoria: Array.isArray(item.objetivos_categoria)
+      ? item.objetivos_categoria[0] ?? null
+      : item.objetivos_categoria ?? null,
+  })) as Objetivo[];
 }
 
 export async function updateObjetivoProgress(params: {

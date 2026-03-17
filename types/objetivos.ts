@@ -17,7 +17,7 @@ export type Objetivo = {
   status?: string | null;
   progresso_percentual: number | null;
   created_at?: string | null;
-  objetivos_categoria?: ObjetivoCategoria[] | null;
+  objetivos_categoria?: ObjetivoCategoria | null;
 };
 
 export type ObjetivosMetricas = {
