@@ -32,23 +32,17 @@ export function ObjetivosPageView({
   onDelete,
 }: Props) {
   const metricas = useMemo(() => calcularMetricas(objetivos), [objetivos]);
-  const ranking = useMemo(
-    () => calcularRankingCategorias(objetivos),
-    [objetivos]
-  );
-  const grupos = useMemo(
-    () => agruparObjetivosPorCategoria(objetivos),
-    [objetivos]
-  );
+  const ranking = useMemo(() => calcularRankingCategorias(objetivos), [objetivos]);
+  const grupos = useMemo(() => agruparObjetivosPorCategoria(objetivos), [objetivos]);
 
   return (
     <main
       className="min-h-screen bg-black text-white flex flex-col"
       style={getObjetivosPageCssVars()}
     >
-      <header className="w-full px-4 sm:px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-[#333]">
+      <header className="w-full px-4 sm:px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-white/10">
         <div
-          className="text-[1.4rem] font-bold"
+          className="text-[1.75rem] sm:text-[1.4rem] font-bold tracking-[-0.5px]"
           style={{
             background:
               "radial-gradient(circle,#c94a4a,#d8a44b,#3d7a99,#5dc6a1)",
@@ -59,68 +53,66 @@ export function ObjetivosPageView({
           Bravoo
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={onLogout}
-            className="text-[var(--color-2)] text-[0.85rem] font-semibold bg-transparent border-none cursor-pointer"
-          >
-            Logout
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="text-[var(--color-2)] text-[0.95rem] sm:text-[0.85rem] font-semibold bg-transparent border-none cursor-pointer"
+        >
+          Logout
+        </button>
       </header>
 
-      <div className="flex-1 w-full max-w-[1100px] mx-auto mt-5 px-3 sm:px-4 pb-10">
-        <div className="flex justify-between items-center gap-3 mb-1 flex-wrap">
-          <h2 className="m-0 text-[1.5rem] sm:text-[1.6rem] font-semibold">
+      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 sm:px-4 pt-4 sm:pt-5 pb-10">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="m-0 text-[1.15rem] sm:text-[1.6rem] font-semibold tracking-[-0.3px]">
             Objetivos em {new Date().getFullYear()}
           </h2>
 
           <Link
             href="/objetivos/novo"
-            className="bg-[var(--color-2)] text-black font-extrabold border-none px-[18px] py-[9px] rounded-full no-underline transition hover:scale-[1.03] shadow-[0_10px_24px_rgba(0,0,0,0.25)]"
+            className="shrink-0 bg-[var(--color-2)] text-black font-extrabold border-none px-5 py-2.5 rounded-full no-underline transition hover:scale-[1.03] shadow-[0_10px_24px_rgba(0,0,0,0.25)]"
           >
             + Novo
           </Link>
         </div>
 
-        <p className="text-[0.92rem] sm:text-[0.95rem] text-[#ccc] mb-[18px]">
+        <p className="hidden sm:block text-[0.95rem] text-[#ccc] mb-5">
           Arraste a barra para ajustar o progresso.
         </p>
 
-        <section className="bg-[#111] rounded-[18px] border border-[#333] p-4 sm:p-[18px]">
-          {objetivos.length > 0 && (
+        {objetivos.length > 0 && (
+          <div className="mb-4">
             <ObjetivosResumo
               media={metricas.media}
               concluidos={metricas.concluidos}
               total={metricas.total}
               ranking={ranking}
             />
-          )}
-
-          {loadingMessage ? (
-            <div className="text-[0.85rem] text-[#aaa] mb-3">
-              {loadingMessage}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-[14px]">
-            {grupos.map((grupo) => (
-              <ObjetivosCategoriaCard
-                key={grupo.key}
-                grupo={grupo}
-                savingIds={savingIds}
-                deletingIds={deletingIds}
-                onSaveProgress={onSaveProgress}
-                onDelete={onDelete}
-              />
-            ))}
           </div>
-        </section>
+        )}
+
+        {loadingMessage ? (
+          <div className="text-[0.85rem] text-[#aaa] mb-3">
+            {loadingMessage}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3 sm:gap-[14px]">
+          {grupos.map((grupo) => (
+            <ObjetivosCategoriaCard
+              key={grupo.key}
+              grupo={grupo}
+              savingIds={savingIds}
+              deletingIds={deletingIds}
+              onSaveProgress={onSaveProgress}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
 
         <Link
           href="/aluno"
-          className="block text-center mx-auto mt-[30px] text-[var(--color-2)] no-underline font-semibold"
+          className="block text-center mx-auto mt-8 text-[var(--color-2)] no-underline font-semibold"
         >
           ← Voltar
         </Link>

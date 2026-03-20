@@ -45,31 +45,44 @@ export function ObjetivoItemCard({
     valor === 0 ? "0%" : valor >= 100 ? "Concluído ✅" : `${valor}%`;
 
   return (
-    <article className="bg-black/30 border border-white/10 rounded-[16px] p-[14px] shadow-[0_10px_22px_rgba(0,0,0,0.22)]">
-      <div className="mb-[10px] font-extrabold text-[0.95rem]">
-        {objetivo.titulo || "Sem título"}
+    <article className="rounded-[18px] border border-white/10 bg-black/25 px-4 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.22)]">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-extrabold text-[0.95rem] leading-[1.25] text-white break-words">
+            {objetivo.titulo || "Sem título"}
+          </div>
+        </div>
+
+        <div
+          className="shrink-0 text-[0.82rem] font-black px-2.5 py-1 rounded-full border"
+          style={{
+            color: corCategoria,
+            borderColor: `${corCategoria}55`,
+            background: `${corCategoria}12`,
+          }}
+        >
+          {label}
+        </div>
       </div>
 
-      <input
-        type="range"
-        min={0}
-        max={100}
-        step={1}
-        value={valor}
-        onChange={(e) => handleChange(Number(e.target.value))}
-        onMouseUp={handleCommit}
-        onTouchEnd={handleCommit}
-        disabled={isSaving || isDeleting}
-        className="w-full cursor-pointer"
-        style={{ accentColor: corCategoria }}
-      />
-
-      <div className="mt-2 text-[0.82rem] font-black text-white text-center">
-        {label}
+      <div className="mb-3">
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={valor}
+          onChange={(e) => handleChange(Number(e.target.value))}
+          onMouseUp={handleCommit}
+          onTouchEnd={handleCommit}
+          disabled={isSaving || isDeleting}
+          className="w-full cursor-pointer"
+          style={{ accentColor: corCategoria }}
+        />
       </div>
 
-      <div className="mt-3 flex justify-between items-center gap-3">
-        <div className="text-[0.78rem] text-white/55">
+      <div className="flex items-center justify-between gap-3 min-h-[24px]">
+        <div className="text-[0.75rem] text-white/50 font-medium">
           {isSaving ? "Salvando..." : ""}
         </div>
 
@@ -77,8 +90,8 @@ export function ObjetivoItemCard({
           type="button"
           onClick={() => onDelete(objetivo.id)}
           disabled={isDeleting}
-          className="bg-transparent rounded-full px-3 py-[6px] cursor-pointer text-[0.78rem] font-extrabold border text-[#ff7c7c]"
-          style={{ borderColor: "rgba(201,74,74,0.75)" }}
+          className="bg-transparent rounded-full px-2.5 py-1.5 cursor-pointer text-[0.75rem] font-bold border text-[#ff8f8f] transition-opacity disabled:opacity-60"
+          style={{ borderColor: "rgba(201,74,74,0.45)" }}
         >
           {isDeleting ? "Excluindo..." : "Excluir"}
         </button>

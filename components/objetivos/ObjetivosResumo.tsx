@@ -14,117 +14,158 @@ export function ObjetivosResumo({ media, concluidos, total, ranking }: Props) {
     total > 0 ? Math.round((concluidos / total) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 items-stretch">
-      {/* CARD PROGRESSO MÉDIO */}
+    <div className="mb-6">
+      {/* MOBILE */}
       <section
-        className="md:col-span-8 rounded-[22px] p-4 md:p-5 min-h-[unset] md:min-h-[220px] flex flex-col"
+        className="md:hidden rounded-[22px] px-4 py-4"
         style={{
           background:
             "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
-          border: "1px solid rgba(233,137,29,0.35)",
+          border: "1px solid rgba(255,255,255,0.08)",
           boxShadow:
             "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
         }}
       >
-        <div className="text-[1rem] md:text-[1.05rem] font-extrabold text-[#f0f0f0] mb-3 md:mb-[14px] tracking-[-0.2px] text-left">
-          Progresso Médio
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,2.3fr)_minmax(180px,1fr)] md:gap-[14px] items-stretch flex-1">
-          {/* BOX ESQUERDA */}
-          <div
-            className="min-h-[unset] md:min-h-[150px] rounded-[18px] p-4 flex flex-col justify-center"
-            style={{
-              border: "1px solid rgba(255,255,255,0.08)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
-            }}
-          >
-            <div className="mt-1 flex flex-col gap-[8px] md:gap-[10px] flex-1 justify-center">
-              <div className="flex justify-between items-center gap-3 text-[0.92rem] md:text-[0.98rem] font-semibold text-[#cfcfcf] leading-[1.35]">
-                <span>Categoria</span>
-                <span className="w-[28px] text-right">%</span>
-              </div>
-
-              {ranking.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center gap-3 text-[0.92rem] md:text-[1rem] font-bold leading-[1.2]"
-                  style={{ color: item.cor }}
-                >
-                  <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                    {item.nome}
-                  </span>
-
-                  <span className="w-[28px] text-right font-black">
-                    {item.media}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* BOX DIREITA */}
-          <div
-            className="min-h-[140px] md:min-h-[150px] rounded-[18px] p-4 flex flex-col justify-between items-center text-center"
-            style={{
-              border: "1px solid rgba(255,255,255,0.08)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
-            }}
-          >
-            <div className="text-[0.92rem] md:text-[0.95rem] font-extrabold text-[#d9d9d9]">
-              Geral
-            </div>
-
-            <div className="flex-1 w-full flex items-center justify-center text-[clamp(2.8rem,12vw,5.1rem)] md:text-[clamp(3.2rem,6vw,5.1rem)] leading-[0.9] font-black text-[var(--color-2)] tracking-[-2px] md:tracking-[-3px]">
+        <div className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-[2rem] leading-none font-black text-[var(--color-4)]">
               {media}%
             </div>
+            <div className="text-[0.95rem] text-[#bdbdbd] font-medium mt-1">
+              Progresso
+            </div>
           </div>
+
+          <div className="w-px h-12 bg-white/10" />
+
+          <div>
+            <div className="text-[2rem] leading-none font-black text-white">
+              {concluidos}
+              <span className="opacity-50">/{total}</span>
+            </div>
+            <div className="text-[0.95rem] text-[#bdbdbd] font-medium mt-1">
+              Concluídos
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="ml-1 text-[var(--color-2)] text-[1.25rem] font-bold"
+            aria-label="Expandir resumo"
+          >
+            ▼
+          </button>
         </div>
       </section>
 
-      {/* CARD OBJETIVOS CONCLUÍDOS */}
-      <section
-        className="md:col-span-4 rounded-[22px] p-4 md:p-5 min-h-[unset] md:min-h-[220px] flex flex-col"
-        style={{
-          background:
-            "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
-          border: "1px solid rgba(93,198,161,0.30)",
-          boxShadow:
-            "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
-        }}
-      >
-        <div className="text-[1rem] md:text-[1.05rem] font-extrabold text-[#f0f0f0] mb-3 md:mb-[14px] tracking-[-0.2px] text-left">
-          Objetivos Concluídos
-        </div>
+      {/* DESKTOP */}
+      <div className="hidden md:grid md:grid-cols-12 gap-4 items-stretch">
+        {/* CARD PROGRESSO MÉDIO */}
+        <section
+          className="md:col-span-8 rounded-[22px] p-5 min-h-[220px] flex flex-col"
+          style={{
+            background:
+              "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
+            border: "1px solid rgba(233,137,29,0.35)",
+            boxShadow:
+              "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
+          }}
+        >
+          <div className="text-[1.05rem] font-extrabold text-[#f0f0f0] mb-[14px] tracking-[-0.2px] text-left">
+            Progresso Médio
+          </div>
 
-        <div className="flex flex-1">
-          <div
-            className="w-full min-h-[140px] md:min-h-[150px] rounded-[18px] p-4 flex flex-col"
-            style={{
-              border: "1px solid rgba(255,255,255,0.08)",
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
-            }}
-          >
-            <div className="flex flex-col gap-1">
-              <div className="text-[0.92rem] md:text-[0.95rem] font-extrabold text-[#d9d9d9] text-left">
-                Concluídos
+          <div className="grid grid-cols-[minmax(0,2.3fr)_minmax(180px,1fr)] gap-[14px] items-stretch flex-1">
+            <div
+              className="min-h-[150px] rounded-[18px] p-4 flex flex-col justify-center"
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
+              }}
+            >
+              <div className="mt-1 flex flex-col gap-[10px] flex-1 justify-center">
+                <div className="flex justify-between items-center gap-3 text-[0.98rem] font-semibold text-[#cfcfcf] leading-[1.35]">
+                  <span>Categoria</span>
+                  <span className="w-[28px] text-right">%</span>
+                </div>
+
+                {ranking.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between items-center gap-3 text-[1rem] font-bold leading-[1.2]"
+                    style={{ color: item.cor }}
+                  >
+                    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {item.nome}
+                    </span>
+                    <span className="w-[28px] text-right font-black">
+                      {item.media}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center text-center text-[clamp(2.8rem,11vw,4.4rem)] md:text-[clamp(3rem,5vw,4.4rem)] leading-[0.95] font-black tracking-[-2px] text-[var(--color-4)]">
-              {concluidos}
-              <span className="opacity-55">/{total}</span>
-            </div>
+            <div
+              className="min-h-[150px] rounded-[18px] p-4 flex flex-col justify-between items-center text-center"
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
+              }}
+            >
+              <div className="text-[0.95rem] font-extrabold text-[#d9d9d9]">
+                Geral
+              </div>
 
-            <div className="text-[#cfcfcf] text-[0.92rem] md:text-[0.98rem] font-semibold leading-[1.35] text-left">
-              {percentualConcluidos}% do total já concluído
+              <div className="flex-1 w-full flex items-center justify-center text-[clamp(3.2rem,6vw,5.1rem)] leading-[0.9] font-black text-[var(--color-2)] tracking-[-3px]">
+                {media}%
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* CARD OBJETIVOS CONCLUÍDOS */}
+        <section
+          className="md:col-span-4 rounded-[22px] p-5 min-h-[220px] flex flex-col"
+          style={{
+            background:
+              "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
+            border: "1px solid rgba(93,198,161,0.30)",
+            boxShadow:
+              "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
+          }}
+        >
+          <div className="text-[1.05rem] font-extrabold text-[#f0f0f0] mb-[14px] tracking-[-0.2px] text-left">
+            Objetivos Concluídos
+          </div>
+
+          <div className="flex flex-1">
+            <div
+              className="w-full min-h-[150px] rounded-[18px] p-4 flex flex-col"
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), rgba(255,255,255,0.02)",
+              }}
+            >
+              <div className="text-[0.95rem] font-extrabold text-[#d9d9d9] text-left">
+                Concluídos
+              </div>
+
+              <div className="flex-1 flex items-center justify-center text-center text-[clamp(3rem,5vw,4.4rem)] leading-[0.95] font-black tracking-[-2px] text-[var(--color-4)]">
+                {concluidos}
+                <span className="opacity-55">/{total}</span>
+              </div>
+
+              <div className="text-[#cfcfcf] text-[0.98rem] font-semibold leading-[1.35] text-left">
+                {percentualConcluidos}% do total já concluído
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
