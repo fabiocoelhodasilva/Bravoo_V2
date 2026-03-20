@@ -41,42 +41,28 @@ export function ObjetivoItemCard({
     await onSaveProgress(objetivo.id, valorRef.current);
   }
 
-  const label =
-    valor === 0 ? "0%" : valor >= 100 ? "100% ✓" : `${valor}%`;
+  const label = valor >= 100 ? "100% ✓" : `${valor}%`;
 
   return (
-    <article className="border-b border-white/10 py-2">
-      {/* LINHA PRINCIPAL */}
-      <div className="flex items-center gap-2">
-        {/* TÍTULO */}
-        <div className="flex-1 min-w-0 text-[0.78rem] font-medium text-white truncate">
+    <article className="border-b border-white/8 py-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1 truncate text-[0.74rem] font-medium leading-none text-white">
           {objetivo.titulo || "Sem título"}
         </div>
 
-        {/* % */}
-        <div
-          className="text-[0.7rem] font-bold px-2 py-[2px] rounded-full"
-          style={{
-            color: corCategoria,
-            background: `${corCategoria}12`,
-          }}
-        >
-          {label}
-        </div>
-
-        {/* LIXEIRA */}
         <button
           type="button"
           onClick={() => onDelete(objetivo.id)}
           disabled={isDeleting}
-          className="text-[0.9rem] text-white/50 hover:text-[#ff8f8f]"
+          aria-label="Excluir objetivo"
+          title="Excluir objetivo"
+          className="shrink-0 h-6 w-6 flex items-center justify-center text-[0.8rem] leading-none text-white/45 hover:text-[#ff8f8f] disabled:opacity-60"
         >
           {isDeleting ? "…" : "🗑️"}
         </button>
       </div>
 
-      {/* SLIDER */}
-      <div className="mt-1">
+      <div className="mt-0.5 flex items-center gap-2">
         <input
           type="range"
           min={0}
@@ -87,14 +73,20 @@ export function ObjetivoItemCard({
           onMouseUp={handleCommit}
           onTouchEnd={handleCommit}
           disabled={isSaving || isDeleting}
-          className="w-[70%] cursor-pointer"
+          className="w-[58%] cursor-pointer"
           style={{ accentColor: corCategoria }}
         />
-      </div>
 
-      {/* STATUS */}
-      <div className="text-[0.65rem] text-white/40 h-[10px]">
-        {isSaving ? "Salvando..." : ""}
+        <div
+          className="text-[0.62rem] font-semibold leading-none"
+          style={{ color: corCategoria }}
+        >
+          {label}
+        </div>
+
+        <div className="text-[0.6rem] leading-none text-white/35 min-w-[44px]">
+          {isSaving ? "Salvando" : ""}
+        </div>
       </div>
     </article>
   );
