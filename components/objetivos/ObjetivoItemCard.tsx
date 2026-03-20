@@ -42,30 +42,41 @@ export function ObjetivoItemCard({
   }
 
   const label =
-    valor === 0 ? "0%" : valor >= 100 ? "Concluído ✅" : `${valor}%`;
+    valor === 0 ? "0%" : valor >= 100 ? "100% ✓" : `${valor}%`;
 
   return (
-    <article className="rounded-[18px] border border-white/10 bg-black/25 px-4 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.22)]">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0 flex-1">
-          <div className="font-extrabold text-[0.95rem] leading-[1.25] text-white break-words">
-            {objetivo.titulo || "Sem título"}
-          </div>
+    <article className="border-b border-white/10 py-2">
+      {/* LINHA PRINCIPAL */}
+      <div className="flex items-center gap-2">
+        {/* TÍTULO */}
+        <div className="flex-1 min-w-0 text-[0.78rem] font-medium text-white truncate">
+          {objetivo.titulo || "Sem título"}
         </div>
 
+        {/* % */}
         <div
-          className="shrink-0 text-[0.82rem] font-black px-2.5 py-1 rounded-full border"
+          className="text-[0.7rem] font-bold px-2 py-[2px] rounded-full"
           style={{
             color: corCategoria,
-            borderColor: `${corCategoria}55`,
             background: `${corCategoria}12`,
           }}
         >
           {label}
         </div>
+
+        {/* LIXEIRA */}
+        <button
+          type="button"
+          onClick={() => onDelete(objetivo.id)}
+          disabled={isDeleting}
+          className="text-[0.9rem] text-white/50 hover:text-[#ff8f8f]"
+        >
+          {isDeleting ? "…" : "🗑️"}
+        </button>
       </div>
 
-      <div className="mb-3">
+      {/* SLIDER */}
+      <div className="mt-1">
         <input
           type="range"
           min={0}
@@ -76,25 +87,14 @@ export function ObjetivoItemCard({
           onMouseUp={handleCommit}
           onTouchEnd={handleCommit}
           disabled={isSaving || isDeleting}
-          className="w-full cursor-pointer"
+          className="w-[70%] cursor-pointer"
           style={{ accentColor: corCategoria }}
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3 min-h-[24px]">
-        <div className="text-[0.75rem] text-white/50 font-medium">
-          {isSaving ? "Salvando..." : ""}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onDelete(objetivo.id)}
-          disabled={isDeleting}
-          className="bg-transparent rounded-full px-2.5 py-1.5 cursor-pointer text-[0.75rem] font-bold border text-[#ff8f8f] transition-opacity disabled:opacity-60"
-          style={{ borderColor: "rgba(201,74,74,0.45)" }}
-        >
-          {isDeleting ? "Excluindo..." : "Excluir"}
-        </button>
+      {/* STATUS */}
+      <div className="text-[0.65rem] text-white/40 h-[10px]">
+        {isSaving ? "Salvando..." : ""}
       </div>
     </article>
   );

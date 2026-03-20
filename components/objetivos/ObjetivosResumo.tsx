@@ -26,12 +26,12 @@ export function ObjetivosResumo({ media, concluidos, total, ranking }: Props) {
             "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
         }}
       >
-        <div className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           <div>
             <div className="text-[2rem] leading-none font-black text-[var(--color-4)]">
               {media}%
             </div>
-            <div className="text-[0.95rem] text-[#bdbdbd] font-medium mt-1">
+            <div className="text-[0.9rem] text-[#bdbdbd] font-medium mt-1">
               Progresso
             </div>
           </div>
@@ -43,24 +43,15 @@ export function ObjetivosResumo({ media, concluidos, total, ranking }: Props) {
               {concluidos}
               <span className="opacity-50">/{total}</span>
             </div>
-            <div className="text-[0.95rem] text-[#bdbdbd] font-medium mt-1">
+            <div className="text-[0.9rem] text-[#bdbdbd] font-medium mt-1">
               Concluídos
             </div>
           </div>
-
-          <button
-            type="button"
-            className="ml-1 text-[var(--color-2)] text-[1.25rem] font-bold"
-            aria-label="Expandir resumo"
-          >
-            ▼
-          </button>
         </div>
       </section>
 
       {/* DESKTOP */}
       <div className="hidden md:grid md:grid-cols-12 gap-4 items-stretch">
-        {/* CARD PROGRESSO MÉDIO */}
         <section
           className="md:col-span-8 rounded-[22px] p-5 min-h-[220px] flex flex-col"
           style={{
@@ -126,7 +117,6 @@ export function ObjetivosResumo({ media, concluidos, total, ranking }: Props) {
           </div>
         </section>
 
-        {/* CARD OBJETIVOS CONCLUÍDOS */}
         <section
           className="md:col-span-4 rounded-[22px] p-5 min-h-[220px] flex flex-col"
           style={{

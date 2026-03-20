@@ -32,8 +32,14 @@ export function ObjetivosPageView({
   onDelete,
 }: Props) {
   const metricas = useMemo(() => calcularMetricas(objetivos), [objetivos]);
-  const ranking = useMemo(() => calcularRankingCategorias(objetivos), [objetivos]);
-  const grupos = useMemo(() => agruparObjetivosPorCategoria(objetivos), [objetivos]);
+  const ranking = useMemo(
+    () => calcularRankingCategorias(objetivos),
+    [objetivos]
+  );
+  const grupos = useMemo(
+    () => agruparObjetivosPorCategoria(objetivos),
+    [objetivos]
+  );
 
   return (
     <main
@@ -42,7 +48,7 @@ export function ObjetivosPageView({
     >
       <header className="w-full px-4 sm:px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-white/10">
         <div
-          className="text-[1.75rem] sm:text-[1.4rem] font-bold tracking-[-0.5px]"
+          className="text-[1.55rem] sm:text-[1.4rem] font-bold tracking-[-0.5px]"
           style={{
             background:
               "radial-gradient(circle,#c94a4a,#d8a44b,#3d7a99,#5dc6a1)",
@@ -56,7 +62,7 @@ export function ObjetivosPageView({
         <button
           type="button"
           onClick={onLogout}
-          className="text-[var(--color-2)] text-[0.95rem] sm:text-[0.85rem] font-semibold bg-transparent border-none cursor-pointer"
+          className="text-[var(--color-2)] text-[0.9rem] sm:text-[0.85rem] font-semibold bg-transparent border-none cursor-pointer"
         >
           Logout
         </button>
@@ -64,7 +70,10 @@ export function ObjetivosPageView({
 
       <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 sm:px-4 pt-4 sm:pt-5 pb-10">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="m-0 text-[1.15rem] sm:text-[1.6rem] font-semibold tracking-[-0.3px]">
+          <h2
+            className="m-0 text-[1.12rem] sm:text-[1.55rem] font-extrabold tracking-[-0.4px]"
+            style={{ color: "#f4efe2" }}
+          >
             Objetivos em {new Date().getFullYear()}
           </h2>
 
@@ -98,7 +107,7 @@ export function ObjetivosPageView({
         ) : null}
 
         <div className="flex flex-col gap-3 sm:gap-[14px]">
-          {grupos.map((grupo) => (
+          {grupos.map((grupo, index) => (
             <ObjetivosCategoriaCard
               key={grupo.key}
               grupo={grupo}
@@ -106,6 +115,7 @@ export function ObjetivosPageView({
               deletingIds={deletingIds}
               onSaveProgress={onSaveProgress}
               onDelete={onDelete}
+              defaultOpen={index === 0}
             />
           ))}
         </div>

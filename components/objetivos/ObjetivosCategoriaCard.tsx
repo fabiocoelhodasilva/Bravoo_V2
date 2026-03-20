@@ -57,7 +57,7 @@ export function ObjetivosCategoriaCard({
               {grupo.categoria.nome}
             </div>
 
-            <div className="mt-1 text-[0.82rem] text-[#bdbdbd] font-medium sm:hidden">
+            <div className="mt-1 text-[0.8rem] text-[#bdbdbd] font-medium sm:hidden">
               {grupo.metricas.concluidos}/{grupo.metricas.total} objetivos
             </div>
           </div>
@@ -82,7 +82,7 @@ export function ObjetivosCategoriaCard({
         </div>
       </button>
 
-      <div className={`${aberto ? "block" : "hidden"} px-4 pb-4 pt-3`}>
+      <div className={`${aberto ? "block" : "hidden"} px-3 pb-3 pt-2`}>
         <div className="hidden sm:flex flex-wrap gap-[8px_12px] items-center mb-4">
           <div className="text-[#f0f0f0] font-bold text-[0.95rem]">
             concluído
@@ -93,7 +93,7 @@ export function ObjetivosCategoriaCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[420px] gap-3 justify-start">
+        <div className="grid grid-cols-1 md:grid-cols-[420px] gap-2.5 justify-start">
           {grupo.objetivos.map((objetivo) => (
             <ObjetivoItemCard
               key={objetivo.id}
