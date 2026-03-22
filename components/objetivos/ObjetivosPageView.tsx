@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Objetivo } from "@/types/objetivos";
 import {
   agruparObjetivosPorCategoria,
@@ -11,6 +11,8 @@ import {
 } from "@/lib/objetivos/objetivos-utils";
 import { ObjetivosResumo } from "./ObjetivosResumo";
 import { ObjetivosCategoriaCard } from "./ObjetivosCategoriaCard";
+import FloatingAddButton from "../ui/FloatingAddButton";
+import BottomNav from "../ui/BottomNav";
 
 type Props = {
   objetivos: Objetivo[];
@@ -31,6 +33,8 @@ export function ObjetivosPageView({
   onSaveProgress,
   onDelete,
 }: Props) {
+  const [expandirTudo, setExpandirTudo] = useState(false);
+
   const metricas = useMemo(() => calcularMetricas(objetivos), [objetivos]);
   const ranking = useMemo(
     () => calcularRankingCategorias(objetivos),
@@ -46,51 +50,29 @@ export function ObjetivosPageView({
       className="min-h-screen bg-black text-white flex flex-col"
       style={getObjetivosPageCssVars()}
     >
-      <header className="w-full px-4 sm:px-5 py-3 flex justify-between items-center bg-[#050505] border-b border-white/10">
-        <div
-          className="text-[1.55rem] sm:text-[1.4rem] font-bold tracking-[-0.5px]"
-          style={{
-            background:
-              "radial-gradient(circle,#c94a4a,#d8a44b,#3d7a99,#5dc6a1)",
-            WebkitBackgroundClip: "text",
-            color: "transparent",
-          }}
-        >
+      <header className="fixed top-0 left-0 w-full z-50 px-4 sm:px-5 h-[48px] flex items-center justify-between bg-[#050505]/95 backdrop-blur border-b border-white/5">
+        <div className="gradient-text text-[1.15rem] font-semibold tracking-[-0.4px] opacity-90">
           Bravoo
         </div>
 
         <button
           type="button"
           onClick={onLogout}
-          className="text-[var(--color-2)] text-[0.9rem] sm:text-[0.85rem] font-semibold bg-transparent border-none cursor-pointer"
+          className="text-[var(--color-2)] text-[0.8rem] font-semibold"
         >
           Logout
         </button>
       </header>
 
-      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 sm:px-4 pt-4 sm:pt-5 pb-10">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2
-            className="m-0 text-[1.12rem] sm:text-[1.55rem] font-extrabold tracking-[-0.4px]"
-            style={{ color: "#f4efe2" }}
-          >
+      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[140px]">
+        <div className="mb-2">
+          <h2 className="text-center text-[1.25rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
             Objetivos em {new Date().getFullYear()}
           </h2>
-
-          <Link
-            href="/objetivos/novo"
-            className="shrink-0 bg-[var(--color-2)] text-black font-extrabold border-none px-5 py-2.5 rounded-full no-underline transition hover:scale-[1.03] shadow-[0_10px_24px_rgba(0,0,0,0.25)]"
-          >
-            + Novo
-          </Link>
         </div>
 
-        <p className="hidden sm:block text-[0.95rem] text-[#ccc] mb-5">
-          Arraste a barra para ajustar o progresso.
-        </p>
-
         {objetivos.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-3">
             <ObjetivosResumo
               media={metricas.media}
               concluidos={metricas.concluidos}
@@ -100,13 +82,13 @@ export function ObjetivosPageView({
           </div>
         )}
 
-        {loadingMessage ? (
-          <div className="text-[0.85rem] text-[#aaa] mb-3">
+        {loadingMessage && (
+          <div className="text-[0.8rem] text-[#aaa] mb-3">
             {loadingMessage}
           </div>
-        ) : null}
+        )}
 
-        <div className="flex flex-col gap-3 sm:gap-[14px]">
+        <div className="flex flex-col gap-2.5">
           {grupos.map((grupo, index) => (
             <ObjetivosCategoriaCard
               key={grupo.key}
@@ -116,17 +98,35 @@ export function ObjetivosPageView({
               onSaveProgress={onSaveProgress}
               onDelete={onDelete}
               defaultOpen={index === 0}
+              expandirTudo={expandirTudo}
             />
           ))}
         </div>
 
+        {grupos.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setExpandirTudo((prev) => !prev)}
+            className="mt-5 w-full rounded-full border border-white/10 bg-white/[0.03] px-4 py-3 text-[0.95rem] font-semibold text-[#e7e0cf] shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition active:scale-[0.99]"
+          >
+            {expandirTudo ? "Recolher tudo" : "Expandir tudo"}
+          </button>
+        )}
+
         <Link
           href="/aluno"
-          className="block text-center mx-auto mt-8 text-[var(--color-2)] no-underline font-semibold"
+          className="block text-center mx-auto mt-8 text-[var(--color-2)] text-[0.9rem] font-semibold"
         >
           ← Voltar
         </Link>
       </div>
+
+      <FloatingAddButton
+        href="/objetivos/novo"
+        ariaLabel="Criar novo objetivo"
+      />
+
+      <BottomNav active="objetivos" />
     </main>
   );
 }

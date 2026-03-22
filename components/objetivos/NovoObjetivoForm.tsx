@@ -75,12 +75,21 @@ export function NovoObjetivoForm({
   return (
     <>
       <section
-        className="bg-[#111] rounded-[18px] border border-[#333] px-4 pt-[18px] pb-5"
-        style={{ boxShadow: "0 4px 12px rgba(0,0,0,.35)" }}
+        className="rounded-[20px] border px-4 py-5 sm:px-5 sm:py-6"
+        style={{
+          background:
+            "radial-gradient(700px 240px at 0% 0%, rgba(255,255,255,0.04), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)), #111",
+          borderColor: "rgba(255,255,255,0.10)",
+          boxShadow:
+            "0 10px 26px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset",
+        }}
       >
         <form onSubmit={handleSubmit}>
-          <div className="flex flex-col mb-[14px] gap-[6px]">
-            <label htmlFor="categoria_id" className="text-[0.9rem] text-[#ddd]">
+          <div className="flex flex-col mb-4 gap-2">
+            <label
+              htmlFor="categoria_id"
+              className="text-[0.86rem] font-medium text-[#dddddd]"
+            >
               Categoria *
             </label>
 
@@ -89,8 +98,11 @@ export function NovoObjetivoForm({
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
               required
-              className="w-full px-[10px] py-2 rounded-[10px] border border-[#444] bg-black text-white text-[0.9rem] font-['Poppins'] focus:outline-none"
-              style={{ boxShadow: "none" }}
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+              style={{
+                borderColor: "rgba(255,255,255,0.12)",
+                boxShadow: "none",
+              }}
             >
               {loadingCategorias ? (
                 <option value="">Carregando categorias...</option>
@@ -107,9 +119,9 @@ export function NovoObjetivoForm({
             </select>
 
             {categoriaSelecionada && (
-              <div className="flex items-center gap-2 mt-[6px] text-[0.85rem] text-[#bbb]">
+              <div className="mt-1 flex items-center gap-2 text-[0.8rem] text-[#bcbcbc]">
                 <span
-                  className="w-[10px] h-[10px] rounded-full border border-[#333]"
+                  className="h-[10px] w-[10px] rounded-full border border-[#333]"
                   style={{ background: categoriaSelecionada.cor || "#666" }}
                 />
                 <span>
@@ -119,8 +131,11 @@ export function NovoObjetivoForm({
             )}
           </div>
 
-          <div className="flex flex-col mb-[14px] gap-[6px]">
-            <label htmlFor="titulo" className="text-[0.9rem] text-[#ddd]">
+          <div className="flex flex-col mb-4 gap-2">
+            <label
+              htmlFor="titulo"
+              className="text-[0.86rem] font-medium text-[#dddddd]"
+            >
               Título do objetivo *
             </label>
 
@@ -129,19 +144,22 @@ export function NovoObjetivoForm({
               type="text"
               maxLength={200}
               required
-              placeholder="Ex: Ler 12 livros, aprender inglês, treinar 3x por semana..."
+              placeholder="Ex: Treinar 3x por semana"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full px-[10px] py-2 rounded-[10px] border border-[#444] bg-black text-white text-[0.9rem] font-['Poppins'] focus:outline-none"
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{
+                borderColor: "rgba(255,255,255,0.12)",
+              }}
             />
           </div>
 
-          <div className="flex flex-col mb-[14px] gap-[6px]">
+          <div className="flex flex-col mb-4 gap-2">
             <label
               htmlFor="data_prevista_conclusao"
-              className="text-[0.9rem] text-[#ddd]"
+              className="text-[0.86rem] font-medium text-[#dddddd]"
             >
-              Data prevista de conclusão (opcional)
+              Data prevista de conclusão
             </label>
 
             <input
@@ -149,37 +167,31 @@ export function NovoObjetivoForm({
               type="date"
               value={dataPrevistaConclusao}
               onChange={(e) => setDataPrevistaConclusao(e.target.value)}
-              className="w-full px-[10px] py-2 rounded-[10px] border border-[#444] bg-black text-white text-[0.9rem] font-['Poppins'] focus:outline-none"
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+              style={{
+                borderColor: "rgba(255,255,255,0.12)",
+              }}
             />
           </div>
 
           {mensagem && (
             <div
-              className="mt-[10px] text-[0.85rem]"
+              className="mt-1 text-[0.82rem] font-medium"
               style={{
-                color: mensagem.tipo === "erro" ? "#ff6b6b" : "#5dc6a1",
+                color: mensagem.tipo === "erro" ? "#ff7a7a" : "#5dc6a1",
               }}
             >
               {mensagem.texto}
             </div>
           )}
 
-          <div className="mt-[18px] flex justify-end gap-[10px] flex-wrap">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="border border-[#555] text-[#ccc] bg-transparent rounded-[12px] px-[18px] py-[10px] text-[0.9rem] font-semibold cursor-pointer"
-            >
-              Cancelar
-            </button>
-
+          <div className="mt-5 flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="rounded-[12px] px-[18px] py-[10px] text-[0.9rem] font-semibold cursor-pointer border-none text-black"
+              className="rounded-full px-5 py-[10px] text-[0.88rem] font-bold text-black transition active:scale-[0.98] disabled:opacity-70"
               style={{
                 background: "var(--color-4)",
-                opacity: saving ? 0.7 : 1,
               }}
             >
               {saving ? "Salvando..." : "Salvar objetivo"}
@@ -191,7 +203,7 @@ export function NovoObjetivoForm({
       <button
         type="button"
         onClick={onCancel}
-        className="block text-center mx-auto mt-[30px] text-[var(--color-2)] bg-transparent border-none font-semibold text-[18px] cursor-pointer"
+        className="mx-auto mt-7 block cursor-pointer border-none bg-transparent text-center text-[var(--color-2)] text-[0.95rem] font-semibold"
       >
         ← Voltar
       </button>

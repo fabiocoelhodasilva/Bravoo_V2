@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ObjetivosGrupo } from "@/types/objetivos";
 import { ObjetivoItemCard } from "./ObjetivoItemCard";
 
@@ -11,6 +11,7 @@ type Props = {
   onSaveProgress: (objetivoId: string, progresso: number) => Promise<void>;
   onDelete: (objetivoId: string) => Promise<void>;
   defaultOpen?: boolean;
+  expandirTudo?: boolean;
 };
 
 export function ObjetivosCategoriaCard({
@@ -20,9 +21,18 @@ export function ObjetivosCategoriaCard({
   onSaveProgress,
   onDelete,
   defaultOpen = false,
+  expandirTudo = false,
 }: Props) {
   const cor = grupo.categoria.cor;
   const [aberto, setAberto] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (expandirTudo) {
+      setAberto(true);
+    } else {
+      setAberto(defaultOpen);
+    }
+  }, [expandirTudo, defaultOpen]);
 
   return (
     <section
@@ -93,7 +103,7 @@ export function ObjetivosCategoriaCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[420px] gap-2.5 justify-start">
+        <div className="grid grid-cols-1 md:grid-cols-[420px] gap-1.5 justify-start">
           {grupo.objetivos.map((objetivo) => (
             <ObjetivoItemCard
               key={objetivo.id}

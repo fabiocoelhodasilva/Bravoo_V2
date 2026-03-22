@@ -26,24 +26,24 @@ export function ObjetivosResumo({ media, concluidos, total, ranking }: Props) {
             "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
         }}
       >
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
             <div className="text-[2rem] leading-none font-black text-[var(--color-4)]">
               {media}%
             </div>
-            <div className="text-[0.9rem] text-[#bdbdbd] font-medium mt-1">
+            <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
               Progresso
             </div>
           </div>
 
           <div className="w-px h-12 bg-white/10" />
 
-          <div>
+          <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
             <div className="text-[2rem] leading-none font-black text-white">
               {concluidos}
               <span className="opacity-50">/{total}</span>
             </div>
-            <div className="text-[0.9rem] text-[#bdbdbd] font-medium mt-1">
+            <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
               Concluídos
             </div>
           </div>
