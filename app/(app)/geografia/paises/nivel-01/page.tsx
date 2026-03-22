@@ -13,15 +13,23 @@ export default function Nivel1PaisesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans">
+    <div className="min-h-screen bg-black text-white font-sans overflow-hidden">
       <HeaderInterno onLogout={handleLogout} />
 
       <div className="h-[48px]" />
 
-      <main className="relative w-full h-[calc(100vh-48px)]">
-        <GlobeScene modo="america-sul" />
+      <main className="flex min-h-[calc(100vh-48px)] flex-col items-center px-4 pt-4 pb-6">
+        <h1 className="text-center text-3xl font-bold gradient-text mb-4">
+          Nível 1 — América do Sul
+        </h1>
 
-        <div className="absolute bottom-6 w-full flex justify-center z-10">
+        <div className="flex-1 w-full flex items-center justify-center">
+          <div className="w-full max-w-[900px] aspect-square max-h-[70vh] sm:max-h-[72vh]">
+            <GlobeScene modo="america-sul" />
+          </div>
+        </div>
+
+        <div className="mt-4">
           <BotaoVoltar />
         </div>
       </main>

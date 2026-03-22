@@ -43,14 +43,23 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
     const container = globeRef.current;
     container.innerHTML = "";
 
-    const globe = Globe()(container)
-      .width(window.innerWidth)
-      .height(window.innerHeight - 48)
+    let destroyed = false;
+
+    const getContainerSize = () => ({
+      width: container.clientWidth || window.innerWidth,
+      height: container.clientHeight || window.innerHeight,
+    });
+
+    const { width, height } = getContainerSize();
+
+    const globe = new Globe(container)
+      .width(width)
+      .height(height)
       .globeImageUrl("//unpkg.com/three-globe/example/img/earth-dark.jpg")
       .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-      .polygonAltitude(0.06)
-      .polygonCapColor(() => "rgba(93, 198, 161, 0.85)")
-      .polygonSideColor(() => "rgba(93, 198, 161, 0.35)")
+      .polygonAltitude(0.05)
+      .polygonCapColor(() => "rgba(93, 198, 161, 0.88)")
+      .polygonSideColor(() => "rgba(93, 198, 161, 0.30)")
       .polygonStrokeColor(() => "#000")
       .polygonsTransitionDuration(0);
 
@@ -62,6 +71,8 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
         return res.json();
       })
       .then((data: GeoJsonData) => {
+        if (destroyed) return;
+
         let features = data.features ?? [];
 
         if (modo === "america-sul") {
@@ -73,6 +84,10 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
 
             return PAISES_AMERICA_SUL.includes(nome);
           });
+
+          globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
+        } else {
+          globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
         }
 
         globe.polygonsData(features);
@@ -81,14 +96,18 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
         console.error("Erro ao carregar countries.geojson:", error);
       });
 
-    const handleResize = () => {
-      globe.width(window.innerWidth).height(window.innerHeight - 48);
-    };
+    const resizeObserver = new ResizeObserver(() => {
+      if (destroyed) return;
 
-    window.addEventListener("resize", handleResize);
+      const { width, height } = getContainerSize();
+      globe.width(width).height(height);
+    });
+
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      destroyed = true;
+      resizeObserver.disconnect();
       container.innerHTML = "";
     };
   }, [modo]);
@@ -96,11 +115,7 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
   return (
     <div
       ref={globeRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#000",
-      }}
+      className="w-full h-full bg-black rounded-2xl overflow-hidden"
     />
   );
 }
