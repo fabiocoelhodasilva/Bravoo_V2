@@ -2,46 +2,53 @@
 
 import Header from "./Header";
 import GradientTitle from "./GradientTitle";
-import SubjectButton from "./SubjectButton";
-import { useRouter } from "next/navigation";
+import HomeFeatureCard from "./ui/HomeFeatureCard";
 
-interface StudentDashboardProps {
-  onLogout?: () => void;
-}
-
-export default function StudentDashboard({ onLogout }: StudentDashboardProps) {
-  const router = useRouter();
-
+export default function StudentDashboard() {
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center text-center font-sans">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center font-sans">
       <Header />
 
       <GradientTitle>Escolha um Tema</GradientTitle>
 
-      <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
-        <SubjectButton subject="agenda" onClick={() => router.push("/agenda")}>
-          Agenda escolar
-        </SubjectButton>
+      <div className="flex flex-col gap-5 w-full max-w-sm px-4 animate-fade-in">
 
-        <SubjectButton subject="biblia" onClick={() => router.push("/biblia")}>
-          Bíblia
-        </SubjectButton>
+        <HomeFeatureCard
+          title="Minha Jornada"
+          href="/objetivos"
+          colorClass="bg-[var(--color-2)] hover:brightness-110"
+        />
 
-        <SubjectButton subject="geografia" onClick={() => router.push("/geografia")}>
-          Geografia
-        </SubjectButton>
+        <HomeFeatureCard
+          title="Bíblia"
+          href="/biblia"
+          colorClass="bg-[var(--color-1)] hover:brightness-110"
+        />
 
-        <SubjectButton subject="matematica" onClick={() => router.push("/matematica")}>
-          Matemática
-        </SubjectButton>
+        <HomeFeatureCard
+          title="Geografia"
+          href="/geografia"
+          colorClass="bg-[var(--color-5)] hover:brightness-110"
+        />
 
-        <SubjectButton subject="virtudes" onClick={() => router.push("/virtudes")}>
-          Virtudes
-        </SubjectButton>
+        <HomeFeatureCard
+          title="Matemática"
+          href="/matematica"
+          colorClass="bg-[var(--color-4)] hover:brightness-110"
+        />
 
-        <SubjectButton subject="relatorios" onClick={() => router.push("/relatorios")}>
-          Meus Resultados
-        </SubjectButton>
+        <HomeFeatureCard
+          title="Virtudes"
+          href="/virtudes"
+          colorClass="bg-[var(--color-6)] hover:brightness-110"
+        />
+
+        <HomeFeatureCard
+          title="Meus Resultados"
+          href="/relatorios"
+          colorClass="bg-[var(--color-7)] hover:brightness-110"
+        />
+
       </div>
     </div>
   );

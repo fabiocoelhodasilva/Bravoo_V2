@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import FloatingAddButton from "../ui/FloatingAddButton";
+import Link from "next/link";
 import BottomNav from "../ui/BottomNav";
+import HeaderInterno from "../ui/HeaderInterno";
+import BotaoVoltar from "../ui/BotaoVoltar";
 
 type Tarefa = {
   id: string;
@@ -44,28 +46,25 @@ export function MeuDiaPageView({
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col">
-      <header className="fixed top-0 left-0 w-full z-50 px-4 sm:px-5 h-[48px] flex items-center justify-between bg-[#050505]/95 backdrop-blur border-b border-white/5">
-        <div className="gradient-text text-[1.15rem] font-semibold tracking-[-0.4px] opacity-90">
-          Bravoo
-        </div>
+      <HeaderInterno onLogout={onLogout} />
 
-        <button
-          type="button"
-          onClick={onLogout}
-          className="text-[var(--color-2)] text-[0.8rem] font-semibold"
-        >
-          Logout
-        </button>
-      </header>
-
-      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[140px]">
-        <div className="mb-2">
-          <h2 className="text-center text-[1.25rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
+      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[90px]">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[1.2rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
             Meu dia
           </h2>
+
+          <Link
+            href="/meu-dia/nova"
+            aria-label="Adicionar tarefa"
+            title="Adicionar tarefa"
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
+          >
+            +
+          </Link>
         </div>
 
-        <div className="text-center text-[0.85rem] text-white/60 mb-4 capitalize">
+        <div className="mb-4 text-center text-[0.85rem] text-white/60 capitalize">
           {hojeFormatado}
         </div>
 
@@ -103,11 +102,11 @@ export function MeuDiaPageView({
         </section>
 
         {tarefas.length === 0 ? (
-          <section className="flex flex-col items-center justify-center text-center mt-20">
-            <div className="text-[1.15rem] text-white/90 mb-2">
+          <section className="mt-20 flex flex-col items-center justify-center text-center">
+            <div className="mb-2 text-[1.15rem] text-white/90">
               Nada planejado ainda 🗓️
             </div>
-            <p className="text-[0.9rem] text-white/50 max-w-[260px]">
+            <p className="max-w-[260px] text-[0.9rem] text-white/50">
               Toque no botão + para adicionar tarefas do seu dia.
             </p>
           </section>
@@ -118,10 +117,10 @@ export function MeuDiaPageView({
                 key={tarefa.id}
                 type="button"
                 onClick={() => toggleTarefa(tarefa.id)}
-                className="flex items-center gap-3 py-2 border-b border-white/10 text-left"
+                className="flex items-center gap-3 border-b border-white/10 py-2 text-left"
               >
                 <div
-                  className={`w-5 h-5 rounded-full border flex items-center justify-center text-[0.7rem] shrink-0 ${
+                  className={`h-5 w-5 shrink-0 rounded-full border flex items-center justify-center text-[0.7rem] ${
                     tarefa.concluida
                       ? "bg-[var(--color-4)] text-black border-[var(--color-4)]"
                       : "border-white/30 text-transparent"
@@ -143,12 +142,9 @@ export function MeuDiaPageView({
             ))}
           </div>
         )}
-      </div>
 
-      <FloatingAddButton
-        href="/meu-dia/nova"
-        ariaLabel="Adicionar tarefa"
-      />
+        <BotaoVoltar />
+      </div>
 
       <BottomNav active="meu-dia" />
     </main>

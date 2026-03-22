@@ -11,7 +11,6 @@ import {
 } from "@/lib/objetivos/objetivos-utils";
 import { ObjetivosResumo } from "./ObjetivosResumo";
 import { ObjetivosCategoriaCard } from "./ObjetivosCategoriaCard";
-import FloatingAddButton from "../ui/FloatingAddButton";
 import BottomNav from "../ui/BottomNav";
 
 type Props = {
@@ -64,11 +63,20 @@ export function ObjetivosPageView({
         </button>
       </header>
 
-      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[140px]">
-        <div className="mb-2">
-          <h2 className="text-center text-[1.25rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
+      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[90px]">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[1.2rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
             Objetivos em {new Date().getFullYear()}
           </h2>
+
+          <Link
+            href="/objetivos/novo"
+            aria-label="Criar novo objetivo"
+            title="Criar novo objetivo"
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
+          >
+            +
+          </Link>
         </div>
 
         {objetivos.length > 0 && (
@@ -83,7 +91,7 @@ export function ObjetivosPageView({
         )}
 
         {loadingMessage && (
-          <div className="text-[0.8rem] text-[#aaa] mb-3">
+          <div className="mb-3 text-[0.8rem] text-[#aaa]">
             {loadingMessage}
           </div>
         )}
@@ -115,16 +123,11 @@ export function ObjetivosPageView({
 
         <Link
           href="/aluno"
-          className="block text-center mx-auto mt-8 text-[var(--color-2)] text-[0.9rem] font-semibold"
+          className="mx-auto mt-8 block text-center text-[0.9rem] font-semibold text-[var(--color-2)]"
         >
           ← Voltar
         </Link>
       </div>
-
-      <FloatingAddButton
-        href="/objetivos/novo"
-        ariaLabel="Criar novo objetivo"
-      />
 
       <BottomNav active="objetivos" />
     </main>

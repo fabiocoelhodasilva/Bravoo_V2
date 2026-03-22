@@ -1,33 +1,71 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [ok, setOk] = useState(false);
+
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      const userId = data?.session?.user?.id;
+    let isMounted = true;
 
-      // se não logado, manda pro login (preserva pra voltar depois)
-      if (!userId) {
+    async function checkSession() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        const userId = data?.session?.user?.id;
+
+        if (!isMounted) return;
+
+        if (error || !userId) {
+          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          return;
+        }
+
+        setCheckingAuth(false);
+      } catch (error) {
+        console.error("Erro ao verificar sessão no AppLayout:", error);
+
+        if (!isMounted) return;
+        router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      }
+    }
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      if (event === "SIGNED_OUT" || !session?.user?.id) {
         router.replace(`/login?next=${encodeURIComponent(pathname)}`);
         return;
       }
 
-      setOk(true);
-    })();
+      setCheckingAuth(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [router, pathname]);
 
-  if (!ok) {
+  if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p>Carregando...</p>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-white" />
+          <p className="text-sm opacity-80">Carregando...</p>
+        </div>
       </div>
     );
   }
