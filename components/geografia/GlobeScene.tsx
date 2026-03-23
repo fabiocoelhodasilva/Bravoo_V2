@@ -16,6 +16,7 @@ type GeoJsonData = {
 
 type Props = {
   modo?: "america-sul" | "mundo";
+  onCountryClick?: (nome: string) => void;
 };
 
 const PAISES_AMERICA_SUL = [
@@ -34,7 +35,10 @@ const PAISES_AMERICA_SUL = [
   "French Guiana",
 ];
 
-export default function GlobeScene({ modo = "mundo" }: Props) {
+export default function GlobeScene({
+  modo = "mundo",
+  onCountryClick,
+}: Props) {
   const globeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -44,6 +48,9 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
     container.innerHTML = "";
 
     let destroyed = false;
+
+    const getCountryName = (feature: GeoJsonFeature) =>
+      feature.properties?.name || feature.properties?.ADMIN || "";
 
     const getContainerSize = () => ({
       width: container.clientWidth || window.innerWidth,
@@ -57,11 +64,19 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
       .height(height)
       .globeImageUrl("//unpkg.com/three-globe/example/img/earth-dark.jpg")
       .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-      .polygonAltitude(0.05)
-      .polygonCapColor(() => "rgba(93, 198, 161, 0.88)")
-      .polygonSideColor(() => "rgba(93, 198, 161, 0.30)")
-      .polygonStrokeColor(() => "#000")
-      .polygonsTransitionDuration(0);
+      .polygonAltitude(0.06)
+      .polygonCapColor(() => "rgba(93, 198, 161, 0.95)")
+      .polygonSideColor(() => "rgba(93, 198, 161, 0.35)")
+      .polygonStrokeColor(() => "rgba(255,255,255,0.7)")
+      .polygonsTransitionDuration(0)
+      .onPolygonClick((polygon: GeoJsonFeature) => {
+        const nome = getCountryName(polygon);
+
+        if (!nome) return;
+        if (onCountryClick) {
+          onCountryClick(nome);
+        }
+      });
 
     fetch("/dados/countries.geojson")
       .then((res) => {
@@ -76,14 +91,9 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
         let features = data.features ?? [];
 
         if (modo === "america-sul") {
-          features = features.filter((feature) => {
-            const nome =
-              feature.properties?.name ||
-              feature.properties?.ADMIN ||
-              "";
-
-            return PAISES_AMERICA_SUL.includes(nome);
-          });
+          features = features.filter((feature) =>
+            PAISES_AMERICA_SUL.includes(getCountryName(feature))
+          );
 
           globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
         } else {
@@ -110,7 +120,7 @@ export default function GlobeScene({ modo = "mundo" }: Props) {
       resizeObserver.disconnect();
       container.innerHTML = "";
     };
-  }, [modo]);
+  }, [modo, onCountryClick]);
 
   return (
     <div
