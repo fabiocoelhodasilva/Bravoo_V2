@@ -33,6 +33,7 @@ const PAISES_AMERICA_SUL = [
   "Uruguay",
   "Venezuela",
   "French Guiana",
+  "France", // necessário para a Guiana Francesa aparecer em alguns GeoJSONs
 ];
 
 export default function GlobeScene({
@@ -73,6 +74,7 @@ export default function GlobeScene({
         const nome = getCountryName(polygon);
 
         if (!nome) return;
+
         if (onCountryClick) {
           onCountryClick(nome);
         }

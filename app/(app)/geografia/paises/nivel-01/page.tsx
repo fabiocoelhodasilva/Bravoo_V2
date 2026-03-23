@@ -9,6 +9,7 @@ import GlobeScene from "@/components/geografia/GlobeScene";
 type PaisItem = {
   en: string;
   pt: string;
+  aliases?: string[];
 };
 
 const PAISES_MAP: PaisItem[] = [
@@ -24,7 +25,11 @@ const PAISES_MAP: PaisItem[] = [
   { en: "Suriname", pt: "Suriname" },
   { en: "Uruguay", pt: "Uruguai" },
   { en: "Venezuela", pt: "Venezuela" },
-  { en: "French Guiana", pt: "Guiana Francesa" },
+  {
+    en: "French Guiana",
+    pt: "Guiana Francesa",
+    aliases: ["France"], // aceita clique vindo como France
+  },
 ];
 
 export default function Nivel01PaisesPage() {
@@ -35,6 +40,7 @@ export default function Nivel01PaisesPage() {
   const [pontuacao, setPontuacao] = useState(10);
   const [acertos, setAcertos] = useState(0);
   const [mensagem, setMensagem] = useState("");
+  const [ultimoClique, setUltimoClique] = useState("");
   const [inicioJogo, setInicioJogo] = useState<number>(Date.now());
   const [finalizado, setFinalizado] = useState(false);
 
@@ -69,7 +75,11 @@ export default function Nivel01PaisesPage() {
   function handleCountryClick(nomePaisEmIngles: string) {
     if (finalizado || !paisAtual) return;
 
-    if (nomePaisEmIngles === paisAtual.en) {
+    setUltimoClique(nomePaisEmIngles);
+
+    const nomesAceitos = [paisAtual.en, ...(paisAtual.aliases ?? [])];
+
+    if (nomesAceitos.includes(nomePaisEmIngles)) {
       const novoTotalAcertos = acertos + 1;
       const proximoIndice = indiceAtual + 1;
 
@@ -84,10 +94,11 @@ export default function Nivel01PaisesPage() {
         setTimeout(() => {
           setIndiceAtual(proximoIndice);
           setMensagem("");
+          setUltimoClique("");
         }, 700);
       }
     } else {
-      setMensagem(`❌ Ops! Você clicou em outro país.`);
+      setMensagem("❌ Continue tentando, não foi dessa vez.");
       setPontuacao((valorAtual) => Math.max(0, valorAtual - 1));
     }
   }
@@ -111,8 +122,12 @@ export default function Nivel01PaisesPage() {
           Pontuação: <span className="font-semibold">{pontuacao}</span>
         </div>
 
-        <div className="text-sm mb-4 min-h-[24px] text-center">
+        <div className="text-sm mb-1 min-h-[24px] text-center">
           {mensagem}
+        </div>
+
+        <div className="text-xs mb-4 opacity-70 min-h-[18px] text-center">
+          {ultimoClique ? `Você clicou em: ${ultimoClique}` : ""}
         </div>
 
         <div className="flex-1 w-full flex items-center justify-center">
