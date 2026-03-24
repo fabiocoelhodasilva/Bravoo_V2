@@ -206,46 +206,48 @@ export default function AmericaDoSulPaisesPage() {
 
       <div className="h-[48px]" />
 
-      <main className="min-h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-3 sm:pt-4 pb-8">
-        {!finalizado && (
-          <div className="text-sm opacity-80 mb-1 sm:mb-2 text-center">
-            Clique na região do seguinte país:
-          </div>
-        )}
-
-        <h1 className="text-3xl font-bold gradient-text mb-1 sm:mb-2 text-center">
-          {finalizado ? "Parabéns, você concluiu o jogo!" : paisAtual?.pt}
-        </h1>
-
-        {finalizado ? (
-          <>
-            <div className="text-sm mb-2 text-center">
-              Pontuação: {pontuacao} | Progresso: {listaPaises.length}/{listaPaises.length}
+      <main className="min-h-[calc(100vh-48px)] flex flex-col px-4 pt-3 sm:pt-4 pb-4">
+        <div className="flex flex-col items-center w-full">
+          {!finalizado && (
+            <div className="text-sm opacity-80 mb-1 sm:mb-2 text-center">
+              Clique na região do seguinte país:
             </div>
+          )}
 
-            <div className="text-sm text-center">
-              <button
-                onClick={reiniciarJogo}
-                className="underline hover:text-sky-300 transition"
-              >
-                Jogar novamente?
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-sm mb-2 text-center">
-              Pontuação: {pontuacao} | Progresso: {indiceAtual + 1}/{listaPaises.length}
-            </div>
+          <h1 className="text-3xl font-bold gradient-text mb-1 sm:mb-2 text-center">
+            {finalizado ? "Parabéns, você concluiu o jogo!" : paisAtual?.pt}
+          </h1>
 
-            <div className="text-sm mb-3 text-center min-h-[24px]">
-              {mensagem}
-            </div>
-          </>
-        )}
+          {finalizado ? (
+            <>
+              <div className="text-sm mb-2 text-center">
+                Pontuação: {pontuacao} | Progresso: {listaPaises.length}/{listaPaises.length}
+              </div>
 
-        <div className="w-full flex justify-center">
-          <div className="w-full max-w-[360px] sm:max-w-[520px] lg:max-w-[900px] aspect-square max-h-[56vh] sm:max-h-[60vh] lg:max-h-none">
+              <div className="text-sm text-center">
+                <button
+                  onClick={reiniciarJogo}
+                  className="underline hover:text-sky-300 transition"
+                >
+                  Jogar novamente?
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm mb-2 text-center">
+                Pontuação: {pontuacao} | Progresso: {indiceAtual + 1}/{listaPaises.length}
+              </div>
+
+              <div className="text-sm mb-3 text-center min-h-[24px]">
+                {mensagem}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex-1 w-full flex justify-center items-center">
+          <div className="w-full max-w-[92vw] sm:max-w-[520px] lg:max-w-[900px] aspect-square max-h-[68vh] sm:max-h-[60vh] lg:max-h-none">
             <GlobeScene
               modo="america-sul"
               onCountryClick={handleCountryClick}
@@ -257,7 +259,7 @@ export default function AmericaDoSulPaisesPage() {
           </div>
         </div>
 
-        <div className="mt-8 sm:mt-5 mb-2">
+        <div className="mt-auto pt-4 pb-2 flex justify-center">
           <BotaoVoltar />
         </div>
       </main>
