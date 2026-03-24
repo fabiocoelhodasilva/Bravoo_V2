@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Globe from "globe.gl";
 
 type GeoJsonFeature = {
@@ -51,7 +51,6 @@ export default function GlobeScene({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
-  const [hoverCountry, setHoverCountry] = useState("");
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
@@ -98,19 +97,14 @@ export default function GlobeScene({
     return sidePalette[seed];
   }
 
-  // Azul pós-acerto mais suave e próximo do natural
   const correctCapColor = "rgba(147, 197, 253, 0.20)";
   const correctSideColor = "rgba(96, 165, 250, 0.10)";
 
-  // Brilho curto no momento do acerto
   const celebrateCapColor = "rgba(191, 219, 254, 0.38)";
   const celebrateSideColor = "rgba(147, 197, 253, 0.20)";
 
   const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
   const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
-
-  const hoverCapColor = "rgba(255, 255, 255, 0.15)";
-  const hoverSideColor = "rgba(255, 255, 255, 0.06)";
 
   function getCapColor(feature: GeoJsonFeature) {
     const nome = getCountryName(feature);
@@ -118,7 +112,6 @@ export default function GlobeScene({
     if (celebratingCountries.includes(nome)) return celebrateCapColor;
     if (correctCountries.includes(nome)) return correctCapColor;
     if (flashingCountries.includes(nome)) return flashWrongCapColor;
-    if (hoverCountry === nome) return hoverCapColor;
 
     return getNaturalCapColor(nome);
   }
@@ -129,7 +122,6 @@ export default function GlobeScene({
     if (celebratingCountries.includes(nome)) return celebrateSideColor;
     if (correctCountries.includes(nome)) return correctSideColor;
     if (flashingCountries.includes(nome)) return flashWrongSideColor;
-    if (hoverCountry === nome) return hoverSideColor;
 
     return getNaturalSideColor(nome);
   }
@@ -140,7 +132,6 @@ export default function GlobeScene({
     if (celebratingCountries.includes(nome)) return 0.065;
     if (correctCountries.includes(nome)) return 0.04;
     if (flashingCountries.includes(nome)) return 0.04;
-    if (hoverCountry === nome) return 0.04;
 
     return 0.025;
   }
@@ -176,15 +167,6 @@ export default function GlobeScene({
       .polygonSideColor((feature: object) => getSideColor(feature as GeoJsonFeature))
       .polygonStrokeColor(() => "rgba(255,255,255,0.18)")
       .polygonsTransitionDuration(180)
-      .onPolygonHover((polygon: object | null) => {
-        if (!polygon) {
-          setHoverCountry("");
-          return;
-        }
-
-        const nome = getCountryName(polygon as GeoJsonFeature);
-        setHoverCountry(nome || "");
-      })
       .onPolygonClick((polygon: object) => {
         const nome = getCountryName(polygon as GeoJsonFeature);
         if (!nome) return;
@@ -252,7 +234,7 @@ export default function GlobeScene({
       .polygonSideColor((feature: object) => getSideColor(feature as GeoJsonFeature))
       .polygonAltitude((feature: object) => getAltitude(feature as GeoJsonFeature))
       .polygonsTransitionDuration(180);
-  }, [correctCountries, flashingCountries, celebratingCountries, hoverCountry]);
+  }, [correctCountries, flashingCountries, celebratingCountries]);
 
   useEffect(() => {
     const globe = globeInstanceRef.current;

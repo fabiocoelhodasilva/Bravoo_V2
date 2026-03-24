@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
+import GamificationBar from "@/components/gamification/GamificationBar";
 
 export default function GeografiaMenu() {
   const router = useRouter();
@@ -19,9 +20,16 @@ export default function GeografiaMenu() {
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
-        <h1 className="text-center text-4xl font-bold mb-10 gradient-text">
+        <h1 className="text-center text-4xl font-bold mb-6 gradient-text">
           Geografia
         </h1>
+
+        <GamificationBar
+          constancyCount={7}
+          coins={128}
+          constancyRank={12}
+          coinsRank={7}
+        />
 
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
           <HomeFeatureCard
