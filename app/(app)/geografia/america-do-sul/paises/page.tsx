@@ -206,7 +206,7 @@ export default function AmericaDoSulPaisesPage() {
 
       <div className="h-[48px]" />
 
-      <main className="min-h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-3 sm:pt-4 pb-6">
+      <main className="min-h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-3 sm:pt-4 pb-8">
         {!finalizado && (
           <div className="text-sm opacity-80 mb-1 sm:mb-2 text-center">
             Clique na região do seguinte país:
@@ -245,7 +245,7 @@ export default function AmericaDoSulPaisesPage() {
         )}
 
         <div className="w-full flex justify-center">
-          <div className="w-full max-w-[320px] sm:max-w-[520px] lg:max-w-[900px] aspect-square max-h-[48vh] sm:max-h-[60vh] lg:max-h-none">
+          <div className="w-full max-w-[360px] sm:max-w-[520px] lg:max-w-[900px] aspect-square max-h-[56vh] sm:max-h-[60vh] lg:max-h-none">
             <GlobeScene
               modo="america-sul"
               onCountryClick={handleCountryClick}
@@ -257,7 +257,7 @@ export default function AmericaDoSulPaisesPage() {
           </div>
         </div>
 
-        <div className="mt-5 mb-2">
+        <div className="mt-8 sm:mt-5 mb-2">
           <BotaoVoltar />
         </div>
       </main>
