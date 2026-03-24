@@ -24,12 +24,21 @@ export default function PaisesPage() {
         </h1>
 
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
+          {/* América do Sul — Países (azul principal) */}
           <HomeFeatureCard
-            title="Nível 1 — América do Sul"
+            title="América do Sul — Países"
             href="/geografia/paises/nivel-01"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 
+          {/* América do Sul — Capitais (azul mais suave da mesma família) */}
+          <HomeFeatureCard
+            title="América do Sul — Capitais"
+            href="/geografia/paises/capitais-america-sul"
+            colorClass="bg-[var(--color-5)]/70 hover:brightness-110"
+          />
+
+          {/* Mantidos */}
           <HomeFeatureCard
             title="Nível 2 — Américas"
             href="/geografia/paises/nivel-2"
