@@ -16,7 +16,6 @@ export default function GeografiaMenu() {
     <div className="min-h-screen bg-black text-white font-sans">
       <HeaderInterno onLogout={handleLogout} />
 
-      {/* Espaço para não ficar atrás do header */}
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
@@ -26,21 +25,21 @@ export default function GeografiaMenu() {
 
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
           <HomeFeatureCard
-            title="Países"
-            href="/geografia/paises"
+            title="América do Sul — Países"
+            href="/geografia/america-do-sul/paises"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 
           <HomeFeatureCard
-            title="Estados"
-            href="/geografia/estados"
-            colorClass="bg-[var(--color-4)] hover:brightness-110"
+            title="América do Sul — Capitais"
+            href="/geografia/america-do-sul/capitais"
+            colorClass="bg-[var(--color-5)]/70 hover:brightness-110"
           />
 
           <HomeFeatureCard
-            title="Capitais"
-            href="/geografia/capitais"
-            colorClass="bg-[var(--color-6)] hover:brightness-110"
+            title="Estados do Brasil"
+            href="/geografia/estados"
+            colorClass="bg-[var(--color-4)] hover:brightness-110"
           />
         </div>
 
