@@ -204,7 +204,7 @@ export default function GlobeScene({
     const globe = new Globe(container)
       .width(width)
       .height(height)
-      .globeImageUrl("/textures/earth-blue-marble-min.jpg")
+      .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
       .polygonAltitude((feature: object) =>
         getVisualState(feature as GeoJsonFeature).altitude
       )
