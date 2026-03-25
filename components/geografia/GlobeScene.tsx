@@ -93,7 +93,7 @@ function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
   } else if (modoAtual === "america-central") {
-    globe.pointOfView({ lat: 15, lng: -88, altitude: 1.35 }, 0);
+    globe.pointOfView({ lat: 15, lng: -88, altitude: 0.95 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
   }
@@ -103,7 +103,7 @@ function aplicarVistaFinal(globe: any, modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
   } else if (modoAtual === "america-central") {
-    globe.pointOfView({ lat: 15, lng: -88, altitude: 1.05 }, 1200);
+    globe.pointOfView({ lat: 15, lng: -88, altitude: 0.82 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
