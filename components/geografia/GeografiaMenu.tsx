@@ -5,12 +5,36 @@ import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
 import GamificationBar from "@/components/gamification/GamificationBar";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function GeografiaMenu() {
+type GeografiaMenuProps = {
+  constancyCount: number;
+  coins: number;
+  constancyRank: number;
+  coinsRank: number;
+};
+
+export default function GeografiaMenu({
+  constancyCount,
+  coins,
+  constancyRank,
+  coinsRank,
+}: GeografiaMenuProps) {
   const router = useRouter();
 
-  function handleLogout() {
-    router.push("/");
+  async function handleLogout() {
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Erro ao fazer logout:", error);
+        return;
+      }
+
+      router.replace("/login");
+    } catch (error) {
+      console.error("Erro inesperado ao fazer logout:", error);
+    }
   }
 
   return (
@@ -25,10 +49,10 @@ export default function GeografiaMenu() {
         </h1>
 
         <GamificationBar
-          constancyCount={7}
-          coins={128}
-          constancyRank={12}
-          coinsRank={7}
+          constancyCount={constancyCount}
+          coins={coins}
+          constancyRank={constancyRank}
+          coinsRank={coinsRank}
         />
 
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
