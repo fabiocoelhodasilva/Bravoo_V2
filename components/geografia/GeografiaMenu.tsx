@@ -44,7 +44,6 @@ export default function GeografiaMenu({
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
-
         {/* TÍTULO */}
         <h1 className="text-center text-4xl font-bold mb-6 gradient-text">
           Geografia
@@ -60,7 +59,6 @@ export default function GeografiaMenu({
 
         {/* CARDS FUNCIONAIS */}
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in mt-6">
-
           {/* América do Sul */}
           <HomeFeatureCard
             title="América do Sul — Países"
@@ -82,13 +80,18 @@ export default function GeografiaMenu({
             colorClass="bg-[var(--color-7)] hover:brightness-110"
           />
 
+          {/* Europa Ocidental */}
+          <HomeFeatureCard
+            title="Europa Ocidental — Países"
+            href="/geografia/europa/europa-ocidental/paises"
+            colorClass="bg-[var(--color-2)] hover:brightness-110"
+          />
         </div>
 
         {/* BOTÃO VOLTAR */}
         <div className="mt-12 mb-8">
           <BotaoVoltar />
         </div>
-
       </main>
     </div>
   );

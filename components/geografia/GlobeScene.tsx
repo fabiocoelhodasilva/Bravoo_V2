@@ -18,7 +18,12 @@ type GeoJsonData = {
   features?: GeoJsonFeature[];
 };
 
-type GlobeMode = "america-sul" | "america-central" | "america-norte" | "mundo";
+type GlobeMode =
+  | "america-sul"
+  | "america-central"
+  | "america-norte"
+  | "europa-ocidental"
+  | "mundo";
 
 type Props = {
   modo?: GlobeMode;
@@ -96,6 +101,8 @@ function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.78 }, 0);
   } else if (modoAtual === "america-norte") {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
+  } else if (modoAtual === "europa-ocidental") {
+    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.82 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
   }
@@ -108,6 +115,8 @@ function aplicarVistaFinal(globe: any, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.64 }, 1200);
   } else if (modoAtual === "america-norte") {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
+  } else if (modoAtual === "europa-ocidental") {
+    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.68 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
@@ -143,14 +152,19 @@ export default function GlobeScene({
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
   const clickLockRef = useRef(false);
-  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
   }, [onCountryClick]);
 
   const correctSet = useMemo(() => new Set(correctCountries), [correctCountries]);
-  const flashingSet = useMemo(() => new Set(flashingCountries), [flashingCountries]);
+  const flashingSet = useMemo(
+    () => new Set(flashingCountries),
+    [flashingCountries]
+  );
   const celebratingSet = useMemo(
     () => new Set(celebratingCountries),
     [celebratingCountries]
@@ -300,6 +314,8 @@ export default function GlobeScene({
         ? "/dados/america-central-simplified.geojson"
         : modo === "america-norte"
         ? "/dados/america-norte-simplified.geojson"
+        : modo === "europa-ocidental"
+        ? "/dados/europa-ocidental-simplified.geojson"
         : "/dados/countries.geojson";
 
     loadGeoJson(geoJsonPath)
