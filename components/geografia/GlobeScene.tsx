@@ -18,8 +18,10 @@ type GeoJsonData = {
   features?: GeoJsonFeature[];
 };
 
+type GlobeMode = "america-sul" | "america-central" | "mundo";
+
 type Props = {
-  modo?: "america-sul" | "mundo";
+  modo?: GlobeMode;
   onCountryClick?: (nome: string) => void;
   correctCountries?: string[];
   flashingCountries?: string[];
@@ -87,11 +89,23 @@ function getNaturalStyle(nome: string): CountryVisualState {
   return style;
 }
 
-function aplicarVistaInicial(globe: any, modoAtual: "america-sul" | "mundo") {
+function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
+  } else if (modoAtual === "america-central") {
+    globe.pointOfView({ lat: 15, lng: -88, altitude: 1.35 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
+  }
+}
+
+function aplicarVistaFinal(globe: any, modoAtual: GlobeMode) {
+  if (modoAtual === "america-sul") {
+    globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
+  } else if (modoAtual === "america-central") {
+    globe.pointOfView({ lat: 15, lng: -88, altitude: 1.05 }, 1200);
+  } else {
+    globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
 }
 
@@ -278,6 +292,8 @@ export default function GlobeScene({
     const geoJsonPath =
       modo === "america-sul"
         ? "/dados/america-sul-simplified.geojson"
+        : modo === "america-central"
+        ? "/dados/america-central-simplified.geojson"
         : "/dados/countries.geojson";
 
     loadGeoJson(geoJsonPath)
@@ -370,12 +386,7 @@ export default function GlobeScene({
     if (finalizado) {
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.6;
-
-      if (modo === "america-sul") {
-        globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
-      } else {
-        globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
-      }
+      aplicarVistaFinal(globe, modo);
     } else {
       controls.autoRotate = false;
       controls.autoRotateSpeed = 0.5;

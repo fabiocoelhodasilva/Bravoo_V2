@@ -44,10 +44,13 @@ export default function GeografiaMenu({
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
+
+        {/* TÍTULO */}
         <h1 className="text-center text-4xl font-bold mb-6 gradient-text">
           Geografia
         </h1>
 
+        {/* GAMIFICAÇÃO */}
         <GamificationBar
           constancyCount={constancyCount}
           coins={coins}
@@ -55,29 +58,30 @@ export default function GeografiaMenu({
           coinsRank={coinsRank}
         />
 
-        <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in">
+        {/* CARDS FUNCIONAIS */}
+        <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in mt-6">
+
+          {/* América do Sul */}
           <HomeFeatureCard
             title="América do Sul — Países"
             href="/geografia/america-do-sul/paises"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 
+          {/* América Central */}
           <HomeFeatureCard
-            title="América do Sul — Capitais"
-            href="/geografia/america-do-sul/capitais"
-            colorClass="bg-[var(--color-5)]/70 hover:brightness-110"
+            title="América Central — Países"
+            href="/geografia/america-central/paises"
+            colorClass="bg-[var(--color-6)] hover:brightness-110"
           />
 
-          <HomeFeatureCard
-            title="Estados do Brasil"
-            href="/geografia/estados"
-            colorClass="bg-[var(--color-4)] hover:brightness-110"
-          />
         </div>
 
+        {/* BOTÃO VOLTAR */}
         <div className="mt-12 mb-8">
           <BotaoVoltar />
         </div>
+
       </main>
     </div>
   );
