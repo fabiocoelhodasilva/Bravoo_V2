@@ -80,7 +80,7 @@ function getNaturalStyle(nome: string): CountryVisualState {
   const style = {
     capColor: capPalette[seed],
     sideColor: sidePalette[seed],
-    altitude: 0.022,
+    altitude: 0.018,
   };
 
   naturalStyleCache.set(nome, style);
@@ -122,6 +122,10 @@ export default function GlobeScene({
   const globeInstanceRef = useRef<any>(null);
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
   const resizeFrameRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+  const lastPointerDownRef = useRef({ x: 0, y: 0 });
+  const clickLockRef = useRef(false);
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
@@ -157,7 +161,7 @@ export default function GlobeScene({
         map.set(nome, {
           capColor: celebrateCapColor,
           sideColor: celebrateSideColor,
-          altitude: 0.06,
+          altitude: 0.05,
         });
         return;
       }
@@ -166,7 +170,7 @@ export default function GlobeScene({
         map.set(nome, {
           capColor: correctCapColor,
           sideColor: correctSideColor,
-          altitude: 0.038,
+          altitude: 0.032,
         });
         return;
       }
@@ -175,7 +179,7 @@ export default function GlobeScene({
         map.set(nome, {
           capColor: flashWrongCapColor,
           sideColor: flashWrongSideColor,
-          altitude: 0.038,
+          altitude: 0.032,
         });
       }
     });
@@ -188,6 +192,18 @@ export default function GlobeScene({
     return visualStateByName.get(nome) || getNaturalStyle(nome);
   }
 
+  function lockClickTemporarily() {
+    clickLockRef.current = true;
+
+    if (clickUnlockTimeoutRef.current) {
+      clearTimeout(clickUnlockTimeoutRef.current);
+    }
+
+    clickUnlockTimeoutRef.current = setTimeout(() => {
+      clickLockRef.current = false;
+    }, 180);
+  }
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -198,6 +214,31 @@ export default function GlobeScene({
       width: container.clientWidth || window.innerWidth,
       height: container.clientHeight || window.innerHeight,
     });
+
+    const handlePointerDown = (event: PointerEvent) => {
+      isDraggingRef.current = false;
+      lastPointerDownRef.current = { x: event.clientX, y: event.clientY };
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const dx = Math.abs(event.clientX - lastPointerDownRef.current.x);
+      const dy = Math.abs(event.clientY - lastPointerDownRef.current.y);
+
+      if (dx > 6 || dy > 6) {
+        isDraggingRef.current = true;
+      }
+    };
+
+    const handlePointerUp = () => {
+      window.setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 0);
+    };
+
+    container.addEventListener("pointerdown", handlePointerDown);
+    container.addEventListener("pointermove", handlePointerMove);
+    container.addEventListener("pointerup", handlePointerUp);
+    container.addEventListener("pointerleave", handlePointerUp);
 
     const { width, height } = getContainerSize();
 
@@ -217,8 +258,13 @@ export default function GlobeScene({
       .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
       .polygonsTransitionDuration(0)
       .onPolygonClick((polygon: object) => {
+        if (isDraggingRef.current) return;
+        if (clickLockRef.current) return;
+
         const nome = getCountryName(polygon as GeoJsonFeature);
         if (!nome) return;
+
+        lockClickTemporarily();
         onCountryClickRef.current?.(nome);
       });
 
@@ -246,11 +292,13 @@ export default function GlobeScene({
           controls.enableZoom = true;
           controls.enablePan = false;
           controls.enableDamping = true;
-          controls.dampingFactor = 0.08;
-          controls.rotateSpeed = 0.7;
-          controls.zoomSpeed = 0.8;
+          controls.dampingFactor = 0.1;
+          controls.rotateSpeed = 0.55;
+          controls.zoomSpeed = 0.7;
           controls.autoRotate = false;
-          controls.autoRotateSpeed = 0.55;
+          controls.autoRotateSpeed = 0.5;
+          controls.minDistance = 140;
+          controls.maxDistance = 420;
         }
       })
       .catch((error) => {
@@ -274,10 +322,20 @@ export default function GlobeScene({
 
     return () => {
       destroyed = true;
+
+      container.removeEventListener("pointerdown", handlePointerDown);
+      container.removeEventListener("pointermove", handlePointerMove);
+      container.removeEventListener("pointerup", handlePointerUp);
+      container.removeEventListener("pointerleave", handlePointerUp);
+
       resizeObserver.disconnect();
 
       if (resizeFrameRef.current) {
         cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      if (clickUnlockTimeoutRef.current) {
+        clearTimeout(clickUnlockTimeoutRef.current);
       }
 
       globeInstanceRef.current = null;
@@ -311,7 +369,7 @@ export default function GlobeScene({
 
     if (finalizado) {
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.65;
+      controls.autoRotateSpeed = 0.6;
 
       if (modo === "america-sul") {
         globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
@@ -320,14 +378,14 @@ export default function GlobeScene({
       }
     } else {
       controls.autoRotate = false;
-      controls.autoRotateSpeed = 0.55;
+      controls.autoRotateSpeed = 0.5;
     }
   }, [finalizado, modo]);
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-black rounded-2xl overflow-hidden"
+      className="w-full h-full bg-black rounded-2xl overflow-hidden touch-none"
     />
   );
 }
