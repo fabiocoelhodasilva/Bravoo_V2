@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Globe from "globe.gl";
 
 type GeoJsonFeature = {
   properties?: {
     name?: string;
     ADMIN?: string;
+  };
+  geometry?: {
+    type?: string;
+    coordinates?: any;
   };
 };
 
@@ -23,22 +27,88 @@ type Props = {
   finalizado?: boolean;
 };
 
-const PAISES_AMERICA_SUL = [
-  "Argentina",
-  "Bolivia",
-  "Brazil",
-  "Chile",
-  "Colombia",
-  "Ecuador",
-  "Guyana",
-  "Paraguay",
-  "Peru",
-  "Suriname",
-  "Uruguay",
-  "Venezuela",
-  "French Guiana",
-  "France",
-];
+type CountryVisualState = {
+  capColor: string;
+  sideColor: string;
+  altitude: number;
+};
+
+const geoJsonCache = new Map<string, GeoJsonFeature[]>();
+const countrySeedCache = new Map<string, number>();
+const naturalStyleCache = new Map<string, CountryVisualState>();
+
+function getCountryName(feature: GeoJsonFeature) {
+  return feature.properties?.name || feature.properties?.ADMIN || "";
+}
+
+function getCountrySeed(nome: string) {
+  const cached = countrySeedCache.get(nome);
+  if (cached !== undefined) return cached;
+
+  let total = 0;
+  for (let i = 0; i < nome.length; i += 1) {
+    total += nome.charCodeAt(i);
+  }
+
+  const seed = total % 5;
+  countrySeedCache.set(nome, seed);
+  return seed;
+}
+
+function getNaturalStyle(nome: string): CountryVisualState {
+  const cached = naturalStyleCache.get(nome);
+  if (cached) return cached;
+
+  const seed = getCountrySeed(nome);
+
+  const capPalette = [
+    "rgba(255, 255, 255, 0.07)",
+    "rgba(191, 219, 254, 0.08)",
+    "rgba(186, 230, 253, 0.075)",
+    "rgba(224, 242, 254, 0.07)",
+    "rgba(255, 255, 255, 0.06)",
+  ];
+
+  const sidePalette = [
+    "rgba(255, 255, 255, 0.025)",
+    "rgba(191, 219, 254, 0.03)",
+    "rgba(186, 230, 253, 0.028)",
+    "rgba(224, 242, 254, 0.024)",
+    "rgba(255, 255, 255, 0.02)",
+  ];
+
+  const style = {
+    capColor: capPalette[seed],
+    sideColor: sidePalette[seed],
+    altitude: 0.022,
+  };
+
+  naturalStyleCache.set(nome, style);
+  return style;
+}
+
+function aplicarVistaInicial(globe: any, modoAtual: "america-sul" | "mundo") {
+  if (modoAtual === "america-sul") {
+    globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
+  } else {
+    globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
+  }
+}
+
+async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
+  const cached = geoJsonCache.get(path);
+  if (cached) return cached;
+
+  const res = await fetch(path);
+  if (!res.ok) {
+    throw new Error(`Erro ao buscar GeoJSON: ${res.status}`);
+  }
+
+  const data: GeoJsonData = await res.json();
+  const features = data.features ?? [];
+  geoJsonCache.set(path, features);
+  return features;
+}
 
 export default function GlobeScene({
   modo = "mundo",
@@ -51,97 +121,71 @@ export default function GlobeScene({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
+  const resizeFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
   }, [onCountryClick]);
 
-  const getCountryName = (feature: GeoJsonFeature) =>
-    feature.properties?.name || feature.properties?.ADMIN || "";
+  const correctSet = useMemo(() => new Set(correctCountries), [correctCountries]);
+  const flashingSet = useMemo(() => new Set(flashingCountries), [flashingCountries]);
+  const celebratingSet = useMemo(
+    () => new Set(celebratingCountries),
+    [celebratingCountries]
+  );
 
-  function getCountrySeed(nome: string) {
-    let total = 0;
+  const visualStateByName = useMemo(() => {
+    const map = new Map<string, CountryVisualState>();
 
-    for (let i = 0; i < nome.length; i += 1) {
-      total += nome.charCodeAt(i);
-    }
+    const correctCapColor = "rgba(147, 197, 253, 0.20)";
+    const correctSideColor = "rgba(96, 165, 250, 0.10)";
 
-    return total % 5;
-  }
+    const celebrateCapColor = "rgba(191, 219, 254, 0.38)";
+    const celebrateSideColor = "rgba(147, 197, 253, 0.20)";
 
-  function getNaturalCapColor(nome: string) {
-    const seed = getCountrySeed(nome);
+    const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
+    const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
 
-    const capPalette = [
-      "rgba(255, 255, 255, 0.07)",
-      "rgba(191, 219, 254, 0.08)",
-      "rgba(186, 230, 253, 0.075)",
-      "rgba(224, 242, 254, 0.07)",
-      "rgba(255, 255, 255, 0.06)",
-    ];
+    const allNames = new Set<string>([
+      ...correctSet,
+      ...flashingSet,
+      ...celebratingSet,
+    ]);
 
-    return capPalette[seed];
-  }
+    allNames.forEach((nome) => {
+      if (celebratingSet.has(nome)) {
+        map.set(nome, {
+          capColor: celebrateCapColor,
+          sideColor: celebrateSideColor,
+          altitude: 0.06,
+        });
+        return;
+      }
 
-  function getNaturalSideColor(nome: string) {
-    const seed = getCountrySeed(nome);
+      if (correctSet.has(nome)) {
+        map.set(nome, {
+          capColor: correctCapColor,
+          sideColor: correctSideColor,
+          altitude: 0.038,
+        });
+        return;
+      }
 
-    const sidePalette = [
-      "rgba(255, 255, 255, 0.025)",
-      "rgba(191, 219, 254, 0.03)",
-      "rgba(186, 230, 253, 0.028)",
-      "rgba(224, 242, 254, 0.024)",
-      "rgba(255, 255, 255, 0.02)",
-    ];
+      if (flashingSet.has(nome)) {
+        map.set(nome, {
+          capColor: flashWrongCapColor,
+          sideColor: flashWrongSideColor,
+          altitude: 0.038,
+        });
+      }
+    });
 
-    return sidePalette[seed];
-  }
+    return map;
+  }, [correctSet, flashingSet, celebratingSet]);
 
-  const correctCapColor = "rgba(147, 197, 253, 0.20)";
-  const correctSideColor = "rgba(96, 165, 250, 0.10)";
-
-  const celebrateCapColor = "rgba(191, 219, 254, 0.38)";
-  const celebrateSideColor = "rgba(147, 197, 253, 0.20)";
-
-  const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
-  const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
-
-  function getCapColor(feature: GeoJsonFeature) {
+  function getVisualState(feature: GeoJsonFeature): CountryVisualState {
     const nome = getCountryName(feature);
-
-    if (celebratingCountries.includes(nome)) return celebrateCapColor;
-    if (correctCountries.includes(nome)) return correctCapColor;
-    if (flashingCountries.includes(nome)) return flashWrongCapColor;
-
-    return getNaturalCapColor(nome);
-  }
-
-  function getSideColor(feature: GeoJsonFeature) {
-    const nome = getCountryName(feature);
-
-    if (celebratingCountries.includes(nome)) return celebrateSideColor;
-    if (correctCountries.includes(nome)) return correctSideColor;
-    if (flashingCountries.includes(nome)) return flashWrongSideColor;
-
-    return getNaturalSideColor(nome);
-  }
-
-  function getAltitude(feature: GeoJsonFeature) {
-    const nome = getCountryName(feature);
-
-    if (celebratingCountries.includes(nome)) return 0.065;
-    if (correctCountries.includes(nome)) return 0.04;
-    if (flashingCountries.includes(nome)) return 0.04;
-
-    return 0.025;
-  }
-
-  function aplicarVistaInicial(globe: any) {
-    if (modo === "america-sul") {
-      globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
-    } else {
-      globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
-    }
+    return visualStateByName.get(nome) || getNaturalStyle(nome);
   }
 
   useEffect(() => {
@@ -160,13 +204,18 @@ export default function GlobeScene({
     const globe = new Globe(container)
       .width(width)
       .height(height)
-      .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
-      .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-      .polygonAltitude((feature: object) => getAltitude(feature as GeoJsonFeature))
-      .polygonCapColor((feature: object) => getCapColor(feature as GeoJsonFeature))
-      .polygonSideColor((feature: object) => getSideColor(feature as GeoJsonFeature))
-      .polygonStrokeColor(() => "rgba(255,255,255,0.18)")
-      .polygonsTransitionDuration(180)
+      .globeImageUrl("/textures/earth-blue-marble-min.jpg")
+      .polygonAltitude((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).altitude
+      )
+      .polygonCapColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).capColor
+      )
+      .polygonSideColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).sideColor
+      )
+      .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
+      .polygonsTransitionDuration(0)
       .onPolygonClick((polygon: object) => {
         const nome = getCountryName(polygon as GeoJsonFeature);
         if (!nome) return;
@@ -175,44 +224,50 @@ export default function GlobeScene({
 
     globeInstanceRef.current = globe;
 
-    fetch("/dados/countries.geojson")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Erro ao buscar GeoJSON: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data: GeoJsonData) => {
+    const renderer = globe.renderer?.();
+    if (renderer) {
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.2));
+    }
+
+    const geoJsonPath =
+      modo === "america-sul"
+        ? "/dados/america-sul-simplified.geojson"
+        : "/dados/countries.geojson";
+
+    loadGeoJson(geoJsonPath)
+      .then((features) => {
         if (destroyed) return;
 
-        let features = data.features ?? [];
-
-        if (modo === "america-sul") {
-          features = features.filter((feature) =>
-            PAISES_AMERICA_SUL.includes(getCountryName(feature))
-          );
-        }
-
         globe.polygonsData(features);
-        aplicarVistaInicial(globe);
+        aplicarVistaInicial(globe, modo);
 
         const controls = globe.controls?.();
         if (controls) {
           controls.enableZoom = true;
           controls.enablePan = false;
+          controls.enableDamping = true;
+          controls.dampingFactor = 0.08;
+          controls.rotateSpeed = 0.7;
+          controls.zoomSpeed = 0.8;
           controls.autoRotate = false;
-          controls.autoRotateSpeed = 0.6;
+          controls.autoRotateSpeed = 0.55;
         }
       })
       .catch((error) => {
-        console.error("Erro ao carregar countries.geojson:", error);
+        console.error("Erro ao carregar GeoJSON:", error);
       });
 
     const resizeObserver = new ResizeObserver(() => {
       if (destroyed || !globeInstanceRef.current) return;
 
-      const { width, height } = getContainerSize();
-      globeInstanceRef.current.width(width).height(height);
+      if (resizeFrameRef.current) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        const { width, height } = getContainerSize();
+        globeInstanceRef.current.width(width).height(height);
+      });
     });
 
     resizeObserver.observe(container);
@@ -220,6 +275,11 @@ export default function GlobeScene({
     return () => {
       destroyed = true;
       resizeObserver.disconnect();
+
+      if (resizeFrameRef.current) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+
       globeInstanceRef.current = null;
       container.innerHTML = "";
     };
@@ -230,11 +290,17 @@ export default function GlobeScene({
     if (!globe) return;
 
     globe
-      .polygonCapColor((feature: object) => getCapColor(feature as GeoJsonFeature))
-      .polygonSideColor((feature: object) => getSideColor(feature as GeoJsonFeature))
-      .polygonAltitude((feature: object) => getAltitude(feature as GeoJsonFeature))
-      .polygonsTransitionDuration(180);
-  }, [correctCountries, flashingCountries, celebratingCountries]);
+      .polygonCapColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).capColor
+      )
+      .polygonSideColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).sideColor
+      )
+      .polygonAltitude((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).altitude
+      )
+      .polygonsTransitionDuration(0);
+  }, [visualStateByName]);
 
   useEffect(() => {
     const globe = globeInstanceRef.current;
@@ -245,7 +311,7 @@ export default function GlobeScene({
 
     if (finalizado) {
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.7;
+      controls.autoRotateSpeed = 0.65;
 
       if (modo === "america-sul") {
         globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
@@ -254,8 +320,7 @@ export default function GlobeScene({
       }
     } else {
       controls.autoRotate = false;
-      controls.autoRotateSpeed = 0.6;
-      aplicarVistaInicial(globe);
+      controls.autoRotateSpeed = 0.55;
     }
   }, [finalizado, modo]);
 
