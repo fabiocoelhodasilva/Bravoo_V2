@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import GlobeScene from "@/components/geografia/GlobeScene";
+import { supabase } from "@/lib/supabaseClient";
 
 type PaisItem = {
   en: string;
@@ -34,6 +35,11 @@ const PAISES_MAP: PaisItem[] = [
 
 const PONTUACAO_INICIAL = 13;
 
+const ATIVIDADE_ID = "22222222-2222-2222-2222-222222222001";
+const MATERIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
+const ASSUNTO_ID = "cb092890-2955-4eab-a84f-8f6548cb4eb6";
+const DETALHE_ID = "bbbd11be-a755-4816-ab2f-99b2d225b8b0";
+
 export default function AmericaDoSulPaisesPage() {
   const router = useRouter();
 
@@ -44,6 +50,8 @@ export default function AmericaDoSulPaisesPage() {
   const [mensagem, setMensagem] = useState("");
   const [inicioJogo, setInicioJogo] = useState<number>(Date.now());
   const [finalizado, setFinalizado] = useState(false);
+  const [logoutCarregando, setLogoutCarregando] = useState(false);
+  const [salvandoResultado, setSalvandoResultado] = useState(false);
 
   const [correctCountries, setCorrectCountries] = useState<string[]>([]);
   const [flashingCountries, setFlashingCountries] = useState<string[]>([]);
@@ -53,8 +61,25 @@ export default function AmericaDoSulPaisesPage() {
 
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  function handleLogout() {
-    router.push("/");
+  async function handleLogout() {
+    if (logoutCarregando) return;
+
+    try {
+      setLogoutCarregando(true);
+
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Erro ao fazer logout:", error);
+        setLogoutCarregando(false);
+        return;
+      }
+
+      router.replace("/login");
+    } catch (error) {
+      console.error("Erro inesperado ao fazer logout:", error);
+      setLogoutCarregando(false);
+    }
   }
 
   function embaralharPaises() {
@@ -121,17 +146,67 @@ export default function AmericaDoSulPaisesPage() {
     oscillator.stop(ctx.currentTime + 0.18);
   }
 
-  function finalizarJogo(acertosFinais: number, pontuacaoFinal: number) {
+  async function finalizarJogo(acertosFinais: number, pontuacaoFinal: number) {
     setFinalizado(true);
     setMensagem("");
     tocarSom("vitoria");
 
-    console.log("Resultado final:", {
-      pontuacao: pontuacaoFinal,
-      acertos: acertosFinais,
-      total_itens: listaPaises.length,
-      tempo_total_segundos: Math.floor((Date.now() - inicioJogo) / 1000),
-    });
+    const tempoTotalSegundos = Math.floor((Date.now() - inicioJogo) / 1000);
+
+    try {
+      setSalvandoResultado(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Erro ao buscar usuário logado:", userError);
+        return;
+      }
+
+      if (!user) {
+        console.error("Usuário não encontrado para salvar a sessão.");
+        return;
+      }
+
+      const { error: rpcError } = await supabase.rpc(
+        "next_registrar_sessao_e_premiar",
+        {
+          p_usuario_id: user.id,
+          p_atividade_id: ATIVIDADE_ID,
+          p_materia_id: MATERIA_ID,
+          p_assunto_id: ASSUNTO_ID,
+          p_detalhe_id: DETALHE_ID,
+          p_pontuacao: pontuacaoFinal,
+          p_acertos: acertosFinais,
+          p_total_itens: listaPaises.length,
+          p_tempo_total_segundos: tempoTotalSegundos,
+        }
+      );
+
+      if (rpcError) {
+        console.error("Erro ao registrar sessão e premiar:", rpcError);
+        return;
+      }
+
+      console.log("Sessão registrada com sucesso:", {
+        usuario_id: user.id,
+        atividade_id: ATIVIDADE_ID,
+        materia_id: MATERIA_ID,
+        assunto_id: ASSUNTO_ID,
+        detalhe_id: DETALHE_ID,
+        pontuacao: pontuacaoFinal,
+        acertos: acertosFinais,
+        total_itens: listaPaises.length,
+        tempo_total_segundos: tempoTotalSegundos,
+      });
+    } catch (error) {
+      console.error("Erro inesperado ao finalizar jogo:", error);
+    } finally {
+      setSalvandoResultado(false);
+    }
   }
 
   function piscarErro(nomePais: string) {
@@ -165,6 +240,7 @@ export default function AmericaDoSulPaisesPage() {
     setCorrectCountries([]);
     setFlashingCountries([]);
     setCelebratingCountries([]);
+    setSalvandoResultado(false);
   }
 
   function handleCountryClick(nome: string) {
@@ -184,7 +260,9 @@ export default function AmericaDoSulPaisesPage() {
       setCorrectCountries((prev) => [...new Set([...prev, ...nomesAceitos])]);
 
       if (indiceAtual + 1 >= listaPaises.length) {
-        setTimeout(() => finalizarJogo(novoTotalAcertos, pontuacao), 700);
+        setTimeout(() => {
+          void finalizarJogo(novoTotalAcertos, pontuacao);
+        }, 700);
       } else {
         setTimeout(() => {
           setIndiceAtual((i) => i + 1);
@@ -221,8 +299,15 @@ export default function AmericaDoSulPaisesPage() {
           {finalizado ? (
             <>
               <div className="text-sm mb-2 text-center">
-                Pontuação: {pontuacao} | Progresso: {listaPaises.length}/{listaPaises.length}
+                Pontuação: {pontuacao} | Progresso: {listaPaises.length}/
+                {listaPaises.length}
               </div>
+
+              {salvandoResultado && (
+                <div className="text-xs text-center opacity-80 mb-2">
+                  Salvando seu resultado...
+                </div>
+              )}
 
               <div className="text-sm text-center">
                 <button
@@ -236,7 +321,8 @@ export default function AmericaDoSulPaisesPage() {
           ) : (
             <>
               <div className="text-sm mb-2 text-center">
-                Pontuação: {pontuacao} | Progresso: {indiceAtual + 1}/{listaPaises.length}
+                Pontuação: {pontuacao} | Progresso: {indiceAtual + 1}/
+                {listaPaises.length}
               </div>
 
               <div className="text-sm mb-3 text-center min-h-[24px]">
