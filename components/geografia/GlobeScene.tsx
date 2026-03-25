@@ -18,7 +18,7 @@ type GeoJsonData = {
   features?: GeoJsonFeature[];
 };
 
-type GlobeMode = "america-sul" | "america-central" | "mundo";
+type GlobeMode = "america-sul" | "america-central" | "america-norte" | "mundo";
 
 type Props = {
   modo?: GlobeMode;
@@ -94,6 +94,8 @@ function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
   } else if (modoAtual === "america-central") {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.78 }, 0);
+  } else if (modoAtual === "america-norte") {
+    globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
   }
@@ -104,6 +106,8 @@ function aplicarVistaFinal(globe: any, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
   } else if (modoAtual === "america-central") {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.64 }, 1200);
+  } else if (modoAtual === "america-norte") {
+    globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
@@ -294,6 +298,8 @@ export default function GlobeScene({
         ? "/dados/america-sul-simplified.geojson"
         : modo === "america-central"
         ? "/dados/america-central-simplified.geojson"
+        : modo === "america-norte"
+        ? "/dados/america-norte-simplified.geojson"
         : "/dados/countries.geojson";
 
     loadGeoJson(geoJsonPath)

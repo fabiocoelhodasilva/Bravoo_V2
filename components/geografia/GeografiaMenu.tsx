@@ -75,6 +75,13 @@ export default function GeografiaMenu({
             colorClass="bg-[var(--color-6)] hover:brightness-110"
           />
 
+          {/* América do Norte */}
+          <HomeFeatureCard
+            title="América do Norte — Países"
+            href="/geografia/america-do-norte/paises"
+            colorClass="bg-[var(--color-7)] hover:brightness-110"
+          />
+
         </div>
 
         {/* BOTÃO VOLTAR */}
