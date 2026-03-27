@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NovoObjetivoForm } from "@/components/objetivos/NovoObjetivoForm";
+import { useAuth } from "@/context/AuthContext";
 import {
   fetchCategoriasObjetivo,
-  getCurrentSessionOrThrow,
   signOutObjetivos,
   createObjetivo,
 } from "@/lib/objetivos/objetivos-service";
@@ -21,36 +21,27 @@ type CategoriaOption = {
 
 export default function NovoObjetivoPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
-  const [checking, setChecking] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
 
   useEffect(() => {
-    void initializePage();
-  }, []);
+    if (loading || !user?.id) return;
 
-  async function initializePage() {
-    try {
-      const session = await getCurrentSessionOrThrow();
-      const currentUserId = session.user.id;
-      setUserId(currentUserId);
-
-      const categoriasData = await fetchCategoriasObjetivo();
-      setCategorias(categoriasData);
-    } catch (error) {
-      if (error instanceof Error && error.message === "NO_SESSION") {
-        router.replace("/login");
-        return;
+    async function initializePage() {
+      try {
+        const categoriasData = await fetchCategoriasObjetivo();
+        setCategorias(categoriasData);
+      } catch (error) {
+        console.error("Erro ao carregar página de novo objetivo:", error);
+      } finally {
+        setLoadingCategorias(false);
       }
-
-      console.error("Erro ao carregar página de novo objetivo:", error);
-    } finally {
-      setLoadingCategorias(false);
-      setChecking(false);
     }
-  }
+
+    void initializePage();
+  }, [loading, user?.id]);
 
   async function handleLogout() {
     try {
@@ -68,12 +59,12 @@ export default function NovoObjetivoPage() {
     titulo: string;
     dataPrevistaConclusao: string;
   }) {
-    if (!userId) {
+    if (!user?.id) {
       throw new Error("Usuário não autenticado.");
     }
 
     await createObjetivo({
-      userId,
+      userId: user.id,
       categoriaId: values.categoriaId,
       titulo: values.titulo,
       dataPrevistaConclusao: values.dataPrevistaConclusao || null,
@@ -83,12 +74,16 @@ export default function NovoObjetivoPage() {
     router.refresh();
   }
 
-  if (checking) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-sm opacity-80">Carregando…</div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (

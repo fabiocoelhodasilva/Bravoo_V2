@@ -9,13 +9,58 @@ type CategoriaObjetivoOption = {
   cor?: string | null;
 };
 
-export async function getCurrentSessionOrThrow() {
-  const { data, error } = await supabase.auth.getSession();
+type ObjetivoRow = {
+  id: string;
+  categoria_id: string | null;
+  titulo: string;
+  progresso_percentual: number | null;
+  objetivos_categoria:
+    | {
+        id: string;
+        nome: string;
+        cor?: string | null;
+      }
+    | {
+        id: string;
+        nome: string;
+        cor?: string | null;
+      }[]
+    | null;
+};
 
-  if (error) throw error;
-  if (!data.session) throw new Error("NO_SESSION");
+type CategoriaCompletaRow = {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  ordem?: number | null;
+  cor?: string | null;
+  ativo?: boolean | null;
+};
 
-  return data.session;
+type CategoriaBasicaRow = {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+};
+
+function hojeISO() {
+  const d = new Date();
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function normalizarObjetivo(item: ObjetivoRow, userId: string): Objetivo {
+  const categoria = Array.isArray(item.objetivos_categoria)
+    ? item.objetivos_categoria[0] ?? null
+    : item.objetivos_categoria ?? null;
+
+  return {
+    ...item,
+    usuario_id: userId,
+    objetivos_categoria: categoria,
+  } as Objetivo;
 }
 
 export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> {
@@ -23,34 +68,22 @@ export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> 
     .from("objetivos")
     .select(`
       id,
-      usuario_id,
       categoria_id,
       titulo,
-      data_inicio,
-      data_prevista_conclusao,
-      status,
       progresso_percentual,
-      created_at,
       objetivos_categoria:categoria_id (
         id,
         nome,
-        descricao,
-        ordem,
-        cor,
-        ativo
+        cor
       )
     `)
-    .eq("usuario_id", userId)
-    .order("created_at", { ascending: false });
+    .eq("usuario_id", userId);
 
   if (error) throw error;
 
-  return (data ?? []).map((item: any) => ({
-    ...item,
-    objetivos_categoria: Array.isArray(item.objetivos_categoria)
-      ? item.objetivos_categoria[0] ?? null
-      : item.objetivos_categoria ?? null,
-  })) as Objetivo[];
+  return (data ?? []).map((item) =>
+    normalizarObjetivo(item as ObjetivoRow, userId)
+  );
 }
 
 export async function updateObjetivoProgress(params: {
@@ -85,14 +118,6 @@ export async function signOutObjetivos() {
   if (error) throw error;
 }
 
-function hojeISO() {
-  const d = new Date();
-  const ano = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const dia = String(d.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
-}
-
 export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption[]> {
   const tentativaCompleta = await supabase
     .from("objetivos_categoria")
@@ -101,13 +126,15 @@ export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption
     .order("ordem", { ascending: true });
 
   if (!tentativaCompleta.error) {
-    return (tentativaCompleta.data ?? []).map((c: any) => ({
-      id: c.id,
-      nome: c.nome,
-      descricao: c.descricao ?? "",
-      ordem: c.ordem ?? 999,
-      cor: c.cor ?? "",
-    }));
+    return (tentativaCompleta.data as CategoriaCompletaRow[] | null ?? []).map(
+      (c) => ({
+        id: c.id,
+        nome: c.nome,
+        descricao: c.descricao ?? "",
+        ordem: c.ordem ?? 999,
+        cor: c.cor ?? "",
+      })
+    );
   }
 
   const tentativaBasica = await supabase
@@ -117,13 +144,15 @@ export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption
 
   if (tentativaBasica.error) throw tentativaBasica.error;
 
-  return (tentativaBasica.data ?? []).map((c: any) => ({
-    id: c.id,
-    nome: c.nome,
-    descricao: c.descricao ?? "",
-    ordem: 999,
-    cor: "",
-  }));
+  return (tentativaBasica.data as CategoriaBasicaRow[] | null ?? []).map(
+    (c) => ({
+      id: c.id,
+      nome: c.nome,
+      descricao: c.descricao ?? "",
+      ordem: 999,
+      cor: "",
+    })
+  );
 }
 
 export async function createObjetivo(params: {

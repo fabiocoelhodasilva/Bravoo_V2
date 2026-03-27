@@ -6,6 +6,36 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import BrandLogo from "@/components/ui/BrandLogo";
 
+function traduzirErroLogin(message?: string) {
+  const msg = (message || "").toLowerCase();
+
+  if (
+    msg.includes("invalid login credentials") ||
+    msg.includes("user not found") ||
+    msg.includes("invalid email or password")
+  ) {
+    return "E-mail ou senha incorretos.";
+  }
+
+  if (msg.includes("email not confirmed")) {
+    return "Confirme seu e-mail antes de entrar.";
+  }
+
+  if (msg.includes("too many requests")) {
+    return "Muitas tentativas. Aguarde alguns minutos.";
+  }
+
+  if (
+    msg.includes("network") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("fetch")
+  ) {
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  }
+
+  return "Não foi possível fazer login. Tente novamente.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -60,11 +90,12 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Erro ao logar:", error);
-        setMensagem("Erro: " + (error.message || "Não foi possível fazer login."));
+        setMensagem(traduzirErroLogin(error.message));
         return;
       }
 
       const usuarioId = data?.user?.id;
+
       if (!usuarioId) {
         setMensagem("Não foi possível identificar o usuário.");
         return;
@@ -91,6 +122,7 @@ export default function LoginPage() {
         try {
           sessionStorage.setItem("mensagem_professor", msg);
         } catch {}
+
         setMensagem(msg);
         setTimeout(() => router.replace("/aluno"), 1500);
         return;
@@ -100,7 +132,7 @@ export default function LoginPage() {
       setTimeout(() => router.replace("/aluno"), 900);
     } catch (e) {
       console.error("Erro inesperado ao fazer login:", e);
-      setMensagem("Erro inesperado ao fazer login.");
+      setMensagem("Não foi possível fazer login. Tente novamente.");
     } finally {
       setLoading(false);
     }

@@ -15,65 +15,45 @@ const EUROPA_OCIDENTAL = new Set([
   "France",
   "Italy",
   "Germany",
-  "England", // importante no seu geojson
+  "England",
 ]);
 
-// Função para pegar nome do país
 function getCountryName(feature) {
   return feature?.properties?.name || feature?.properties?.ADMIN || "";
 }
 
-// 🔥 AJUSTE PRINCIPAL: usar 4 casas decimais
-function simplifyCoordinates(coords, decimals = 4) {
-  if (!Array.isArray(coords)) return coords;
-
-  // caso base: ponto [lng, lat]
-  if (typeof coords[0] === "number" && typeof coords[1] === "number") {
-    return [
-      Number(coords[0].toFixed(decimals)),
-      Number(coords[1].toFixed(decimals)),
-    ];
-  }
-
-  return coords.map((item) => simplifyCoordinates(item, decimals));
-}
-
-// Simplifica um país inteiro
-function simplifyFeature(feature) {
+function cloneFeatureWithOriginalCoordinates(feature) {
   return {
     ...feature,
-    geometry: {
-      ...feature.geometry,
-      coordinates: simplifyCoordinates(feature.geometry.coordinates, 4), // 🔥 aqui também
-    },
+    geometry: feature?.geometry
+      ? {
+          ...feature.geometry,
+          coordinates: feature.geometry.coordinates,
+        }
+      : feature.geometry,
   };
 }
 
 try {
-  // Ler arquivo original
   const raw = fs.readFileSync(inputPath, "utf8");
   const geojson = JSON.parse(raw);
 
   const allNames = (geojson.features || []).map(getCountryName);
 
-  // Filtrar países
   const filteredFeatures = (geojson.features || [])
     .filter((feature) => EUROPA_OCIDENTAL.has(getCountryName(feature)))
-    .map(simplifyFeature);
+    .map(cloneFeatureWithOriginalCoordinates);
 
-  // Novo arquivo
   const output = {
     type: "FeatureCollection",
     features: filteredFeatures,
   };
 
-  // Salvar
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), "utf8");
 
   console.log("✅ Arquivo gerado com sucesso:");
   console.log(outputPath);
   console.log("🌍 Total de países:", filteredFeatures.length);
-
   console.log(
     "📌 Países encontrados:",
     filteredFeatures.map((f) => getCountryName(f))

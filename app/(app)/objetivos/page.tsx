@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ObjetivosPageView } from "@/components/objetivos/ObjetivosPageView";
+import { useAuth } from "@/context/AuthContext";
 import {
   deleteObjetivo,
   fetchObjetivosByUser,
-  getCurrentSessionOrThrow,
   signOutObjetivos,
   updateObjetivoProgress,
 } from "@/lib/objetivos/objetivos-service";
@@ -15,49 +15,38 @@ import type { Objetivo } from "@/types/objetivos";
 
 export default function ObjetivosPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
-  const [checking, setChecking] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
   const [loadingMessage, setLoadingMessage] = useState("Carregando objetivos...");
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    void initializePage();
-  }, []);
+    if (loading || !user?.id) return;
 
-  async function initializePage() {
-    try {
-      const session = await getCurrentSessionOrThrow();
-      const currentUserId = session.user.id;
+    async function initializePage() {
+      try {
+        const objetivosData = await fetchObjetivosByUser(user.id);
+        setObjetivos(objetivosData);
 
-      setUserId(currentUserId);
-
-      const objetivosData = await fetchObjetivosByUser(currentUserId);
-      setObjetivos(objetivosData);
-
-      setLoadingMessage(
-        objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message === "NO_SESSION") {
-        router.replace("/login");
-        return;
+        setLoadingMessage(
+          objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
+        );
+      } catch (error) {
+        console.error("Erro ao carregar objetivos:", error);
+        setLoadingMessage("Erro ao carregar.");
       }
-
-      console.error("Erro ao carregar objetivos:", error);
-      setLoadingMessage("Erro ao carregar.");
-    } finally {
-      setChecking(false);
     }
-  }
+
+    void initializePage();
+  }, [loading, user?.id]);
 
   async function reloadObjetivos() {
-    if (!userId) return;
+    if (!user?.id) return;
 
     try {
-      const objetivosData = await fetchObjetivosByUser(userId);
+      const objetivosData = await fetchObjetivosByUser(user.id);
       setObjetivos(objetivosData);
 
       setLoadingMessage(
@@ -81,15 +70,18 @@ export default function ObjetivosPage() {
   }
 
   async function handleSaveProgress(objetivoId: string, progresso: number) {
-    if (!userId) return;
+    if (!user?.id) return;
 
     const safeProgress = clampProgress(progresso);
-    setSavingIds((prev) => [...prev, objetivoId]);
+
+    setSavingIds((prev) =>
+      prev.includes(objetivoId) ? prev : [...prev, objetivoId]
+    );
 
     try {
       await updateObjetivoProgress({
         objetivoId,
-        userId,
+        userId: user.id,
         progresso: safeProgress,
       });
 
@@ -109,17 +101,19 @@ export default function ObjetivosPage() {
   }
 
   async function handleDelete(objetivoId: string) {
-    if (!userId) return;
+    if (!user?.id) return;
 
     const confirmed = window.confirm("Excluir este objetivo?");
     if (!confirmed) return;
 
-    setDeletingIds((prev) => [...prev, objetivoId]);
+    setDeletingIds((prev) =>
+      prev.includes(objetivoId) ? prev : [...prev, objetivoId]
+    );
 
     try {
       await deleteObjetivo({
         objetivoId,
-        userId,
+        userId: user.id,
       });
 
       await reloadObjetivos();
@@ -131,12 +125,16 @@ export default function ObjetivosPage() {
     }
   }
 
-  if (checking) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-sm opacity-80">Carregando objetivos…</div>
+        <div className="text-sm opacity-80">Carregando objetivos...</div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (

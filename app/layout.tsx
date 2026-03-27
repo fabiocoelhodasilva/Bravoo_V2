@@ -30,9 +30,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/* 🚀 PRELOAD DA TEXTURA DO GLOBO */}
+        <link
+          rel="preload"
+          as="image"
+          href="/textures/earth-blue-marble.jpg"
+        />
+      </head>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
