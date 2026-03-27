@@ -23,7 +23,7 @@ export default function ObjetivosPage() {
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (loading || !user?.id) return;
+    if (loading || !user) return;
 
     async function initializePage() {
       try {
@@ -40,10 +40,10 @@ export default function ObjetivosPage() {
     }
 
     void initializePage();
-  }, [loading, user?.id]);
+  }, [loading, user]);
 
   async function reloadObjetivos() {
-    if (!user?.id) return;
+    if (!user) return;
 
     try {
       const objetivosData = await fetchObjetivosByUser(user.id);
@@ -70,7 +70,7 @@ export default function ObjetivosPage() {
   }
 
   async function handleSaveProgress(objetivoId: string, progresso: number) {
-    if (!user?.id) return;
+    if (!user) return;
 
     const safeProgress = clampProgress(progresso);
 
@@ -101,7 +101,7 @@ export default function ObjetivosPage() {
   }
 
   async function handleDelete(objetivoId: string) {
-    if (!user?.id) return;
+    if (!user) return;
 
     const confirmed = window.confirm("Excluir este objetivo?");
     if (!confirmed) return;
