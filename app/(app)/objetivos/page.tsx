@@ -23,13 +23,13 @@ export default function ObjetivosPage() {
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    const currentUser = user;
+    if (loading || !user?.id) return;
 
-    if (loading || !currentUser) return;
+    const userId = user.id;
 
     async function initializePage() {
       try {
-        const objetivosData = await fetchObjetivosByUser(currentUser.id);
+        const objetivosData = await fetchObjetivosByUser(userId);
         setObjetivos(objetivosData);
 
         setLoadingMessage(
@@ -42,14 +42,14 @@ export default function ObjetivosPage() {
     }
 
     void initializePage();
-  }, [loading, user]);
+  }, [loading, user?.id]);
 
   async function reloadObjetivos() {
-    const currentUser = user;
-    if (!currentUser) return;
+    const userId = user?.id;
+    if (!userId) return;
 
     try {
-      const objetivosData = await fetchObjetivosByUser(currentUser.id);
+      const objetivosData = await fetchObjetivosByUser(userId);
       setObjetivos(objetivosData);
 
       setLoadingMessage(
@@ -73,8 +73,8 @@ export default function ObjetivosPage() {
   }
 
   async function handleSaveProgress(objetivoId: string, progresso: number) {
-    const currentUser = user;
-    if (!currentUser) return;
+    const userId = user?.id;
+    if (!userId) return;
 
     const safeProgress = clampProgress(progresso);
 
@@ -85,7 +85,7 @@ export default function ObjetivosPage() {
     try {
       await updateObjetivoProgress({
         objetivoId,
-        userId: currentUser.id,
+        userId,
         progresso: safeProgress,
       });
 
@@ -105,8 +105,8 @@ export default function ObjetivosPage() {
   }
 
   async function handleDelete(objetivoId: string) {
-    const currentUser = user;
-    if (!currentUser) return;
+    const userId = user?.id;
+    if (!userId) return;
 
     const confirmed = window.confirm("Excluir este objetivo?");
     if (!confirmed) return;
@@ -118,7 +118,7 @@ export default function ObjetivosPage() {
     try {
       await deleteObjetivo({
         objetivoId,
-        userId: currentUser.id,
+        userId,
       });
 
       await reloadObjetivos();
