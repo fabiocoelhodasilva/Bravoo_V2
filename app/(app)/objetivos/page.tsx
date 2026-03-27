@@ -23,11 +23,13 @@ export default function ObjetivosPage() {
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (loading || !user) return;
+    const currentUser = user;
+
+    if (loading || !currentUser) return;
 
     async function initializePage() {
       try {
-        const objetivosData = await fetchObjetivosByUser(user.id);
+        const objetivosData = await fetchObjetivosByUser(currentUser.id);
         setObjetivos(objetivosData);
 
         setLoadingMessage(
@@ -43,10 +45,11 @@ export default function ObjetivosPage() {
   }, [loading, user]);
 
   async function reloadObjetivos() {
-    if (!user) return;
+    const currentUser = user;
+    if (!currentUser) return;
 
     try {
-      const objetivosData = await fetchObjetivosByUser(user.id);
+      const objetivosData = await fetchObjetivosByUser(currentUser.id);
       setObjetivos(objetivosData);
 
       setLoadingMessage(
@@ -70,7 +73,8 @@ export default function ObjetivosPage() {
   }
 
   async function handleSaveProgress(objetivoId: string, progresso: number) {
-    if (!user) return;
+    const currentUser = user;
+    if (!currentUser) return;
 
     const safeProgress = clampProgress(progresso);
 
@@ -81,7 +85,7 @@ export default function ObjetivosPage() {
     try {
       await updateObjetivoProgress({
         objetivoId,
-        userId: user.id,
+        userId: currentUser.id,
         progresso: safeProgress,
       });
 
@@ -101,7 +105,8 @@ export default function ObjetivosPage() {
   }
 
   async function handleDelete(objetivoId: string) {
-    if (!user) return;
+    const currentUser = user;
+    if (!currentUser) return;
 
     const confirmed = window.confirm("Excluir este objetivo?");
     if (!confirmed) return;
@@ -113,7 +118,7 @@ export default function ObjetivosPage() {
     try {
       await deleteObjetivo({
         objetivoId,
-        userId: user.id,
+        userId: currentUser.id,
       });
 
       await reloadObjetivos();
