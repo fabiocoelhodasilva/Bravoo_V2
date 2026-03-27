@@ -40,6 +40,43 @@ type CountryVisualState = {
   altitude: number;
 };
 
+type GlobeInstance = {
+  width: (value: number) => GlobeInstance;
+  height: (value: number) => GlobeInstance;
+  globeImageUrl: (value: string) => GlobeInstance;
+  polygonAltitude: (fn: (feature: object) => number) => GlobeInstance;
+  polygonCapColor: (fn: (feature: object) => string) => GlobeInstance;
+  polygonSideColor: (fn: (feature: object) => string) => GlobeInstance;
+  polygonStrokeColor: (fn: () => string) => GlobeInstance;
+  polygonsTransitionDuration: (value: number) => GlobeInstance;
+  onPolygonClick: (fn: (polygon: object) => void) => GlobeInstance;
+  polygonsData: (data: GeoJsonFeature[]) => GlobeInstance;
+  pointOfView: (
+    view: { lat: number; lng: number; altitude: number },
+    duration?: number
+  ) => void;
+  renderer?: () => {
+    setPixelRatio?: (value: number) => void;
+    dispose?: () => void;
+    forceContextLoss?: () => void;
+  };
+  controls?: () => {
+    enableZoom: boolean;
+    enablePan: boolean;
+    enableDamping: boolean;
+    dampingFactor: number;
+    rotateSpeed: number;
+    zoomSpeed: number;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
+    minDistance: number;
+    maxDistance: number;
+  };
+  pauseAnimation?: () => void;
+};
+
+const GlobeCtor = Globe as unknown as new (element: HTMLElement) => GlobeInstance;
+
 const geoJsonCache = new Map<string, GeoJsonFeature[]>();
 const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
@@ -96,13 +133,16 @@ function getNaturalStyle(nome: string): CountryVisualState {
 
 function getGeoJsonPath(modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modoAtual === "america-central") return "/dados/america-central-simplified.geojson";
-  if (modoAtual === "america-norte") return "/dados/america-norte-simplified.geojson";
-  if (modoAtual === "europa-ocidental") return "/dados/europa-ocidental-simplified.geojson";
+  if (modoAtual === "america-central")
+    return "/dados/america-central-simplified.geojson";
+  if (modoAtual === "america-norte")
+    return "/dados/america-norte-simplified.geojson";
+  if (modoAtual === "europa-ocidental")
+    return "/dados/europa-ocidental-simplified.geojson";
   return "/dados/countries.geojson";
 }
 
-function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
+function aplicarVistaInicial(globe: GlobeInstance, modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
   } else if (modoAtual === "america-central") {
@@ -116,7 +156,7 @@ function aplicarVistaInicial(globe: any, modoAtual: GlobeMode) {
   }
 }
 
-function aplicarVistaFinal(globe: any, modoAtual: GlobeMode) {
+function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") {
     globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
   } else if (modoAtual === "america-central") {
@@ -154,13 +194,15 @@ export default function GlobeScene({
   finalizado = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const globeRef = useRef<any>(null);
+  const globeRef = useRef<GlobeInstance | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
   const clickLockRef = useRef(false);
-  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
@@ -239,7 +281,6 @@ export default function GlobeScene({
     }, 180);
   }
 
-  // cria o globo uma vez só
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -277,7 +318,7 @@ export default function GlobeScene({
 
     const { width, height } = getContainerSize();
 
-    const globe = Globe()(container)
+    const globe = new GlobeCtor(container)
       .width(width)
       .height(height)
       .globeImageUrl("/textures/earth-blue-marble.jpg")
@@ -307,7 +348,7 @@ export default function GlobeScene({
 
     const renderer = globe.renderer?.();
     if (renderer) {
-      renderer.setPixelRatio(1);
+      renderer.setPixelRatio?.(1);
     }
 
     const controls = globe.controls?.();
@@ -362,7 +403,6 @@ export default function GlobeScene({
     };
   }, []);
 
-  // troca região / geojson sem recriar o globo
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -381,7 +421,6 @@ export default function GlobeScene({
       });
   }, [modo]);
 
-  // atualiza visual sem recriar
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -399,7 +438,6 @@ export default function GlobeScene({
       .polygonsTransitionDuration(0);
   }, [visualStateByName]);
 
-  // finalização
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
