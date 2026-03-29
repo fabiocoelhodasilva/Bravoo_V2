@@ -8,14 +8,20 @@ const outputPath = path.join(
   "../public/dados/europa-ocidental-simplified.geojson"
 );
 
-// Países da Europa Ocidental
+// Países da Europa Ocidental (bloco didático do lado esquerdo do mapa)
 const EUROPA_OCIDENTAL = new Set([
   "Portugal",
   "Spain",
   "France",
-  "Italy",
+  "Belgium",
+  "Netherlands",
+  "Luxembourg",
   "Germany",
+  "Switzerland",
+  "Austria",
+  "Italy",
   "England",
+  "Ireland",
 ]);
 
 function getCountryName(feature) {
@@ -44,6 +50,11 @@ try {
     .filter((feature) => EUROPA_OCIDENTAL.has(getCountryName(feature)))
     .map(cloneFeatureWithOriginalCoordinates);
 
+  const foundNames = filteredFeatures.map((f) => getCountryName(f));
+  const missingNames = [...EUROPA_OCIDENTAL].filter(
+    (name) => !foundNames.includes(name)
+  );
+
   const output = {
     type: "FeatureCollection",
     features: filteredFeatures,
@@ -54,15 +65,20 @@ try {
   console.log("✅ Arquivo gerado com sucesso:");
   console.log(outputPath);
   console.log("🌍 Total de países:", filteredFeatures.length);
-  console.log(
-    "📌 Países encontrados:",
-    filteredFeatures.map((f) => getCountryName(f))
-  );
+  console.log("📌 Países encontrados:", foundNames);
+
+  if (missingNames.length > 0) {
+    console.log("⚠️ Países NÃO encontrados no countries.geojson:", missingNames);
+  } else {
+    console.log("✅ Todos os 12 países foram encontrados no countries.geojson.");
+  }
 
   console.log(
     "🔎 Conferência de nomes no GeoJSON:",
     allNames.filter((name) =>
-      /portugal|spain|france|italy|germany|england/i.test(name)
+      /portugal|spain|france|belgium|netherlands|luxembourg|germany|switzerland|austria|italy|england|ireland/i.test(
+        name
+      )
     )
   );
 } catch (error) {

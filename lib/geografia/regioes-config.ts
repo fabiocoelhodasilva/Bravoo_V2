@@ -1,118 +1,122 @@
 export type PaisItem = {
-  en: string;
-  pt: string;
-  aliases?: string[];
+en: string;
+pt: string;
+aliases?: string[];
 };
 
 export type GlobeMode =
-  | "america-sul"
-  | "america-central"
-  | "america-norte"
-  | "europa-ocidental";
+| "america-sul"
+| "america-central"
+| "america-norte"
+| "europa-ocidental";
 
 export type RegiaoConfig = {
-  slug: string;
-  tituloFinal: string;
-  modoGlobo: GlobeMode;
-  pontuacaoInicial: number;
-  atividadeId: string;
-  materiaId: string;
-  assuntoId: string;
-  detalheId: string;
-  paises: PaisItem[];
+slug: string;
+tituloFinal: string;
+modoGlobo: GlobeMode;
+pontuacaoInicial: number;
+atividadeId: string;
+materiaId: string;
+assuntoId: string;
+detalheId: string;
+paises: PaisItem[];
 };
 
 export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
-  "america-do-sul": {
-    slug: "america-do-sul",
-    tituloFinal: "Parabéns, você concluiu o jogo!",
-    modoGlobo: "america-sul",
-    pontuacaoInicial: 13,
-    atividadeId: "22222222-2222-2222-2222-222222222001",
-    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
-    assuntoId: "cb092890-2955-4eab-a84f-8f6548cb4eb6",
-    detalheId: "bbbd11be-a755-4816-ab2f-99b2d225b8b0",
-    paises: [
-      { en: "Argentina", pt: "Argentina" },
-      { en: "Bolivia", pt: "Bolívia" },
-      { en: "Brazil", pt: "Brasil" },
-      { en: "Chile", pt: "Chile" },
-      { en: "Colombia", pt: "Colômbia" },
-      { en: "Ecuador", pt: "Equador" },
-      { en: "Guyana", pt: "Guiana" },
-      { en: "Paraguay", pt: "Paraguai" },
-      { en: "Peru", pt: "Peru" },
-      { en: "Suriname", pt: "Suriname" },
-      { en: "Uruguay", pt: "Uruguai" },
-      { en: "Venezuela", pt: "Venezuela" },
-      {
-        en: "French Guiana",
-        pt: "Guiana Francesa",
-        aliases: ["France"],
-      },
-    ],
-  },
 
-  "america-central": {
-    slug: "america-central",
-    tituloFinal: "Parabéns, você concluiu o jogo!",
-    modoGlobo: "america-central",
-    pontuacaoInicial: 7,
-    atividadeId: "22222222-2222-2222-2222-222222222002",
-    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
-    assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310001",
-    detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320001",
-    paises: [
-      { en: "Belize", pt: "Belize" },
-      { en: "Costa Rica", pt: "Costa Rica" },
-      { en: "El Salvador", pt: "El Salvador" },
-      { en: "Guatemala", pt: "Guatemala" },
-      { en: "Honduras", pt: "Honduras" },
-      { en: "Nicaragua", pt: "Nicarágua" },
-      { en: "Panama", pt: "Panamá" },
-    ],
-  },
+"america-do-sul": {
+slug: "america-do-sul",
+tituloFinal: "Parabéns, você concluiu o jogo!",
+modoGlobo: "america-sul",
+pontuacaoInicial: 13,
+atividadeId: "22222222-2222-2222-2222-222222222001",
+materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
+assuntoId: "cb092890-2955-4eab-a84f-8f6548cb4eb6",
+detalheId: "bbbd11be-a755-4816-ab2f-99b2d225b8b0",
+paises: [
+{ en: "Argentina", pt: "Argentina" },
+{ en: "Bolivia", pt: "Bolívia" },
+{ en: "Brazil", pt: "Brasil" },
+{ en: "Chile", pt: "Chile" },
+{ en: "Colombia", pt: "Colômbia" },
+{ en: "Ecuador", pt: "Equador" },
+{ en: "Guyana", pt: "Guiana" },
+{ en: "Paraguay", pt: "Paraguai" },
+{ en: "Peru", pt: "Peru" },
+{ en: "Suriname", pt: "Suriname" },
+{ en: "Uruguay", pt: "Uruguai" },
+{ en: "Venezuela", pt: "Venezuela" },
+{
+en: "French Guiana",
+pt: "Guiana Francesa",
+aliases: ["France"],
+},
+],
+},
 
-  "america-do-norte": {
-    slug: "america-do-norte",
-    tituloFinal: "Parabéns, você concluiu o jogo!",
-    modoGlobo: "america-norte",
-    pontuacaoInicial: 3,
-    atividadeId: "22222222-2222-2222-2222-222222222003",
-    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
-    assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310002",
-    detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320002",
-    paises: [
-      { en: "Canada", pt: "Canadá" },
-      {
-        en: "United States of America",
-        pt: "Estados Unidos",
-        aliases: ["United States", "USA", "US"],
-      },
-      { en: "Mexico", pt: "México" },
-    ],
-  },
+"america-central": {
+slug: "america-central",
+tituloFinal: "Parabéns, você concluiu o jogo!",
+modoGlobo: "america-central",
+pontuacaoInicial: 7,
+atividadeId: "22222222-2222-2222-2222-222222222002",
+materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
+assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310001",
+detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320001",
+paises: [
+{ en: "Belize", pt: "Belize" },
+{ en: "Costa Rica", pt: "Costa Rica" },
+{ en: "El Salvador", pt: "El Salvador" },
+{ en: "Guatemala", pt: "Guatemala" },
+{ en: "Honduras", pt: "Honduras" },
+{ en: "Nicaragua", pt: "Nicarágua" },
+{ en: "Panama", pt: "Panamá" },
+],
+},
 
-  "europa-ocidental": {
-    slug: "europa-ocidental",
-    tituloFinal: "Parabéns, você concluiu o jogo!",
-    modoGlobo: "europa-ocidental",
-    pontuacaoInicial: 6,
-    atividadeId: "22222222-2222-2222-2222-222222222004",
-    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
-    assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310003",
-    detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320003",
-    paises: [
-      { en: "Germany", pt: "Alemanha" },
-      { en: "Spain", pt: "Espanha" },
-      { en: "France", pt: "França" },
-      {
-        en: "England",
-        pt: "Inglaterra",
-        aliases: ["United Kingdom", "UK"],
-      },
-      { en: "Italy", pt: "Itália" },
-      { en: "Portugal", pt: "Portugal" },
-    ],
-  },
+"america-do-norte": {
+slug: "america-do-norte",
+tituloFinal: "Parabéns, você concluiu o jogo!",
+modoGlobo: "america-norte",
+pontuacaoInicial: 3,
+atividadeId: "22222222-2222-2222-2222-222222222003",
+materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
+assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310002",
+detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320002",
+paises: [
+{ en: "Canada", pt: "Canadá" },
+{
+en: "United States of America",
+pt: "Estados Unidos",
+aliases: ["United States", "USA", "US"],
+},
+{ en: "Mexico", pt: "México" },
+],
+},
+
+"europa-ocidental": {
+slug: "europa-ocidental",
+tituloFinal: "Parabéns, você concluiu o jogo!",
+modoGlobo: "europa-ocidental",
+pontuacaoInicial: 12,
+atividadeId: "22222222-2222-2222-2222-222222222004",
+materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
+assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310003",
+detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320003",
+paises: [
+{ en: "Portugal", pt: "Portugal" },
+{ en: "Spain", pt: "Espanha" },
+{ en: "France", pt: "França" },
+{ en: "Belgium", pt: "Bélgica" },
+{ en: "Netherlands", pt: "Países Baixos", aliases: ["Holland"] },
+{ en: "Luxembourg", pt: "Luxemburgo" },
+{ en: "Germany", pt: "Alemanha" },
+{ en: "Switzerland", pt: "Suíça" },
+{ en: "Austria", pt: "Áustria" },
+{ en: "Italy", pt: "Itália" },
+{ en: "United Kingdom", pt: "Reino Unido", aliases: ["UK", "England"] },
+{ en: "Ireland", pt: "Irlanda" },
+],
+},
+
 };

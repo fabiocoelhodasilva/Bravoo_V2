@@ -6,6 +6,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 type ContextoProfessor = "escola" | "igreja";
 
+type ProfessorComEscola = {
+  escola_id: string | null;
+  escolas?: {
+    tipo_instituicao: number | null;
+  } | null;
+};
+
 const styleColors = {
   "--color-1": "#c94a4a",
   "--color-2": "#e9891d",
@@ -14,7 +21,7 @@ const styleColors = {
   "--color-5": "#3d7a99",
   "--color-6": "#a35bdc",
   "--color-7": "#ff8c42",
-} as any;
+} as React.CSSProperties;
 
 const ROTAS = {
   escola: {
@@ -57,7 +64,7 @@ const funcoesUsuario = [
     route: "/meus-resultados",
     className: "bg-[var(--color-7)]",
   },
-];
+] as const;
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -71,9 +78,12 @@ export default function TeacherDashboard() {
 
   async function inicializarDashboard() {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!sessionData.session) {
+      if (userError || !user) {
         router.replace("/login");
         return;
       }
@@ -81,7 +91,7 @@ export default function TeacherDashboard() {
       const ctxSalvo =
         typeof window !== "undefined" ? localStorage.getItem("ctx_prof") : null;
 
-      const ctxDetectado = await detectarContexto();
+      const ctxDetectado = await detectarContexto(user.id);
 
       const contextoFinal: ContextoProfessor =
         ctxSalvo === "escola" || ctxSalvo === "igreja"
@@ -97,31 +107,28 @@ export default function TeacherDashboard() {
     }
   }
 
-  async function detectarContexto(): Promise<ContextoProfessor> {
+  async function detectarContexto(
+    userId: string
+  ): Promise<ContextoProfessor> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return "escola";
-
-      const { data: prof, error: erroProf } = await supabase
+      const { data: prof, error } = await supabase
         .from("professores")
-        .select("escola_id")
-        .eq("usuario_id", user.id)
-        .maybeSingle();
+        .select(`
+          escola_id,
+          escolas (
+            tipo_instituicao
+          )
+        `)
+        .eq("usuario_id", userId)
+        .maybeSingle<ProfessorComEscola>();
 
-      if (erroProf || !prof?.escola_id) return "escola";
+      if (error || !prof?.escola_id) {
+        return "escola";
+      }
 
-      const { data: escola, error: erroEscola } = await supabase
-        .from("escolas")
-        .select("tipo_instituicao")
-        .eq("id", prof.escola_id)
-        .maybeSingle();
+      const tipoInstituicao = prof.escolas?.tipo_instituicao;
 
-      if (erroEscola) return "escola";
-
-      return escola?.tipo_instituicao === 2 ? "igreja" : "escola";
+      return tipoInstituicao === 2 ? "igreja" : "escola";
     } catch {
       return "escola";
     }

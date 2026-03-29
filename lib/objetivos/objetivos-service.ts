@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { Objetivo } from "@/types/objetivos";
+import type { Objetivo, ObjetivoCategoria } from "@/types/objetivos";
 
 type CategoriaObjetivoOption = {
   id: string;
@@ -9,23 +9,25 @@ type CategoriaObjetivoOption = {
   cor?: string | null;
 };
 
+type ObjetivoCategoriaRow =
+  | {
+      id: string;
+      nome: string;
+      cor?: string | null;
+    }
+  | {
+      id: string;
+      nome: string;
+      cor?: string | null;
+    }[]
+  | null;
+
 type ObjetivoRow = {
   id: string;
   categoria_id: string | null;
   titulo: string;
   progresso_percentual: number | null;
-  objetivos_categoria:
-    | {
-        id: string;
-        nome: string;
-        cor?: string | null;
-      }
-    | {
-        id: string;
-        nome: string;
-        cor?: string | null;
-      }[]
-    | null;
+  objetivos_categoria: ObjetivoCategoriaRow;
 };
 
 type CategoriaCompletaRow = {
@@ -51,16 +53,31 @@ function hojeISO() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function normalizarObjetivo(item: ObjetivoRow, userId: string): Objetivo {
-  const categoria = Array.isArray(item.objetivos_categoria)
-    ? item.objetivos_categoria[0] ?? null
-    : item.objetivos_categoria ?? null;
+function normalizarCategoria(
+  categoria: ObjetivoCategoriaRow
+): ObjetivoCategoria | null {
+  const categoriaNormalizada = Array.isArray(categoria)
+    ? categoria[0] ?? null
+    : categoria ?? null;
+
+  if (!categoriaNormalizada) return null;
 
   return {
-    ...item,
+    id: categoriaNormalizada.id,
+    nome: categoriaNormalizada.nome,
+    cor: categoriaNormalizada.cor ?? null,
+  };
+}
+
+function normalizarObjetivo(item: ObjetivoRow, userId: string): Objetivo {
+  return {
+    id: item.id,
     usuario_id: userId,
-    objetivos_categoria: categoria,
-  } as Objetivo;
+    categoria_id: item.categoria_id,
+    titulo: item.titulo,
+    progresso_percentual: item.progresso_percentual ?? 0,
+    objetivos_categoria: normalizarCategoria(item.objetivos_categoria),
+  };
 }
 
 export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> {
@@ -81,9 +98,8 @@ export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> 
 
   if (error) throw error;
 
-  return (data ?? []).map((item) =>
-    normalizarObjetivo(item as ObjetivoRow, userId)
-  );
+  const objetivos = (data ?? []) as ObjetivoRow[];
+  return objetivos.map((item) => normalizarObjetivo(item, userId));
 }
 
 export async function updateObjetivoProgress(params: {
@@ -126,15 +142,15 @@ export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption
     .order("ordem", { ascending: true });
 
   if (!tentativaCompleta.error) {
-    return (tentativaCompleta.data as CategoriaCompletaRow[] | null ?? []).map(
-      (c) => ({
-        id: c.id,
-        nome: c.nome,
-        descricao: c.descricao ?? "",
-        ordem: c.ordem ?? 999,
-        cor: c.cor ?? "",
-      })
-    );
+    const categorias = (tentativaCompleta.data ?? []) as CategoriaCompletaRow[];
+
+    return categorias.map((c) => ({
+      id: c.id,
+      nome: c.nome,
+      descricao: c.descricao ?? "",
+      ordem: c.ordem ?? 999,
+      cor: c.cor ?? "",
+    }));
   }
 
   const tentativaBasica = await supabase
@@ -144,15 +160,15 @@ export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption
 
   if (tentativaBasica.error) throw tentativaBasica.error;
 
-  return (tentativaBasica.data as CategoriaBasicaRow[] | null ?? []).map(
-    (c) => ({
-      id: c.id,
-      nome: c.nome,
-      descricao: c.descricao ?? "",
-      ordem: 999,
-      cor: "",
-    })
-  );
+  const categorias = (tentativaBasica.data ?? []) as CategoriaBasicaRow[];
+
+  return categorias.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    descricao: c.descricao ?? "",
+    ordem: 999,
+    cor: "",
+  }));
 }
 
 export async function createObjetivo(params: {

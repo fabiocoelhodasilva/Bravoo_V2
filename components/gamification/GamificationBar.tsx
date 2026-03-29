@@ -2,12 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ReactNode, MouseEvent, TouchEvent } from "react";
 
 type GamificationBarProps = {
   constancyCount: number;
   coins: number;
   constancyRank: number;
   coinsRank: number;
+};
+
+type RuleRowProps = {
+  icon: ReactNode;
+  title: string;
+  rule: string;
+};
+
+type GemType = "weekly" | "monthly" | "yearly";
+
+type GemIconProps = {
+  type: GemType;
+  size?: number;
+};
+
+type BravooCoinIconProps = {
+  size?: number;
 };
 
 export default function GamificationBar({
@@ -24,7 +42,7 @@ export default function GamificationBar({
     router.push("/ranking");
   }
 
-  function togglePopover(e: React.MouseEvent | React.TouchEvent) {
+  function togglePopover(e: MouseEvent | TouchEvent) {
     e.stopPropagation();
     setOpen((prev) => !prev);
   }
@@ -58,8 +76,6 @@ export default function GamificationBar({
         "
       >
         <div className="flex items-stretch">
-          
-          {/* ESQUERDA */}
           <button
             type="button"
             onClick={togglePopover}
@@ -67,13 +83,11 @@ export default function GamificationBar({
             className="w-1/2 pr-3"
           >
             <div className="flex h-full flex-col">
-              
               <div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                 Minhas conquistas
               </div>
 
               <div className="flex items-center justify-between gap-2">
-                
                 <div className="flex-1 flex flex-col items-center">
                   <GemIcon type="weekly" size={24} />
                   <div className="mt-1 text-[12px] font-semibold text-white/90">
@@ -89,28 +103,23 @@ export default function GamificationBar({
                     {coins}
                   </div>
                 </div>
-
               </div>
             </div>
           </button>
 
-          {/* DIVISÃO */}
           <div className="w-px bg-white/10" />
 
-          {/* DIREITA */}
           <button
             type="button"
             onClick={goToRanking}
             className="w-1/2 pl-3"
           >
             <div className="flex h-full flex-col">
-              
               <div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                 Ranking
               </div>
 
               <div className="flex items-center justify-between gap-2">
-
                 <div className="flex-1 flex flex-col items-center">
                   <StackedGems />
                   <div className="mt-1 text-[12px] font-semibold text-white/90">
@@ -126,14 +135,12 @@ export default function GamificationBar({
                     #{coinsRank}
                   </div>
                 </div>
-
               </div>
             </div>
           </button>
         </div>
       </div>
 
-      {/* POPOVER */}
       <div
         className={`absolute left-1/2 top-full z-40 mt-3 w-[300px] -translate-x-1/2 rounded-[18px] border border-white/10 bg-[#0f0f0f] p-2.5 shadow-xl transition-all ${
           open
@@ -148,9 +155,21 @@ export default function GamificationBar({
         </div>
 
         <div className="space-y-1">
-          <RuleRow icon={<GemIcon type="weekly" size={20} />} title="Safira" rule="7 dias" />
-          <RuleRow icon={<GemIcon type="monthly" size={20} />} title="Rubi" rule="30 dias" />
-          <RuleRow icon={<GemIcon type="yearly" size={20} />} title="Diamante" rule="365 dias" />
+          <RuleRow
+            icon={<GemIcon type="weekly" size={20} />}
+            title="Safira"
+            rule="7 dias"
+          />
+          <RuleRow
+            icon={<GemIcon type="monthly" size={20} />}
+            title="Rubi"
+            rule="30 dias"
+          />
+          <RuleRow
+            icon={<GemIcon type="yearly" size={20} />}
+            title="Diamante"
+            rule="365 dias"
+          />
         </div>
 
         <div className="my-2 h-px bg-white/10" />
@@ -168,7 +187,7 @@ export default function GamificationBar({
   );
 }
 
-function RuleRow({ icon, title, rule }: any) {
+function RuleRow({ icon, title, rule }: RuleRowProps) {
   return (
     <div className="flex items-center gap-2 px-2 py-1.5">
       {icon}
@@ -196,7 +215,7 @@ function StackedGems() {
   );
 }
 
-function GemIcon({ type, size = 30 }: any) {
+function GemIcon({ type, size = 30 }: GemIconProps) {
   const colors =
     type === "weekly"
       ? "from-cyan-300 to-blue-500"
@@ -212,7 +231,7 @@ function GemIcon({ type, size = 30 }: any) {
   );
 }
 
-function BravooCoinIcon({ size = 30 }: any) {
+function BravooCoinIcon({ size = 30 }: BravooCoinIconProps) {
   return (
     <div
       className="flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500"
