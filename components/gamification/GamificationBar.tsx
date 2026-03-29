@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ReactNode, MouseEvent, TouchEvent } from "react";
+import type {
+  ReactNode,
+  MouseEvent as ReactMouseEvent,
+  TouchEvent as ReactTouchEvent,
+} from "react";
 
 type GamificationBarProps = {
   constancyCount: number;
@@ -42,13 +46,13 @@ export default function GamificationBar({
     router.push("/ranking");
   }
 
-  function togglePopover(e: MouseEvent | TouchEvent) {
+  function togglePopover(e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>) {
     e.stopPropagation();
     setOpen((prev) => !prev);
   }
 
   useEffect(() => {
-    function handleOutside(event: MouseEvent | TouchEvent) {
+    function handleOutside(event: globalThis.MouseEvent | globalThis.TouchEvent) {
       if (!wrapperRef.current) return;
       if (!wrapperRef.current.contains(event.target as Node)) {
         setOpen(false);
@@ -174,7 +178,7 @@ export default function GamificationBar({
 
         <div className="my-2 h-px bg-white/10" />
 
-        <div className="text-center text-[11px] text-white/60 mb-1">
+        <div className="mb-1 text-center text-[11px] text-white/60">
           Bravoo Coins
         </div>
 
