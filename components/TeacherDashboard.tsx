@@ -66,6 +66,24 @@ const funcoesUsuario = [
   },
 ] as const;
 
+function obterContextoSalvo(): ContextoProfessor | null {
+  const valor = localStorage.getItem("ctx_prof");
+
+  if (valor === "escola" || valor === "igreja") {
+    return valor;
+  }
+
+  return null;
+}
+
+function salvarContexto(novoContexto: ContextoProfessor) {
+  localStorage.setItem("ctx_prof", novoContexto);
+}
+
+function removerContextoSalvo() {
+  localStorage.removeItem("ctx_prof");
+}
+
 export default function TeacherDashboard() {
   const router = useRouter();
 
@@ -88,15 +106,10 @@ export default function TeacherDashboard() {
         return;
       }
 
-      const ctxSalvo =
-        typeof window !== "undefined" ? localStorage.getItem("ctx_prof") : null;
-
+      const ctxSalvo = obterContextoSalvo();
       const ctxDetectado = await detectarContexto(user.id);
 
-      const contextoFinal: ContextoProfessor =
-        ctxSalvo === "escola" || ctxSalvo === "igreja"
-          ? ctxSalvo
-          : ctxDetectado;
+      const contextoFinal: ContextoProfessor = ctxSalvo ?? ctxDetectado;
 
       setContexto(contextoFinal);
     } catch (error) {
@@ -136,7 +149,7 @@ export default function TeacherDashboard() {
 
   function trocarContexto(novoContexto: ContextoProfessor) {
     setContexto(novoContexto);
-    localStorage.setItem("ctx_prof", novoContexto);
+    salvarContexto(novoContexto);
   }
 
   async function handleLogout() {
@@ -145,7 +158,7 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     } finally {
-      localStorage.removeItem("ctx_prof");
+      removerContextoSalvo();
       router.replace("/login");
       router.refresh();
     }
