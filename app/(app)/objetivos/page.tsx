@@ -152,7 +152,15 @@ export default function ObjetivosPage() {
         userId,
       });
 
-      await reloadObjetivos();
+      setObjetivos((prev) => {
+        const nextObjetivos = prev.filter((item) => item.id !== objetivoId);
+
+        setLoadingMessage(
+          nextObjetivos.length === 0 ? "Nenhum objetivo cadastrado." : ""
+        );
+
+        return nextObjetivos;
+      });
 
       setFeedbackType("success");
       setFeedbackMessage("Objetivo excluído com sucesso.");

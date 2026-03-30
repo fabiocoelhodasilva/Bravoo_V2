@@ -200,9 +200,10 @@ export default function GlobeScene({
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
   const clickLockRef = useRef(false);
-  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const currentFeaturesRef = useRef<GeoJsonFeature[]>([]);
+  const visualStateRef = useRef<Map<string, CountryVisualState>>(new Map());
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
@@ -264,9 +265,13 @@ export default function GlobeScene({
     return map;
   }, [correctSet, flashingSet, celebratingSet]);
 
-  function getVisualState(feature: GeoJsonFeature): CountryVisualState {
+  useEffect(() => {
+    visualStateRef.current = visualStateByName;
+  }, [visualStateByName]);
+
+  function getVisualStateFromRef(feature: GeoJsonFeature): CountryVisualState {
     const nome = getCountryName(feature);
-    return visualStateByName.get(nome) || getNaturalStyle(nome);
+    return visualStateRef.current.get(nome) || getNaturalStyle(nome);
   }
 
   function lockClickTemporarily() {
@@ -323,13 +328,13 @@ export default function GlobeScene({
       .height(height)
       .globeImageUrl("/textures/earth-blue-marble.jpg")
       .polygonAltitude((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).altitude
+        getVisualStateFromRef(feature as GeoJsonFeature).altitude
       )
       .polygonCapColor((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).capColor
+        getVisualStateFromRef(feature as GeoJsonFeature).capColor
       )
       .polygonSideColor((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).sideColor
+        getVisualStateFromRef(feature as GeoJsonFeature).sideColor
       )
       .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
       .polygonsTransitionDuration(0)
@@ -411,7 +416,9 @@ export default function GlobeScene({
 
     loadGeoJson(geoJsonPath)
       .then((features) => {
+        currentFeaturesRef.current = features;
         globe.polygonsData(features);
+
         requestAnimationFrame(() => {
           aplicarVistaInicial(globe, modo);
         });
@@ -424,18 +431,9 @@ export default function GlobeScene({
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
+    if (!currentFeaturesRef.current.length) return;
 
-    globe
-      .polygonCapColor((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).capColor
-      )
-      .polygonSideColor((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).sideColor
-      )
-      .polygonAltitude((feature: object) =>
-        getVisualState(feature as GeoJsonFeature).altitude
-      )
-      .polygonsTransitionDuration(0);
+    globe.polygonsData(currentFeaturesRef.current).polygonsTransitionDuration(0);
   }, [visualStateByName]);
 
   useEffect(() => {
