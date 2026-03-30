@@ -330,10 +330,13 @@ export default function GlobeScene({
         const GlobeModule = await import("globe.gl");
         if (cancelled) return;
 
-        const Globe = GlobeModule.default;
+        const GlobeCtor = GlobeModule.default as unknown as new (
+          element: HTMLElement
+        ) => GlobeInstance;
+
         const { width, height } = getContainerSize();
 
-        const globe = Globe()(container)
+        const globe = new GlobeCtor(container)
           .width(width)
           .height(height)
           .globeImageUrl("/textures/earth-blue-marble.jpg")
