@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import Globe from "globe.gl";
 
 type GeoJsonFeature = {
   properties?: {
@@ -27,6 +26,7 @@ type GlobeMode =
 
 type Props = {
   modo?: GlobeMode;
+  currentCountry?: string;
   onCountryClick?: (nome: string) => void;
   correctCountries?: string[];
   flashingCountries?: string[];
@@ -75,11 +75,29 @@ type GlobeInstance = {
   pauseAnimation?: () => void;
 };
 
-const GlobeCtor = Globe as unknown as new (element: HTMLElement) => GlobeInstance;
-
 const geoJsonCache = new Map<string, GeoJsonFeature[]>();
 const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
+
+const SMALL_COUNTRIES = new Set([
+  "Luxembourg",
+  "Luxemburgo",
+  "Belgium",
+  "Bélgica",
+  "Netherlands",
+  "Holanda",
+  "Switzerland",
+  "Suíça",
+  "Liechtenstein",
+  "Monaco",
+  "Mônaco",
+  "Andorra",
+  "San Marino",
+  "São Marino",
+  "Vatican City",
+  "Vaticano",
+  "Malta",
+]);
 
 function getCountryName(feature: GeoJsonFeature) {
   return feature.properties?.name || feature.properties?.ADMIN || "";
@@ -133,12 +151,15 @@ function getNaturalStyle(nome: string): CountryVisualState {
 
 function getGeoJsonPath(modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modoAtual === "america-central")
+  if (modoAtual === "america-central") {
     return "/dados/america-central-simplified.geojson";
-  if (modoAtual === "america-norte")
+  }
+  if (modoAtual === "america-norte") {
     return "/dados/america-norte-simplified.geojson";
-  if (modoAtual === "europa-ocidental")
+  }
+  if (modoAtual === "europa-ocidental") {
     return "/dados/europa-ocidental-simplified.geojson";
+  }
   return "/dados/countries.geojson";
 }
 
@@ -170,6 +191,21 @@ function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
   }
 }
 
+function applySmallCountryFocus(
+  globe: GlobeInstance,
+  modoAtual: GlobeMode,
+  currentCountry?: string
+) {
+  if (!currentCountry) return;
+
+  const nome = currentCountry.trim();
+  if (!SMALL_COUNTRIES.has(nome)) return;
+
+  if (modoAtual === "europa-ocidental") {
+    globe.pointOfView({ lat: 49.8, lng: 6.1, altitude: 0.32 }, 900);
+  }
+}
+
 async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
   const cached = geoJsonCache.get(path);
   if (cached) return cached;
@@ -187,6 +223,7 @@ async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
 
 export default function GlobeScene({
   modo = "mundo",
+  currentCountry,
   onCountryClick,
   correctCountries = [],
   flashingCountries = [],
@@ -196,6 +233,8 @@ export default function GlobeScene({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const globeReadyRef = useRef(false);
+
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
@@ -269,7 +308,7 @@ export default function GlobeScene({
     visualStateRef.current = visualStateByName;
   }, [visualStateByName]);
 
-  function getVisualStateFromRef(feature: GeoJsonFeature): CountryVisualState {
+  function getVisualState(feature: GeoJsonFeature): CountryVisualState {
     const nome = getCountryName(feature);
     return visualStateRef.current.get(nome) || getNaturalStyle(nome);
   }
@@ -290,6 +329,8 @@ export default function GlobeScene({
     const container = containerRef.current;
     if (!container) return;
     if (globeRef.current) return;
+
+    let cancelled = false;
 
     const getContainerSize = () => ({
       width: container.clientWidth || window.innerWidth,
@@ -321,71 +362,112 @@ export default function GlobeScene({
     container.addEventListener("pointerup", handlePointerUp);
     container.addEventListener("pointerleave", handlePointerUp);
 
-    const { width, height } = getContainerSize();
+    async function initGlobe() {
+      try {
+        const GlobeModule = await import("globe.gl");
+        if (cancelled) return;
 
-    const globe = new GlobeCtor(container)
-      .width(width)
-      .height(height)
-      .globeImageUrl("/textures/earth-blue-marble.jpg")
-      .polygonAltitude((feature: object) =>
-        getVisualStateFromRef(feature as GeoJsonFeature).altitude
-      )
-      .polygonCapColor((feature: object) =>
-        getVisualStateFromRef(feature as GeoJsonFeature).capColor
-      )
-      .polygonSideColor((feature: object) =>
-        getVisualStateFromRef(feature as GeoJsonFeature).sideColor
-      )
-      .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
-      .polygonsTransitionDuration(0)
-      .onPolygonClick((polygon: object) => {
-        if (isDraggingRef.current) return;
-        if (clickLockRef.current) return;
+        const Globe = GlobeModule.default;
+        const { width, height } = getContainerSize();
 
-        const nome = getCountryName(polygon as GeoJsonFeature);
-        if (!nome) return;
+        const globe = Globe()(container)
+          .width(width)
+          .height(height)
+          .globeImageUrl("/textures/earth-blue-marble.jpg")
+          .polygonAltitude((feature: object) =>
+            getVisualState(feature as GeoJsonFeature).altitude
+          )
+          .polygonCapColor((feature: object) =>
+            getVisualState(feature as GeoJsonFeature).capColor
+          )
+          .polygonSideColor((feature: object) =>
+            getVisualState(feature as GeoJsonFeature).sideColor
+          )
+          .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
+          .polygonsTransitionDuration(0)
+          .onPolygonClick((polygon: object) => {
+            if (isDraggingRef.current) return;
+            if (clickLockRef.current) return;
 
-        lockClickTemporarily();
-        onCountryClickRef.current?.(nome);
-      });
+            const nome = getCountryName(polygon as GeoJsonFeature);
+            if (!nome) return;
 
-    globeRef.current = globe;
+            lockClickTemporarily();
+            onCountryClickRef.current?.(nome);
+          });
 
-    const renderer = globe.renderer?.();
-    if (renderer) {
-      renderer.setPixelRatio?.(1);
+        if (cancelled) {
+          try {
+            globe.pauseAnimation?.();
+            globe.onPolygonClick(() => {});
+            const rendererInstance = globe.renderer?.();
+            rendererInstance?.dispose?.();
+            rendererInstance?.forceContextLoss?.();
+          } catch {}
+          return;
+        }
+
+        globeRef.current = globe;
+        globeReadyRef.current = true;
+
+        const renderer = globe.renderer?.();
+        if (renderer) {
+          renderer.setPixelRatio?.(1);
+        }
+
+        const controls = globe.controls?.();
+        if (controls) {
+          controls.enableZoom = true;
+          controls.enablePan = false;
+          controls.enableDamping = true;
+          controls.dampingFactor = 0.1;
+          controls.rotateSpeed = 0.55;
+          controls.zoomSpeed = 0.9;
+          controls.autoRotate = false;
+          controls.autoRotateSpeed = 0.5;
+          controls.minDistance = 75;
+          controls.maxDistance = 420;
+        }
+
+        const resizeObserver = new ResizeObserver(() => {
+          if (!globeRef.current) return;
+          const { width: nextWidth, height: nextHeight } = getContainerSize();
+          globeRef.current.width(nextWidth).height(nextHeight);
+        });
+
+        resizeObserver.observe(container);
+        resizeObserverRef.current = resizeObserver;
+
+        const geoJsonPath = getGeoJsonPath(modo);
+        const features = await loadGeoJson(geoJsonPath);
+
+        if (cancelled || !globeRef.current) return;
+
+        currentFeaturesRef.current = features;
+        globe.polygonsData(features);
+
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          aplicarVistaInicial(globe, modo);
+          applySmallCountryFocus(globe, modo, currentCountry);
+        });
+      } catch (error) {
+        console.error("Erro ao inicializar globo:", error);
+      }
     }
 
-    const controls = globe.controls?.();
-    if (controls) {
-      controls.enableZoom = true;
-      controls.enablePan = false;
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.1;
-      controls.rotateSpeed = 0.55;
-      controls.zoomSpeed = 0.7;
-      controls.autoRotate = false;
-      controls.autoRotateSpeed = 0.5;
-      controls.minDistance = 140;
-      controls.maxDistance = 420;
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (!globeRef.current) return;
-      const { width: nextWidth, height: nextHeight } = getContainerSize();
-      globeRef.current.width(nextWidth).height(nextHeight);
-    });
-
-    resizeObserver.observe(container);
-    resizeObserverRef.current = resizeObserver;
+    void initGlobe();
 
     return () => {
+      cancelled = true;
+      globeReadyRef.current = false;
+
       container.removeEventListener("pointerdown", handlePointerDown);
       container.removeEventListener("pointermove", handlePointerMove);
       container.removeEventListener("pointerup", handlePointerUp);
       container.removeEventListener("pointerleave", handlePointerUp);
 
-      resizeObserver.disconnect();
+      resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
 
       if (clickUnlockTimeoutRef.current) {
@@ -409,6 +491,8 @@ export default function GlobeScene({
   }, []);
 
   useEffect(() => {
+    if (!globeReadyRef.current) return;
+
     const globe = globeRef.current;
     if (!globe) return;
 
@@ -421,12 +505,13 @@ export default function GlobeScene({
 
         requestAnimationFrame(() => {
           aplicarVistaInicial(globe, modo);
+          applySmallCountryFocus(globe, modo, currentCountry);
         });
       })
       .catch((error) => {
         console.error("Erro ao carregar GeoJSON:", error);
       });
-  }, [modo]);
+  }, [modo, currentCountry]);
 
   useEffect(() => {
     const globe = globeRef.current;
@@ -435,6 +520,16 @@ export default function GlobeScene({
 
     globe.polygonsData(currentFeaturesRef.current).polygonsTransitionDuration(0);
   }, [visualStateByName]);
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    if (!globeReadyRef.current) return;
+
+    requestAnimationFrame(() => {
+      applySmallCountryFocus(globe, modo, currentCountry);
+    });
+  }, [currentCountry, modo]);
 
   useEffect(() => {
     const globe = globeRef.current;
