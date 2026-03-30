@@ -126,7 +126,7 @@ export default function ObjetivosPage() {
     }
   }
 
-  function handleDelete(objetivoId: string) {
+  async function handleDelete(objetivoId: string): Promise<void> {
     setObjetivoParaExcluir(objetivoId);
     setShowDeleteModal(true);
   }
