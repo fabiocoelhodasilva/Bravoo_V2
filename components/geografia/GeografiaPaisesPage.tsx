@@ -258,7 +258,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
             <div className="h-full aspect-square max-w-full max-h-full md:w-full md:aspect-auto md:rounded-2xl md:overflow-hidden">
               <GlobeScene
                 modo={config.modoGlobo}
-                currentCountry={paisAtual?.en}
                 onCountryClick={handleClick}
                 correctCountries={correctCountries}
                 flashingCountries={flashingCountries}

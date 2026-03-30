@@ -26,7 +26,6 @@ type GlobeMode =
 
 type Props = {
   modo?: GlobeMode;
-  currentCountry?: string;
   onCountryClick?: (nome: string) => void;
   correctCountries?: string[];
   flashingCountries?: string[];
@@ -78,26 +77,6 @@ type GlobeInstance = {
 const geoJsonCache = new Map<string, GeoJsonFeature[]>();
 const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
-
-const SMALL_COUNTRIES = new Set([
-  "Luxembourg",
-  "Luxemburgo",
-  "Belgium",
-  "Bélgica",
-  "Netherlands",
-  "Holanda",
-  "Switzerland",
-  "Suíça",
-  "Liechtenstein",
-  "Monaco",
-  "Mônaco",
-  "Andorra",
-  "San Marino",
-  "São Marino",
-  "Vatican City",
-  "Vaticano",
-  "Malta",
-]);
 
 function getCountryName(feature: GeoJsonFeature) {
   return feature.properties?.name || feature.properties?.ADMIN || "";
@@ -191,21 +170,6 @@ function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
   }
 }
 
-function applySmallCountryFocus(
-  globe: GlobeInstance,
-  modoAtual: GlobeMode,
-  currentCountry?: string
-) {
-  if (!currentCountry) return;
-
-  const nome = currentCountry.trim();
-  if (!SMALL_COUNTRIES.has(nome)) return;
-
-  if (modoAtual === "europa-ocidental") {
-    globe.pointOfView({ lat: 49.8, lng: 6.1, altitude: 0.32 }, 900);
-  }
-}
-
 async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
   const cached = geoJsonCache.get(path);
   if (cached) return cached;
@@ -223,7 +187,6 @@ async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
 
 export default function GlobeScene({
   modo = "mundo",
-  currentCountry,
   onCountryClick,
   correctCountries = [],
   flashingCountries = [],
@@ -447,9 +410,9 @@ export default function GlobeScene({
         globe.polygonsData(features);
 
         requestAnimationFrame(() => {
-          if (cancelled) return;
-          aplicarVistaInicial(globe, modo);
-          applySmallCountryFocus(globe, modo, currentCountry);
+          if (!cancelled) {
+            aplicarVistaInicial(globe, modo);
+          }
         });
       } catch (error) {
         console.error("Erro ao inicializar globo:", error);
@@ -505,13 +468,12 @@ export default function GlobeScene({
 
         requestAnimationFrame(() => {
           aplicarVistaInicial(globe, modo);
-          applySmallCountryFocus(globe, modo, currentCountry);
         });
       })
       .catch((error) => {
         console.error("Erro ao carregar GeoJSON:", error);
       });
-  }, [modo, currentCountry]);
+  }, [modo]);
 
   useEffect(() => {
     const globe = globeRef.current;
@@ -520,16 +482,6 @@ export default function GlobeScene({
 
     globe.polygonsData(currentFeaturesRef.current).polygonsTransitionDuration(0);
   }, [visualStateByName]);
-
-  useEffect(() => {
-    const globe = globeRef.current;
-    if (!globe) return;
-    if (!globeReadyRef.current) return;
-
-    requestAnimationFrame(() => {
-      applySmallCountryFocus(globe, modo, currentCountry);
-    });
-  }, [currentCountry, modo]);
 
   useEffect(() => {
     const globe = globeRef.current;
