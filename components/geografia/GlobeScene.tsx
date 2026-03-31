@@ -358,11 +358,13 @@ export default function GlobeScene({
       controls.enableDamping = true;
       controls.dampingFactor = 0.1;
       controls.rotateSpeed = 0.55;
-      controls.zoomSpeed = 0.7;
+      controls.zoomSpeed = 0.95;
       controls.autoRotate = false;
       controls.autoRotateSpeed = 0.5;
-      controls.minDistance = 140;
-      controls.maxDistance = 420;
+
+      // Permite aproximar mais o globo manualmente
+      controls.minDistance = 85;
+      controls.maxDistance = 600;
     }
 
     const resizeObserver = new ResizeObserver(() => {
