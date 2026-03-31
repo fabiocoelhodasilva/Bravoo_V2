@@ -4,12 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ObjetivosPageView } from "@/components/objetivos/ObjetivosPageView";
 import { useAuth } from "@/context/AuthContext";
+
 import {
-  deleteObjetivo,
   fetchObjetivosByUser,
   signOutObjetivos,
-  updateObjetivoProgress,
 } from "@/lib/objetivos/objetivos-service";
+
+import {
+  deleteObjetivoAction,
+  updateObjetivoProgressAction,
+} from "@/app/actions/objetivos";
+
 import { clampProgress } from "@/lib/objetivos/objetivos-utils";
 import type { Objetivo } from "@/types/objetivos";
 
@@ -75,9 +80,6 @@ export default function ObjetivosPage() {
 
   const handleSaveProgress = useCallback(
     async (objetivoId: string, progresso: number) => {
-      const userId = user?.id;
-      if (!userId) return;
-
       const safeProgress = clampProgress(progresso);
 
       setSavingIds((prev) =>
@@ -85,11 +87,14 @@ export default function ObjetivosPage() {
       );
 
       try {
-        await updateObjetivoProgress({
+        const result = await updateObjetivoProgressAction({
           objetivoId,
-          userId,
           progresso: safeProgress,
         });
+
+        if (!result.ok) {
+          throw new Error(result.message);
+        }
 
         setObjetivos((prev) =>
           prev.map((item) =>
@@ -109,7 +114,7 @@ export default function ObjetivosPage() {
         setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
       }
     },
-    [user?.id]
+    []
   );
 
   const handleDelete = useCallback(async (objetivoId: string): Promise<void> => {
@@ -123,20 +128,22 @@ export default function ObjetivosPage() {
   }, []);
 
   const confirmDelete = useCallback(async () => {
-    const userId = user?.id;
     const objetivoId = objetivoParaExcluir;
 
-    if (!userId || !objetivoId) return;
+    if (!objetivoId) return;
 
     setDeletingIds((prev) =>
       prev.includes(objetivoId) ? prev : [...prev, objetivoId]
     );
 
     try {
-      await deleteObjetivo({
+      const result = await deleteObjetivoAction({
         objetivoId,
-        userId,
       });
+
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
 
       setObjetivos((prev) => {
         const nextObjetivos = prev.filter((item) => item.id !== objetivoId);
@@ -158,7 +165,7 @@ export default function ObjetivosPage() {
       setDeletingIds((prev) => prev.filter((id) => id !== objetivoId));
       closeDeleteModal();
     }
-  }, [user?.id, objetivoParaExcluir, closeDeleteModal]);
+  }, [objetivoParaExcluir, closeDeleteModal]);
 
   if (loading) {
     return (

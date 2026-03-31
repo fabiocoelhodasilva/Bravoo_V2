@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GeografiaMenu from "@/components/geografia/GeografiaMenu";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 
 const MATERIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
 

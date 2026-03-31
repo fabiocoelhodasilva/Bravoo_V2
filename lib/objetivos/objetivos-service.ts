@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 import type { Objetivo, ObjetivoCategoria } from "@/types/objetivos";
 
 type CategoriaObjetivoOption = {

@@ -5,7 +5,7 @@ import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
 import GamificationBar from "@/components/gamification/GamificationBar";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 
 type GeografiaMenuProps = {
   constancyCount: number;
