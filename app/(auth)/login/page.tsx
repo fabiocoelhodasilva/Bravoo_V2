@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import BrandLogo from "@/components/ui/BrandLogo";
+
+const MAX_TENTATIVAS = 3;
+const BLOQUEIO_MS = 3 * 60 * 1000;
 
 function traduzirErroLogin(message?: string) {
   const msg = (message || "").toLowerCase();
@@ -44,6 +47,39 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState("");
 
+  const [tentativas, setTentativas] = useState(0);
+  const [bloqueadoAte, setBloqueadoAte] = useState<number | null>(null);
+  const [agora, setAgora] = useState(Date.now());
+
+  const bloqueado = useMemo(() => {
+    return bloqueadoAte !== null && agora < bloqueadoAte;
+  }, [bloqueadoAte, agora]);
+
+  const segundosRestantes = useMemo(() => {
+    if (!bloqueadoAte || agora >= bloqueadoAte) return 0;
+    return Math.ceil((bloqueadoAte - agora) / 1000);
+  }, [bloqueadoAte, agora]);
+
+  useEffect(() => {
+    if (!bloqueado) return;
+
+    const intervalo = window.setInterval(() => {
+      setAgora(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalo);
+  }, [bloqueado]);
+
+  useEffect(() => {
+    if (!bloqueadoAte) return;
+    if (Date.now() < bloqueadoAte) return;
+
+    setBloqueadoAte(null);
+    setTentativas(0);
+    setMensagem("");
+    setAgora(Date.now());
+  }, [agora, bloqueadoAte]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     await logar();
@@ -73,6 +109,15 @@ export default function LoginPage() {
     const em = email.trim();
     const pw = senha || "";
 
+    if (loading) return;
+
+    if (bloqueado) {
+      setMensagem(
+        `Muitas tentativas. Aguarde ${segundosRestantes} segundo(s) para tentar novamente.`
+      );
+      return;
+    }
+
     setMensagem("");
 
     if (!em || !pw) {
@@ -90,9 +135,24 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Erro ao logar:", error);
-        setMensagem(traduzirErroLogin(error.message));
+
+        const novasTentativas = tentativas + 1;
+        setTentativas(novasTentativas);
+
+        if (novasTentativas >= MAX_TENTATIVAS) {
+          const fimBloqueio = Date.now() + BLOQUEIO_MS;
+          setBloqueadoAte(fimBloqueio);
+          setAgora(Date.now());
+          setMensagem("Muitas tentativas. Aguarde 3 minutos para tentar novamente.");
+        } else {
+          setMensagem(traduzirErroLogin(error.message));
+        }
+
         return;
       }
+
+      setTentativas(0);
+      setBloqueadoAte(null);
 
       const usuarioId = data?.user?.id;
 
@@ -160,6 +220,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading || bloqueado}
         />
 
         <label className="label" htmlFor="senha">
@@ -174,10 +235,15 @@ export default function LoginPage() {
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           required
+          disabled={loading || bloqueado}
         />
 
-        <button className="button" type="submit" disabled={loading}>
-          {loading ? "Entrando..." : "Entrar"}
+        <button className="button" type="submit" disabled={loading || bloqueado}>
+          {loading
+            ? "Entrando..."
+            : bloqueado
+            ? `Aguarde ${segundosRestantes}s`
+            : "Entrar"}
         </button>
       </form>
 
