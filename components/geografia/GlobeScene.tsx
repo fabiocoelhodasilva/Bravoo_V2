@@ -1,29 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import Globe from "globe.gl";
 
 type GeoJsonFeature = {
   properties?: {
     name?: string;
     ADMIN?: string;
-    NAME?: string;
-    sovereignt?: string;
+  };
+  geometry?: {
+    type?: string;
+    coordinates?: unknown;
   };
 };
 
-type GeoJsonResponse = {
-  features: GeoJsonFeature[];
+type GeoJsonData = {
+  features?: GeoJsonFeature[];
 };
 
 type GlobeMode =
-  | "america-do-sul"
+  | "america-sul"
   | "america-central"
-  | "america-do-norte"
+  | "america-norte"
   | "europa-ocidental"
-  | "europa-oriental";
+  | "mundo";
 
 type Props = {
-  modo?: GlobeMode | string;
+  modo?: GlobeMode;
   onCountryClick?: (nome: string) => void;
   correctCountries?: string[];
   flashingCountries?: string[];
@@ -37,74 +40,90 @@ type CountryVisualState = {
   altitude: number;
 };
 
-type GlobeControls = {
-  enableZoom?: boolean;
-  enablePan?: boolean;
-  enableRotate?: boolean;
-  enableDamping?: boolean;
-  dampingFactor?: number;
-  zoomSpeed?: number;
-  rotateSpeed?: number;
-  autoRotate?: boolean;
-  autoRotateSpeed?: number;
-  minDistance?: number;
-  maxDistance?: number;
-  update?: () => void;
-};
-
-type GlobeRenderer = {
-  setPixelRatio?: (value: number) => void;
-};
-
 type GlobeInstance = {
-  width: (v: number) => GlobeInstance;
-  height: (v: number) => GlobeInstance;
-  globeImageUrl: (v: string) => GlobeInstance;
-  backgroundColor?: (v: string) => GlobeInstance;
+  width: (value: number) => GlobeInstance;
+  height: (value: number) => GlobeInstance;
+  globeImageUrl: (value: string) => GlobeInstance;
+  polygonAltitude: (fn: (feature: object) => number) => GlobeInstance;
+  polygonCapColor: (fn: (feature: object) => string) => GlobeInstance;
+  polygonSideColor: (fn: (feature: object) => string) => GlobeInstance;
+  polygonStrokeColor: (fn: () => string) => GlobeInstance;
+  polygonsTransitionDuration: (value: number) => GlobeInstance;
+  onPolygonClick: (fn: (polygon: object) => void) => GlobeInstance;
   polygonsData: (data: GeoJsonFeature[]) => GlobeInstance;
-  polygonAltitude: (fn: (f: object) => number) => GlobeInstance;
-  polygonCapColor: (fn: (f: object) => string) => GlobeInstance;
-  polygonSideColor: (fn: (f: object) => string) => GlobeInstance;
-  polygonStrokeColor: (fn: (f: object) => string) => GlobeInstance;
-  polygonsTransitionDuration: (v: number) => GlobeInstance;
-  onPolygonClick: (fn: (p: object) => void) => GlobeInstance;
   pointOfView: (
     view: { lat: number; lng: number; altitude: number },
     duration?: number
   ) => void;
-  controls?: () => GlobeControls;
-  renderer?: () => GlobeRenderer;
+  renderer?: () => {
+    setPixelRatio?: (value: number) => void;
+    dispose?: () => void;
+    forceContextLoss?: () => void;
+  };
+  controls?: () => {
+    enableZoom: boolean;
+    enablePan: boolean;
+    enableDamping: boolean;
+    dampingFactor: number;
+    rotateSpeed: number;
+    zoomSpeed: number;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
+    minDistance: number;
+    maxDistance: number;
+  };
+  pauseAnimation?: () => void;
 };
 
+const GlobeCtor = Globe as unknown as new (element: HTMLElement) => GlobeInstance;
+
 const geoJsonCache = new Map<string, GeoJsonFeature[]>();
-const filteredGeoJsonCache = new Map<string, GeoJsonFeature[]>();
+const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
 
 function getCountryName(feature: GeoJsonFeature) {
-  return (
-    feature.properties?.name ||
-    feature.properties?.ADMIN ||
-    feature.properties?.NAME ||
-    feature.properties?.sovereignt ||
-    ""
-  );
+  return feature.properties?.name || feature.properties?.ADMIN || "";
 }
 
-function normalizeCountryName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
+function getCountrySeed(nome: string) {
+  const cached = countrySeedCache.get(nome);
+  if (cached !== undefined) return cached;
+
+  let total = 0;
+  for (let i = 0; i < nome.length; i += 1) {
+    total += nome.charCodeAt(i);
+  }
+
+  const seed = total % 5;
+  countrySeedCache.set(nome, seed);
+  return seed;
 }
 
 function getNaturalStyle(nome: string): CountryVisualState {
   const cached = naturalStyleCache.get(nome);
   if (cached) return cached;
 
+  const seed = getCountrySeed(nome);
+
+  const capPalette = [
+    "rgba(255, 255, 255, 0.07)",
+    "rgba(191, 219, 254, 0.08)",
+    "rgba(186, 230, 253, 0.075)",
+    "rgba(224, 242, 254, 0.07)",
+    "rgba(255, 255, 255, 0.06)",
+  ];
+
+  const sidePalette = [
+    "rgba(255, 255, 255, 0.025)",
+    "rgba(191, 219, 254, 0.03)",
+    "rgba(186, 230, 253, 0.028)",
+    "rgba(224, 242, 254, 0.024)",
+    "rgba(255, 255, 255, 0.02)",
+  ];
+
   const style: CountryVisualState = {
-    capColor: "rgba(255,255,255,0.07)",
-    sideColor: "rgba(255,255,255,0.03)",
+    capColor: capPalette[seed],
+    sideColor: sidePalette[seed],
     altitude: 0.018,
   };
 
@@ -112,144 +131,62 @@ function getNaturalStyle(nome: string): CountryVisualState {
   return style;
 }
 
+function getGeoJsonPath(modoAtual: GlobeMode) {
+  if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
+  if (modoAtual === "america-central")
+    return "/dados/america-central-simplified.geojson";
+  if (modoAtual === "america-norte")
+    return "/dados/america-norte-simplified.geojson";
+  if (modoAtual === "europa-ocidental")
+    return "/dados/europa-ocidental-simplified.geojson";
+  return "/dados/countries.geojson";
+}
+
+function aplicarVistaInicial(globe: GlobeInstance, modoAtual: GlobeMode) {
+  if (modoAtual === "america-sul") {
+    globe.pointOfView({ lat: -20, lng: -58, altitude: 1.55 }, 0);
+  } else if (modoAtual === "america-central") {
+    globe.pointOfView({ lat: 16, lng: -85, altitude: 0.78 }, 0);
+  } else if (modoAtual === "america-norte") {
+    globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
+  } else if (modoAtual === "europa-ocidental") {
+    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.82 }, 0);
+  } else {
+    globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
+  }
+}
+
+function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
+  if (modoAtual === "america-sul") {
+    globe.pointOfView({ lat: -20, lng: -58, altitude: 1.18 }, 1200);
+  } else if (modoAtual === "america-central") {
+    globe.pointOfView({ lat: 16, lng: -85, altitude: 0.64 }, 1200);
+  } else if (modoAtual === "america-norte") {
+    globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
+  } else if (modoAtual === "europa-ocidental") {
+    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.68 }, 1200);
+  } else {
+    globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
+  }
+}
+
 async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
   const cached = geoJsonCache.get(path);
   if (cached) return cached;
 
   const res = await fetch(path, { cache: "force-cache" });
-  const data: GeoJsonResponse = await res.json();
+  if (!res.ok) {
+    throw new Error(`Erro ao buscar GeoJSON: ${res.status}`);
+  }
 
-  const features = Array.isArray(data.features) ? data.features : [];
+  const data: GeoJsonData = await res.json();
+  const features = data.features ?? [];
   geoJsonCache.set(path, features);
-
   return features;
 }
 
-const REGION_COUNTRIES: Record<Exclude<GlobeMode, "europa-ocidental"> | "europa-oriental", string[]> = {
-  "america-do-sul": [
-    "Argentina",
-    "Bolivia",
-    "Brazil",
-    "Chile",
-    "Colombia",
-    "Ecuador",
-    "Guyana",
-    "Paraguay",
-    "Peru",
-    "Suriname",
-    "Uruguay",
-    "Venezuela",
-    "French Guiana",
-  ],
-  "america-central": [
-    "Belize",
-    "Costa Rica",
-    "El Salvador",
-    "Guatemala",
-    "Honduras",
-    "Nicaragua",
-    "Panama",
-  ],
-  "america-do-norte": [
-    "Canada",
-    "United States of America",
-    "United States",
-    "Mexico",
-    "Greenland",
-  ],
-  "europa-oriental": [
-    "Poland",
-    "Czech Republic",
-    "Czechia",
-    "Slovakia",
-    "Hungary",
-    "Romania",
-    "Bulgaria",
-    "Ukraine",
-    "Belarus",
-    "Moldova",
-    "Lithuania",
-    "Latvia",
-    "Estonia",
-    "Albania",
-    "Bosnia and Herzegovina",
-    "Bosnia and Herz.",
-    "Serbia",
-    "Croatia",
-    "Slovenia",
-    "Montenegro",
-    "North Macedonia",
-    "Macedonia",
-    "Kosovo",
-  ],
-};
-
-function getGeoJsonSourcePath(modo: string) {
-  if (modo === "europa-ocidental") {
-    return "/dados/europa-ocidental-simplified.geojson";
-  }
-
-  return "/dados/countries.geojson";
-}
-
-function filterFeaturesByMode(
-  modo: string,
-  features: GeoJsonFeature[]
-): GeoJsonFeature[] {
-  if (modo === "europa-ocidental") {
-    return features;
-  }
-
-  const countries = REGION_COUNTRIES[modo as keyof typeof REGION_COUNTRIES];
-  if (!countries) {
-    return [];
-  }
-
-  const allowed = new Set(countries.map(normalizeCountryName));
-
-  return features.filter((feature) => {
-    const nome = normalizeCountryName(getCountryName(feature));
-    return allowed.has(nome);
-  });
-}
-
-async function loadFeaturesForMode(modo: string): Promise<GeoJsonFeature[]> {
-  const cacheKey = `mode:${modo}`;
-  const cached = filteredGeoJsonCache.get(cacheKey);
-  if (cached) return cached;
-
-  const sourcePath = getGeoJsonSourcePath(modo);
-  const rawFeatures = await loadGeoJson(sourcePath);
-  const filtered = filterFeaturesByMode(modo, rawFeatures);
-
-  filteredGeoJsonCache.set(cacheKey, filtered);
-  return filtered;
-}
-
-function getInitialView(modo: string) {
-  switch (modo) {
-    case "america-do-sul":
-      return { lat: -18, lng: -60, altitude: 1.8 };
-
-    case "america-central":
-      return { lat: 15, lng: -88, altitude: 1.9 };
-
-    case "america-do-norte":
-      return { lat: 40, lng: -100, altitude: 1.75 };
-
-    case "europa-ocidental":
-      return { lat: 48, lng: 5, altitude: 1.55 };
-
-    case "europa-oriental":
-      return { lat: 49, lng: 24, altitude: 1.65 };
-
-    default:
-      return { lat: 20, lng: 0, altitude: 2.1 };
-  }
-}
-
 export default function GlobeScene({
-  modo = "america-do-sul",
+  modo = "mundo",
   onCountryClick,
   correctCountries = [],
   flashingCountries = [],
@@ -259,180 +196,246 @@ export default function GlobeScene({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const featuresRef = useRef<GeoJsonFeature[]>([]);
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
-  const visualStateRef = useRef<Map<string, CountryVisualState>>(new Map());
-
-  const correctSet = useMemo(
-    () => new Set(correctCountries.map(normalizeCountryName)),
-    [correctCountries]
+  const isDraggingRef = useRef(false);
+  const lastPointerDownRef = useRef({ x: 0, y: 0 });
+  const clickLockRef = useRef(false);
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
   );
 
-  const flashingSet = useMemo(
-    () => new Set(flashingCountries.map(normalizeCountryName)),
-    [flashingCountries]
-  );
+  useEffect(() => {
+    onCountryClickRef.current = onCountryClick;
+  }, [onCountryClick]);
 
+  const correctSet = useMemo(() => new Set(correctCountries), [correctCountries]);
+  const flashingSet = useMemo(() => new Set(flashingCountries), [flashingCountries]);
   const celebratingSet = useMemo(
-    () => new Set(celebratingCountries.map(normalizeCountryName)),
+    () => new Set(celebratingCountries),
     [celebratingCountries]
   );
 
   const visualStateByName = useMemo(() => {
     const map = new Map<string, CountryVisualState>();
 
-    correctSet.forEach((nome) => {
-      map.set(nome, {
-        capColor: "rgba(147,197,253,0.28)",
-        sideColor: "rgba(96,165,250,0.16)",
-        altitude: 0.04,
-      });
-    });
+    const correctCapColor = "rgba(147, 197, 253, 0.20)";
+    const correctSideColor = "rgba(96, 165, 250, 0.10)";
 
-    celebratingSet.forEach((nome) => {
-      map.set(nome, {
-        capColor: "rgba(191,219,254,0.45)",
-        sideColor: "rgba(147,197,253,0.22)",
-        altitude: 0.06,
-      });
-    });
+    const celebrateCapColor = "rgba(191, 219, 254, 0.38)";
+    const celebrateSideColor = "rgba(147, 197, 253, 0.20)";
 
-    flashingSet.forEach((nome) => {
-      map.set(nome, {
-        capColor: "rgba(248,113,113,0.85)",
-        sideColor: "rgba(248,113,113,0.28)",
-        altitude: 0.045,
-      });
+    const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
+    const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
+
+    const allNames = new Set<string>([
+      ...correctSet,
+      ...flashingSet,
+      ...celebratingSet,
+    ]);
+
+    allNames.forEach((nome) => {
+      if (celebratingSet.has(nome)) {
+        map.set(nome, {
+          capColor: celebrateCapColor,
+          sideColor: celebrateSideColor,
+          altitude: 0.05,
+        });
+        return;
+      }
+
+      if (correctSet.has(nome)) {
+        map.set(nome, {
+          capColor: correctCapColor,
+          sideColor: correctSideColor,
+          altitude: 0.032,
+        });
+        return;
+      }
+
+      if (flashingSet.has(nome)) {
+        map.set(nome, {
+          capColor: flashWrongCapColor,
+          sideColor: flashWrongSideColor,
+          altitude: 0.032,
+        });
+      }
     });
 
     return map;
   }, [correctSet, flashingSet, celebratingSet]);
 
-  useEffect(() => {
-    onCountryClickRef.current = onCountryClick;
-  }, [onCountryClick]);
-
-  useEffect(() => {
-    visualStateRef.current = visualStateByName;
-  }, [visualStateByName]);
-
   function getVisualState(feature: GeoJsonFeature): CountryVisualState {
-    const nome = normalizeCountryName(getCountryName(feature));
-    return visualStateRef.current.get(nome) || getNaturalStyle(nome);
+    const nome = getCountryName(feature);
+    return visualStateByName.get(nome) || getNaturalStyle(nome);
+  }
+
+  function lockClickTemporarily() {
+    clickLockRef.current = true;
+
+    if (clickUnlockTimeoutRef.current) {
+      clearTimeout(clickUnlockTimeoutRef.current);
+    }
+
+    clickUnlockTimeoutRef.current = setTimeout(() => {
+      clickLockRef.current = false;
+    }, 180);
   }
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    if (globeRef.current) return;
 
-    let cancelled = false;
+    const getContainerSize = () => ({
+      width: container.clientWidth || window.innerWidth,
+      height: container.clientHeight || window.innerHeight,
+    });
 
-    async function initGlobe() {
-      const GlobeModule = await import("globe.gl");
-      if (cancelled) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      isDraggingRef.current = false;
+      lastPointerDownRef.current = { x: event.clientX, y: event.clientY };
+    };
 
-      const GlobeCtor = GlobeModule.default as unknown as new (
-        element: HTMLElement
-      ) => GlobeInstance;
+    const handlePointerMove = (event: PointerEvent) => {
+      const dx = Math.abs(event.clientX - lastPointerDownRef.current.x);
+      const dy = Math.abs(event.clientY - lastPointerDownRef.current.y);
 
-      if (cancelled || !containerRef.current) return;
-
-      container.innerHTML = "";
-
-      const mountEl = containerRef.current;
-      const width = mountEl.clientWidth || 300;
-      const height = mountEl.clientHeight || 300;
-
-      const globe = new GlobeCtor(mountEl)
-        .width(width)
-        .height(height)
-        .globeImageUrl("/textures/earth-blue-marble.jpg")
-        .polygonAltitude((f) => getVisualState(f as GeoJsonFeature).altitude)
-        .polygonCapColor((f) => getVisualState(f as GeoJsonFeature).capColor)
-        .polygonSideColor((f) => getVisualState(f as GeoJsonFeature).sideColor)
-        .polygonStrokeColor(() => "rgba(255,255,255,0.18)")
-        .polygonsTransitionDuration(0)
-        .onPolygonClick((p) => {
-          const nome = getCountryName(p as GeoJsonFeature);
-          if (nome) {
-            onCountryClickRef.current?.(nome);
-          }
-        });
-
-      globeRef.current = globe;
-
-      const renderer = globe.renderer?.();
-      if (renderer?.setPixelRatio) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.2));
-      }
-
-      const controls = globe.controls?.();
-      if (controls) {
-        controls.enableZoom = true;
-        controls.enablePan = false;
-        controls.enableRotate = true;
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.08;
-        controls.zoomSpeed = 0.8;
-        controls.rotateSpeed = 0.55;
-        controls.minDistance = 110;
-        controls.maxDistance = 420;
-
-        // nunca girar sozinho
-        controls.autoRotate = false;
-        controls.autoRotateSpeed = 0;
-
-        controls.update?.();
-      }
-
-      const features = await loadFeaturesForMode(modo);
-
-      if (cancelled || !globeRef.current) return;
-
-      featuresRef.current = features;
-      globe.polygonsData(features);
-
-      const initialView = getInitialView(modo);
-      globe.pointOfView(initialView, 0);
-
-      resizeObserverRef.current?.disconnect();
-      resizeObserverRef.current = new ResizeObserver(() => {
-        const currentGlobe = globeRef.current;
-        const currentContainer = containerRef.current;
-        if (!currentGlobe || !currentContainer) return;
-
-        const nextWidth = currentContainer.clientWidth || 300;
-        const nextHeight = currentContainer.clientHeight || 300;
-
-        currentGlobe.width(nextWidth).height(nextHeight);
-      });
-
-      resizeObserverRef.current.observe(mountEl);
-    }
-
-    initGlobe();
-
-    return () => {
-      cancelled = true;
-      resizeObserverRef.current?.disconnect();
-      resizeObserverRef.current = null;
-      globeRef.current = null;
-
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
+      if (dx > 6 || dy > 6) {
+        isDraggingRef.current = true;
       }
     };
+
+    const handlePointerUp = () => {
+      window.setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 0);
+    };
+
+    container.addEventListener("pointerdown", handlePointerDown);
+    container.addEventListener("pointermove", handlePointerMove);
+    container.addEventListener("pointerup", handlePointerUp);
+    container.addEventListener("pointerleave", handlePointerUp);
+
+    const { width, height } = getContainerSize();
+
+    const globe = new GlobeCtor(container)
+      .width(width)
+      .height(height)
+      .globeImageUrl("/textures/earth-blue-marble.jpg")
+      .polygonAltitude((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).altitude
+      )
+      .polygonCapColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).capColor
+      )
+      .polygonSideColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).sideColor
+      )
+      .polygonStrokeColor(() => "rgba(255,255,255,0.16)")
+      .polygonsTransitionDuration(0)
+      .onPolygonClick((polygon: object) => {
+        if (isDraggingRef.current) return;
+        if (clickLockRef.current) return;
+
+        const nome = getCountryName(polygon as GeoJsonFeature);
+        if (!nome) return;
+
+        lockClickTemporarily();
+        onCountryClickRef.current?.(nome);
+      });
+
+    globeRef.current = globe;
+
+    const renderer = globe.renderer?.();
+    if (renderer) {
+      renderer.setPixelRatio?.(1);
+    }
+
+    const controls = globe.controls?.();
+    if (controls) {
+      controls.enableZoom = true;
+      controls.enablePan = false;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.1;
+      controls.rotateSpeed = 0.55;
+      controls.zoomSpeed = 0.7;
+      controls.autoRotate = false;
+      controls.autoRotateSpeed = 0.5;
+      controls.minDistance = 140;
+      controls.maxDistance = 420;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!globeRef.current) return;
+      const { width: nextWidth, height: nextHeight } = getContainerSize();
+      globeRef.current.width(nextWidth).height(nextHeight);
+    });
+
+    resizeObserver.observe(container);
+    resizeObserverRef.current = resizeObserver;
+
+    return () => {
+      container.removeEventListener("pointerdown", handlePointerDown);
+      container.removeEventListener("pointermove", handlePointerMove);
+      container.removeEventListener("pointerup", handlePointerUp);
+      container.removeEventListener("pointerleave", handlePointerUp);
+
+      resizeObserver.disconnect();
+      resizeObserverRef.current = null;
+
+      if (clickUnlockTimeoutRef.current) {
+        clearTimeout(clickUnlockTimeoutRef.current);
+      }
+
+      if (globeRef.current) {
+        try {
+          globeRef.current.pauseAnimation?.();
+          globeRef.current.onPolygonClick(() => {});
+          const rendererInstance = globeRef.current.renderer?.();
+          rendererInstance?.dispose?.();
+          rendererInstance?.forceContextLoss?.();
+        } catch {}
+
+        globeRef.current = null;
+      }
+
+      container.innerHTML = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const geoJsonPath = getGeoJsonPath(modo);
+
+    loadGeoJson(geoJsonPath)
+      .then((features) => {
+        globe.polygonsData(features);
+        requestAnimationFrame(() => {
+          aplicarVistaInicial(globe, modo);
+        });
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar GeoJSON:", error);
+      });
   }, [modo]);
 
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
-    globe.polygonsTransitionDuration(0);
-
-    if (featuresRef.current.length > 0) {
-      globe.polygonsData(featuresRef.current);
-    }
+    globe
+      .polygonCapColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).capColor
+      )
+      .polygonSideColor((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).sideColor
+      )
+      .polygonAltitude((feature: object) =>
+        getVisualState(feature as GeoJsonFeature).altitude
+      )
+      .polygonsTransitionDuration(0);
   }, [visualStateByName]);
 
   useEffect(() => {
@@ -442,11 +445,15 @@ export default function GlobeScene({
     const controls = globe.controls?.();
     if (!controls) return;
 
-    // mantém sem giro mesmo finalizado
-    controls.autoRotate = false;
-    controls.autoRotateSpeed = 0;
-    controls.update?.();
-  }, [finalizado]);
+    if (finalizado) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.6;
+      aplicarVistaFinal(globe, modo);
+    } else {
+      controls.autoRotate = false;
+      controls.autoRotateSpeed = 0.5;
+    }
+  }, [finalizado, modo]);
 
   return (
     <div
