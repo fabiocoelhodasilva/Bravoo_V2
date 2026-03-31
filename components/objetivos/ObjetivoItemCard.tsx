@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Objetivo } from "@/types/objetivos";
 import { clampProgress } from "@/lib/objetivos/objetivos-utils";
 
@@ -13,7 +13,7 @@ type Props = {
   onDelete: (objetivoId: string) => Promise<void>;
 };
 
-export function ObjetivoItemCard({
+function ObjetivoItemCardComponent({
   objetivo,
   corCategoria,
   isSaving,
@@ -91,3 +91,22 @@ export function ObjetivoItemCard({
     </article>
   );
 }
+
+export const ObjetivoItemCard = memo(
+  ObjetivoItemCardComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.objetivo.id === nextProps.objetivo.id &&
+      prevProps.objetivo.titulo === nextProps.objetivo.titulo &&
+      prevProps.objetivo.progresso_percentual ===
+        nextProps.objetivo.progresso_percentual &&
+      prevProps.corCategoria === nextProps.corCategoria &&
+      prevProps.isSaving === nextProps.isSaving &&
+      prevProps.isDeleting === nextProps.isDeleting &&
+      prevProps.onSaveProgress === nextProps.onSaveProgress &&
+      prevProps.onDelete === nextProps.onDelete
+    );
+  }
+);
+
+ObjetivoItemCard.displayName = "ObjetivoItemCard";
