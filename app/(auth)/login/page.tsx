@@ -179,10 +179,6 @@ export default function LoginPage() {
 
       if (prof && prof.aprovado !== true) {
         const msg = `Bem-vindo ${nome}, seu pedido de cadastro como professor está em análise.`;
-        try {
-          sessionStorage.setItem("mensagem_professor", msg);
-        } catch {}
-
         setMensagem(msg);
         setTimeout(() => router.replace("/aluno"), 1500);
         return;
