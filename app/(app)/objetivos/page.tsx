@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ObjetivosPageView } from "@/components/objetivos/ObjetivosPageView";
 import { useAuth } from "@/context/AuthContext";
@@ -30,39 +30,7 @@ export default function ObjetivosPage() {
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    if (loading || !user?.id) return;
-
-    const userId = user.id;
-
-    async function initializePage() {
-      try {
-        const objetivosData = await fetchObjetivosByUser(userId);
-        setObjetivos(objetivosData);
-
-        setLoadingMessage(
-          objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
-        );
-      } catch (error) {
-        console.error("Erro ao carregar objetivos:", error);
-        setLoadingMessage("Erro ao carregar.");
-      }
-    }
-
-    void initializePage();
-  }, [loading, user?.id]);
-
-  useEffect(() => {
-    if (!feedbackMessage) return;
-
-    const timer = window.setTimeout(() => {
-      setFeedbackMessage("");
-    }, 3000);
-
-    return () => window.clearTimeout(timer);
-  }, [feedbackMessage]);
-
-  async function reloadObjetivos() {
+  const reloadObjetivos = useCallback(async () => {
     const userId = user?.id;
     if (!userId) return;
 
@@ -77,9 +45,24 @@ export default function ObjetivosPage() {
       console.error("Erro ao recarregar objetivos:", error);
       setLoadingMessage("Erro ao carregar.");
     }
-  }
+  }, [user?.id]);
 
-  async function handleLogout() {
+  useEffect(() => {
+    if (loading || !user?.id) return;
+    void reloadObjetivos();
+  }, [loading, user?.id, reloadObjetivos]);
+
+  useEffect(() => {
+    if (!feedbackMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setFeedbackMessage("");
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [feedbackMessage]);
+
+  const handleLogout = useCallback(async () => {
     try {
       await signOutObjetivos();
     } catch (error) {
@@ -88,55 +71,58 @@ export default function ObjetivosPage() {
       router.replace("/login");
       router.refresh();
     }
-  }
+  }, [router]);
 
-  async function handleSaveProgress(objetivoId: string, progresso: number) {
-    const userId = user?.id;
-    if (!userId) return;
+  const handleSaveProgress = useCallback(
+    async (objetivoId: string, progresso: number) => {
+      const userId = user?.id;
+      if (!userId) return;
 
-    const safeProgress = clampProgress(progresso);
+      const safeProgress = clampProgress(progresso);
 
-    setSavingIds((prev) =>
-      prev.includes(objetivoId) ? prev : [...prev, objetivoId]
-    );
-
-    try {
-      await updateObjetivoProgress({
-        objetivoId,
-        userId,
-        progresso: safeProgress,
-      });
-
-      setObjetivos((prev) =>
-        prev.map((item) =>
-          item.id === objetivoId
-            ? { ...item, progresso_percentual: safeProgress }
-            : item
-        )
+      setSavingIds((prev) =>
+        prev.includes(objetivoId) ? prev : [...prev, objetivoId]
       );
 
-      setFeedbackType("success");
-      setFeedbackMessage("Progresso salvo com sucesso.");
-    } catch (error) {
-      console.error("Erro ao salvar progresso:", error);
-      setFeedbackType("error");
-      setFeedbackMessage("Não foi possível salvar o progresso.");
-    } finally {
-      setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
-    }
-  }
+      try {
+        await updateObjetivoProgress({
+          objetivoId,
+          userId,
+          progresso: safeProgress,
+        });
 
-  async function handleDelete(objetivoId: string): Promise<void> {
+        setObjetivos((prev) =>
+          prev.map((item) =>
+            item.id === objetivoId
+              ? { ...item, progresso_percentual: safeProgress }
+              : item
+          )
+        );
+
+        setFeedbackType("success");
+        setFeedbackMessage("Progresso salvo com sucesso.");
+      } catch (error) {
+        console.error("Erro ao salvar progresso:", error);
+        setFeedbackType("error");
+        setFeedbackMessage("Não foi possível salvar o progresso.");
+      } finally {
+        setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
+      }
+    },
+    [user?.id]
+  );
+
+  const handleDelete = useCallback(async (objetivoId: string): Promise<void> => {
     setObjetivoParaExcluir(objetivoId);
     setShowDeleteModal(true);
-  }
+  }, []);
 
-  function closeDeleteModal() {
+  const closeDeleteModal = useCallback(() => {
     setShowDeleteModal(false);
     setObjetivoParaExcluir(null);
-  }
+  }, []);
 
-  async function confirmDelete() {
+  const confirmDelete = useCallback(async () => {
     const userId = user?.id;
     const objetivoId = objetivoParaExcluir;
 
@@ -172,7 +158,7 @@ export default function ObjetivosPage() {
       setDeletingIds((prev) => prev.filter((id) => id !== objetivoId));
       closeDeleteModal();
     }
-  }
+  }, [user?.id, objetivoParaExcluir, closeDeleteModal]);
 
   if (loading) {
     return (
