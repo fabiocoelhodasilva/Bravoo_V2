@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { ObjetivosGrupo } from "@/types/objetivos";
 import { ObjetivoItemCard } from "./ObjetivoItemCard";
 
@@ -14,7 +14,7 @@ type Props = {
   expandirTudo?: boolean;
 };
 
-export function ObjetivosCategoriaCard({
+function ObjetivosCategoriaCardComponent({
   grupo,
   savingIds,
   deletingIds,
@@ -25,6 +25,9 @@ export function ObjetivosCategoriaCard({
 }: Props) {
   const cor = grupo.categoria.cor;
   const [aberto, setAberto] = useState(defaultOpen);
+
+  const savingIdsSet = useMemo(() => new Set(savingIds), [savingIds]);
+  const deletingIdsSet = useMemo(() => new Set(deletingIds), [deletingIds]);
 
   useEffect(() => {
     if (expandirTudo) {
@@ -109,8 +112,8 @@ export function ObjetivosCategoriaCard({
               key={objetivo.id}
               objetivo={objetivo}
               corCategoria={cor}
-              isSaving={savingIds.includes(objetivo.id)}
-              isDeleting={deletingIds.includes(objetivo.id)}
+              isSaving={savingIdsSet.has(objetivo.id)}
+              isDeleting={deletingIdsSet.has(objetivo.id)}
               onSaveProgress={onSaveProgress}
               onDelete={onDelete}
             />
@@ -120,3 +123,20 @@ export function ObjetivosCategoriaCard({
     </section>
   );
 }
+
+export const ObjetivosCategoriaCard = memo(
+  ObjetivosCategoriaCardComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.grupo === nextProps.grupo &&
+      prevProps.savingIds === nextProps.savingIds &&
+      prevProps.deletingIds === nextProps.deletingIds &&
+      prevProps.onSaveProgress === nextProps.onSaveProgress &&
+      prevProps.onDelete === nextProps.onDelete &&
+      prevProps.defaultOpen === nextProps.defaultOpen &&
+      prevProps.expandirTudo === nextProps.expandirTudo
+    );
+  }
+);
+
+ObjetivosCategoriaCard.displayName = "ObjetivosCategoriaCard";
