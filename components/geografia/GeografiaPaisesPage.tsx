@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import { supabase } from "@/lib/supabase/client";
+import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import type { RegiaoConfig, PaisItem } from "@/lib/geografia/regioes-config";
 
 const GlobeScene = dynamic(
@@ -134,21 +135,15 @@ export default function GeografiaPaisesPage({ config }: Props) {
     const tempo = Math.floor((Date.now() - inicioJogo) / 1000);
 
     try {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-
-      if (!user) return;
-
-      await supabase.rpc("next_registrar_sessao_e_premiar", {
-        p_usuario_id: user.id,
-        p_atividade_id: config.atividadeId,
-        p_materia_id: config.materiaId,
-        p_assunto_id: config.assuntoId,
-        p_detalhe_id: config.detalheId,
-        p_pontuacao: pontuacaoFinal,
-        p_acertos: acertosFinais,
-        p_total_itens: listaPaises.length,
-        p_tempo_total_segundos: tempo,
+      await salvarSessaoAtividade({
+        atividade_id: config.atividadeId,
+        materia_id: config.materiaId,
+        assunto_id: config.assuntoId,
+        detalhe_id: config.detalheId,
+        pontuacao: pontuacaoFinal,
+        acertos: acertosFinais,
+        total_itens: listaPaises.length,
+        tempo_total_segundos: tempo,
       });
     } catch (e) {
       console.error("Erro ao salvar sessão:", e);

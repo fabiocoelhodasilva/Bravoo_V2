@@ -85,26 +85,6 @@ export default function LoginPage() {
     await logar();
   }
 
-  async function buscarNomeUsuario(usuarioId: string) {
-    const usuarioNextResp = await supabase
-      .from("usuarios_next")
-      .select("nome")
-      .eq("id", usuarioId)
-      .maybeSingle();
-
-    if (usuarioNextResp.data?.nome) {
-      return usuarioNextResp.data.nome;
-    }
-
-    const usuarioResp = await supabase
-      .from("usuarios")
-      .select("nome")
-      .eq("id", usuarioId)
-      .maybeSingle();
-
-    return usuarioResp.data?.nome || "";
-  }
-
   async function logar() {
     const em = email.trim();
     const pw = senha || "";
@@ -128,7 +108,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: em,
         password: pw,
       });
@@ -154,38 +134,13 @@ export default function LoginPage() {
       setTentativas(0);
       setBloqueadoAte(null);
 
-      const usuarioId = data?.user?.id;
-
-      if (!usuarioId) {
-        setMensagem("Não foi possível identificar o usuário.");
-        return;
-      }
-
-      const nome = await buscarNomeUsuario(usuarioId);
-
-      const profResp = await supabase
-        .from("professores")
-        .select("aprovado")
-        .eq("usuario_id", usuarioId)
-        .maybeSingle();
-
-      const prof = profResp.data;
-
-      if (prof && prof.aprovado === true) {
-        setMensagem("Login realizado com sucesso! Redirecionando…");
-        setTimeout(() => router.replace("/professor"), 900);
-        return;
-      }
-
-      if (prof && prof.aprovado !== true) {
-        const msg = `Bem-vindo ${nome}, seu pedido de cadastro como professor está em análise.`;
-        setMensagem(msg);
-        setTimeout(() => router.replace("/aluno"), 1500);
-        return;
-      }
-
       setMensagem("Login realizado com sucesso! Redirecionando…");
-      setTimeout(() => router.replace("/aluno"), 900);
+
+      setTimeout(() => {
+        router.replace("/aluno");
+        router.refresh();
+      }, 800);
+
     } catch (e) {
       console.error("Erro inesperado ao fazer login:", e);
       setMensagem("Não foi possível fazer login. Tente novamente.");
