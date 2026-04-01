@@ -12,6 +12,64 @@ function normalizarProgresso(valor: number) {
   return Math.max(0, Math.min(100, Math.round(valor)));
 }
 
+function hojeISO() {
+  const d = new Date();
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+export async function createObjetivoAction(params: {
+  categoriaId: string;
+  titulo: string;
+  dataPrevistaConclusao: string | null;
+}): Promise<ActionResult> {
+  try {
+    const supabase = await getSupabaseServerClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { ok: false, message: "Usuário não autenticado." };
+    }
+
+    const tituloNormalizado = params.titulo?.trim();
+
+    if (!tituloNormalizado) {
+      return { ok: false, message: "Título obrigatório." };
+    }
+
+    if (!params.categoriaId?.trim()) {
+      return { ok: false, message: "Categoria inválida." };
+    }
+
+    const payload = {
+      usuario_id: user.id,
+      categoria_id: params.categoriaId,
+      titulo: tituloNormalizado,
+      data_inicio: hojeISO(),
+      data_prevista_conclusao: params.dataPrevistaConclusao,
+      status: "nao_iniciado",
+      progresso_percentual: 0,
+    };
+
+    const { error } = await supabase.from("objetivos").insert(payload);
+
+    if (error) {
+      return { ok: false, message: "Não foi possível criar o objetivo." };
+    }
+
+    revalidatePath("/objetivos");
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Erro inesperado ao criar objetivo." };
+  }
+}
+
 export async function updateObjetivoProgressAction(params: {
   objetivoId: string;
   progresso: number;

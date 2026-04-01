@@ -7,8 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import {
   fetchCategoriasObjetivo,
   signOutObjetivos,
-  createObjetivo,
 } from "@/lib/objetivos/objetivos-service";
+import { createObjetivoAction } from "@/app/actions/objetivos";
 import { getObjetivosPageCssVars } from "@/lib/objetivos/objetivos-utils";
 
 type CategoriaOption = {
@@ -59,16 +59,15 @@ export default function NovoObjetivoPage() {
     titulo: string;
     dataPrevistaConclusao: string;
   }) {
-    if (!user?.id) {
-      throw new Error("Usuário não autenticado.");
-    }
-
-    await createObjetivo({
-      userId: user.id,
+    const result = await createObjetivoAction({
       categoriaId: values.categoriaId,
       titulo: values.titulo,
       dataPrevistaConclusao: values.dataPrevistaConclusao || null,
     });
+
+    if (!result.ok) {
+      throw new Error(result.message);
+    }
 
     router.push("/objetivos");
     router.refresh();
