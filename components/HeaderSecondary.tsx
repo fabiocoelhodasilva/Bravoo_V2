@@ -1,6 +1,5 @@
 'use client'
 
-import { ThemeToggle } from './ThemeToggle'
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -27,10 +26,8 @@ export default function HeaderSecondary({
   return (
     <header className="w-full h-14 px-5 flex items-center justify-between border-b border-zinc-800">
 
-      {/* LEFT */}
-      <div className="flex items-center w-1/3">
-        <ThemeToggle />
-      </div>
+      {/* LEFT (espaço vazio para manter layout equilibrado) */}
+      <div className="w-1/3"></div>
 
       {/* CENTER */}
       <div className="flex justify-center w-1/3">
