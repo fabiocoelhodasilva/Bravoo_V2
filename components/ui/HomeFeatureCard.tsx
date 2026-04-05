@@ -28,11 +28,7 @@ export default function HomeFeatureCard({
   `;
 
   if (disabled || !href) {
-    return (
-      <div className={`${baseClasses} cursor-default`}>
-        {title}
-      </div>
-    );
+    return <div className={`${baseClasses} cursor-default`}>{title}</div>;
   }
 
   return (
