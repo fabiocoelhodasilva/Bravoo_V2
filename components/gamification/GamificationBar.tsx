@@ -49,6 +49,44 @@ function ItemResumo({ icone, valor }: ItemResumoProps) {
   );
 }
 
+// Skeleton adicionado para evitar layout shift durante carregamento.
+// ANTES: GeografiaMenu não renderizava nada enquanto carregava (sumia o espaço).
+// PARA REVERTER: remover este componente e o import dele em GeografiaMenu.
+export function GamificationBarSkeleton({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`relative mb-4 w-full max-w-sm rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,24,0.96),rgba(10,10,10,0.96))] p-3 shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${className}`}
+    >
+      {/* linha do CardFaixa */}
+      <div className="w-full rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="h-2.5 w-36 animate-pulse rounded-full bg-white/10" />
+          <div className="h-6 w-12 animate-pulse rounded-full bg-white/10" />
+        </div>
+        <div className="mt-3 px-1">
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-2.5 w-20 animate-pulse rounded-full bg-white/10" />
+            <div className="h-2.5 w-28 animate-pulse rounded-full bg-white/10" />
+          </div>
+        </div>
+      </div>
+
+      {/* linha de escudo / moeda / dias */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-[34px] w-[64px] animate-pulse rounded-full bg-white/10"
+            />
+          ))}
+        </div>
+        <div className="h-[34px] w-[34px] animate-pulse rounded-full bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
 export default function GamificationBar({
   classificacaoAtual,
   faixas,

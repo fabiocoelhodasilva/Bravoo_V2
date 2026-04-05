@@ -207,9 +207,15 @@ export async function buscarClassificacaoAtualPorMateria(
   return data as ClassificacaoAtualMateriaView | null;
 }
 
+// Cache in-memory: faixas são dados estáticos (não mudam por sessão).
+// ANTES: buscava do banco toda vez. PARA REVERTER: remover _faixasCache e o if abaixo.
+let _faixasCache: FaixaGamificacao[] | null = null;
+
 export async function buscarFaixasClassificacao(
   supabase: SupabaseClient
 ): Promise<FaixaGamificacao[]> {
+  if (_faixasCache) return _faixasCache;
+
   const { data, error } = await supabase
     .from("next_faixas_classificacao")
     .select("id, nome, ordem, cor, dias_minimos, dias_maximos")
@@ -220,7 +226,7 @@ export async function buscarFaixasClassificacao(
     throw new Error(`Erro ao buscar faixas de classificação: ${error.message}`);
   }
 
-  return (data ?? []).map((faixa) => ({
+  _faixasCache = (data ?? []).map((faixa) => ({
     id: faixa.id,
     nome: faixa.nome,
     ordem: faixa.ordem,
@@ -228,4 +234,6 @@ export async function buscarFaixasClassificacao(
     diasMinimos: faixa.dias_minimos,
     diasMaximos: faixa.dias_maximos,
   }));
+
+  return _faixasCache;
 }

@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
-import GamificationBar from "@/components/gamification/GamificationBar";
+import GamificationBar, {
+  GamificationBarSkeleton,
+} from "@/components/gamification/GamificationBar";
 import { supabase } from "@/lib/supabase/client";
 import {
   buscarClassificacaoAtualPorMateria,
@@ -32,11 +34,16 @@ export default function GeografiaMenu() {
     try {
       setCarregandoGamificacao(true);
 
+      // ANTES: supabase.auth.getUser() — fazia chamada de rede (~200-400ms) para
+      // verificar o JWT no servidor antes de disparar as 3 queries abaixo.
+      // AGORA: getSession() lê direto do localStorage (sem rede), eliminando essa
+      // espera. RLS do Supabase continua protegendo os dados normalmente.
+      // PARA REVERTER: trocar getSession() por getUser() e user.id por session.user.id.
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session?.user) {
         setClassificacaoAtual(null);
         setFaixas([]);
         setMoedas(0);
@@ -45,11 +52,11 @@ export default function GeografiaMenu() {
 
       const [classificacao, listaFaixas, saldoMoedas] = await Promise.all([
         buscarClassificacaoAtualPorMateria(supabase, {
-          usuarioId: user.id,
+          usuarioId: session.user.id,
           materiaId: GEOGRAFIA_MATERIA_ID,
         }),
         buscarFaixasClassificacao(supabase),
-        buscarSaldoMoedas(supabase, user.id),
+        buscarSaldoMoedas(supabase, session.user.id),
       ]);
 
       const listaFaixasOrdenada = [...listaFaixas].sort(
@@ -63,7 +70,7 @@ export default function GeografiaMenu() {
         const faixaInicial = listaFaixasOrdenada[0];
 
         const classificacaoInicial: ClassificacaoAtualMateriaView = {
-          usuario_id: user.id,
+          usuario_id: session.user.id,
           materia_id: GEOGRAFIA_MATERIA_ID,
 
           dias_seguidos: 0,
@@ -171,7 +178,9 @@ export default function GeografiaMenu() {
           Geografia
         </h1>
 
-        {!carregandoGamificacao && (
+        {carregandoGamificacao ? (
+          <GamificationBarSkeleton />
+        ) : (
           <GamificationBar
             classificacaoAtual={classificacaoAtual}
             faixas={faixas}
