@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BottomNav from "../ui/BottomNav";
 import HeaderInterno from "../ui/HeaderInterno";
@@ -15,22 +15,49 @@ type Tarefa = {
 type Props = {
   onLogout: () => Promise<void>;
   tarefasIniciais?: Tarefa[];
+  onToggleTarefa?: (id: string) => Promise<void> | void;
+  salvandoIds?: string[];
 };
 
 export function MeuDiaPageView({
   onLogout,
   tarefasIniciais = [],
+  onToggleTarefa,
+  salvandoIds = [],
 }: Props) {
   const [tarefas, setTarefas] = useState<Tarefa[]>(tarefasIniciais);
 
-  function toggleTarefa(id: string) {
+  useEffect(() => {
+    setTarefas(tarefasIniciais);
+  }, [tarefasIniciais]);
+
+  async function toggleTarefa(id: string) {
+    if (salvandoIds.includes(id)) return;
+
+    const tarefaAtual = tarefas.find((tarefa) => tarefa.id === id);
+    if (!tarefaAtual) return;
+
+    const novoStatus = !tarefaAtual.concluida;
+
     setTarefas((prev) =>
       prev.map((tarefa) =>
-        tarefa.id === id
-          ? { ...tarefa, concluida: !tarefa.concluida }
-          : tarefa
+        tarefa.id === id ? { ...tarefa, concluida: novoStatus } : tarefa
       )
     );
+
+    try {
+      await onToggleTarefa?.(id);
+    } catch (error) {
+      console.error("Erro ao alternar tarefa:", error);
+
+      setTarefas((prev) =>
+        prev.map((tarefa) =>
+          tarefa.id === id
+            ? { ...tarefa, concluida: tarefaAtual.concluida }
+            : tarefa
+        )
+      );
+    }
   }
 
   const hojeFormatado = useMemo(() => {
@@ -55,7 +82,7 @@ export function MeuDiaPageView({
           </h2>
 
           <Link
-            href="/meu-dia/nova"
+            href="/meu-dia/novo"
             aria-label="Adicionar tarefa"
             title="Adicionar tarefa"
             className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
@@ -112,34 +139,47 @@ export function MeuDiaPageView({
           </section>
         ) : (
           <div className="flex flex-col gap-2">
-            {tarefas.map((tarefa) => (
-              <button
-                key={tarefa.id}
-                type="button"
-                onClick={() => toggleTarefa(tarefa.id)}
-                className="flex items-center gap-3 border-b border-white/10 py-2 text-left"
-              >
-                <div
-                  className={`h-5 w-5 shrink-0 rounded-full border flex items-center justify-center text-[0.7rem] ${
-                    tarefa.concluida
-                      ? "bg-[var(--color-4)] text-black border-[var(--color-4)]"
-                      : "border-white/30 text-transparent"
-                  }`}
-                >
-                  ✓
-                </div>
+            {tarefas.map((tarefa) => {
+              const salvando = salvandoIds.includes(tarefa.id);
 
-                <span
-                  className={`text-[0.95rem] ${
-                    tarefa.concluida
-                      ? "line-through text-white/40"
-                      : "text-white"
+              return (
+                <button
+                  key={tarefa.id}
+                  type="button"
+                  onClick={() => void toggleTarefa(tarefa.id)}
+                  disabled={salvando}
+                  className={`flex items-center gap-3 border-b border-white/10 py-2 text-left ${
+                    salvando ? "opacity-70" : ""
                   }`}
                 >
-                  {tarefa.titulo}
-                </span>
-              </button>
-            ))}
+                  <div
+                    className={`h-5 w-5 shrink-0 rounded-full border flex items-center justify-center text-[0.7rem] ${
+                      tarefa.concluida
+                        ? "bg-[var(--color-4)] text-black border-[var(--color-4)]"
+                        : "border-white/30 text-transparent"
+                    }`}
+                  >
+                    ✓
+                  </div>
+
+                  <span
+                    className={`flex-1 text-[0.95rem] ${
+                      tarefa.concluida
+                        ? "line-through text-white/40"
+                        : "text-white"
+                    }`}
+                  >
+                    {tarefa.titulo}
+                  </span>
+
+                  {salvando && (
+                    <span className="shrink-0 text-[0.72rem] text-white/45">
+                      salvando...
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
