@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
@@ -28,7 +28,7 @@ export default function GeografiaMenu() {
   const [moedas, setMoedas] = useState(0);
   const [carregandoGamificacao, setCarregandoGamificacao] = useState(true);
 
-  async function carregarGamificacao() {
+  const carregarGamificacao = useCallback(async () => {
     try {
       setCarregandoGamificacao(true);
 
@@ -52,9 +52,46 @@ export default function GeografiaMenu() {
         buscarSaldoMoedas(supabase, user.id),
       ]);
 
-      setClassificacaoAtual(classificacao);
-      setFaixas(listaFaixas);
+      const listaFaixasOrdenada = [...listaFaixas].sort(
+        (a, b) => a.ordem - b.ordem
+      );
+
+      setFaixas(listaFaixasOrdenada);
       setMoedas(saldoMoedas);
+
+      if (!classificacao && listaFaixasOrdenada.length > 0) {
+        const faixaInicial = listaFaixasOrdenada[0];
+
+        const classificacaoInicial: ClassificacaoAtualMateriaView = {
+          usuario_id: user.id,
+          materia_id: GEOGRAFIA_MATERIA_ID,
+
+          dias_seguidos: 0,
+          maior_sequencia: 0,
+          ultima_data_atividade: null,
+
+          pontos_consistencia: 0,
+          escudos_disponiveis: 0,
+          ultimo_marco_escudo_concedido: 0,
+
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+
+          classificacao_id: faixaInicial.id,
+          classificacao_nome: faixaInicial.nome,
+          classificacao_ordem: faixaInicial.ordem,
+          classificacao_cor: faixaInicial.cor ?? null,
+
+          classificacao_dias_minimos: faixaInicial.diasMinimos,
+          classificacao_dias_maximos: faixaInicial.diasMaximos,
+
+          percentual_progresso_classificacao: 0,
+        };
+
+        setClassificacaoAtual(classificacaoInicial);
+      } else {
+        setClassificacaoAtual(classificacao);
+      }
     } catch (error) {
       console.error("Erro ao carregar gamificação do menu de Geografia:", error);
       setClassificacaoAtual(null);
@@ -63,11 +100,33 @@ export default function GeografiaMenu() {
     } finally {
       setCarregandoGamificacao(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void carregarGamificacao();
-  }, []);
+  }, [carregarGamificacao]);
+
+  useEffect(() => {
+    const recarregar = () => {
+      void carregarGamificacao();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void carregarGamificacao();
+      }
+    };
+
+    window.addEventListener("focus", recarregar);
+    window.addEventListener("pageshow", recarregar);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", recarregar);
+      window.removeEventListener("pageshow", recarregar);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [carregarGamificacao]);
 
   async function handleLogout() {
     try {

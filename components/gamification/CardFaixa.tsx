@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   MouseEvent as ReactMouseEvent,
   TouchEvent as ReactTouchEvent,
@@ -88,21 +88,67 @@ export default function CardFaixa({
     setAberto((prev) => !prev);
   }
 
-  if (!classificacaoAtual) {
+  const faixaInicial = useMemo(() => {
+    if (!faixas.length) return null;
+
+    return [...faixas].sort((a, b) => a.ordem - b.ordem)[0];
+  }, [faixas]);
+
+  const faixaExibida = useMemo(() => {
+    if (classificacaoAtual) {
+      return {
+        id: classificacaoAtual.classificacao_id,
+        nome: classificacaoAtual.classificacao_nome,
+        cor: classificacaoAtual.classificacao_cor ?? "#FFFFFF",
+        diasMinimos: classificacaoAtual.classificacao_dias_minimos,
+        diasMaximos: classificacaoAtual.classificacao_dias_maximos,
+      };
+    }
+
+    if (faixaInicial) {
+      return {
+        id: faixaInicial.id,
+        nome: faixaInicial.nome,
+        cor: faixaInicial.cor ?? "#FFFFFF",
+        diasMinimos: faixaInicial.diasMinimos,
+        diasMaximos: faixaInicial.diasMaximos,
+      };
+    }
+
+    return null;
+  }, [classificacaoAtual, faixaInicial]);
+
+  if (!faixaExibida) {
     return (
       <div
         className={`rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2.5 ${className}`}
       >
         <div className="text-center text-[12px] font-medium text-white/70">
-          Classificação indisponível
+          Faixas indisponíveis
         </div>
       </div>
     );
   }
 
-  const nomeFaixa = classificacaoAtual.classificacao_nome;
-  const diasMaximos = classificacaoAtual.classificacao_dias_maximos;
-  const corFaixa = classificacaoAtual.classificacao_cor ?? "#FFFFFF";
+  const nomeFaixa = faixaExibida.nome;
+  const diasMinimos = faixaExibida.diasMinimos;
+  const diasMaximos = faixaExibida.diasMaximos;
+  const corFaixa = faixaExibida.cor;
+  const classificacaoAtualId = classificacaoAtual?.classificacao_id ?? faixaExibida.id;
+
+  function montarTextoFaixa() {
+    if (diasMaximos === null) {
+      return diasMinimos === 0
+        ? "a partir de 0 dias seguidos"
+        : `a partir de ${diasMinimos} dias seguidos`;
+    }
+
+    if (diasMinimos === 0) {
+      return `até ${diasMaximos} dias seguidos`;
+    }
+
+    return `${diasMinimos} a ${diasMaximos} dias seguidos`;
+  }
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
@@ -130,9 +176,7 @@ export default function CardFaixa({
           <div className="mt-3 px-1">
             <div className="flex items-center justify-between gap-3 text-[12px] font-semibold">
               <span style={{ color: corFaixa }}>{nomeFaixa}</span>
-              <span className="shrink-0 text-white">
-                {diasMaximos ? `até ${diasMaximos} dias seguidos` : "∞"}
-              </span>
+              <span className="shrink-0 text-white">{montarTextoFaixa()}</span>
             </div>
           </div>
         </div>
@@ -147,7 +191,7 @@ export default function CardFaixa({
       >
         <TabelaFaixas
           faixas={faixas}
-          classificacaoAtualId={classificacaoAtual.classificacao_id}
+          classificacaoAtualId={classificacaoAtualId}
         />
       </div>
     </div>
