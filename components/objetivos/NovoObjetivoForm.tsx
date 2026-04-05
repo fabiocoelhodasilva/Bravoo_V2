@@ -52,7 +52,10 @@ export function NovoObjetivoForm({
     }
 
     if (!titulo.trim()) {
-      setMensagem({ tipo: "erro", texto: "Informe um título para o objetivo." });
+      setMensagem({
+        tipo: "erro",
+        texto: "Informe um título para o objetivo.",
+      });
       return;
     }
 
@@ -67,7 +70,10 @@ export function NovoObjetivoForm({
       });
     } catch (error) {
       console.error("Erro ao salvar objetivo:", error);
-      setMensagem({ tipo: "erro", texto: "Erro ao salvar. Tente novamente." });
+      setMensagem({
+        tipo: "erro",
+        texto: "Erro ao salvar. Tente novamente.",
+      });
       setSaving(false);
     }
   }
@@ -101,7 +107,6 @@ export function NovoObjetivoForm({
               className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
               style={{
                 borderColor: "rgba(255,255,255,0.12)",
-                boxShadow: "none",
               }}
             >
               {loadingCategorias ? (
@@ -109,6 +114,7 @@ export function NovoObjetivoForm({
               ) : (
                 <>
                   <option value="">Selecione...</option>
+
                   {categorias.map((categoria) => (
                     <option key={categoria.id} value={categoria.id}>
                       {categoria.nome}
@@ -122,10 +128,14 @@ export function NovoObjetivoForm({
               <div className="mt-1 flex items-center gap-2 text-[0.8rem] text-[#bcbcbc]">
                 <span
                   className="h-[10px] w-[10px] rounded-full border border-[#333]"
-                  style={{ background: categoriaSelecionada.cor || "#666" }}
+                  style={{
+                    background: categoriaSelecionada.cor || "#666",
+                  }}
                 />
+
                 <span>
-                  {categoriaSelecionada.descricao || categoriaSelecionada.nome}
+                  {categoriaSelecionada.descricao ||
+                    categoriaSelecionada.nome}
                 </span>
               </div>
             )}
@@ -185,11 +195,11 @@ export function NovoObjetivoForm({
             </div>
           )}
 
-          <div className="mt-5 flex justify-end">
+          <div className="mt-5 flex">
             <button
               type="submit"
               disabled={saving}
-              className="rounded-full px-5 py-[10px] text-[0.88rem] font-bold text-black transition active:scale-[0.98] disabled:opacity-70"
+              className="w-full rounded-full px-5 py-3 text-[0.92rem] font-semibold text-black shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: "var(--color-4)",
               }}

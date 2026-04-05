@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "../components/Providers";
@@ -20,14 +20,15 @@ export const metadata: Metadata = {
   // manifest do PWA
   manifest: "/manifest.json",
 
-  // cor da barra do navegador no celular
-  themeColor: "#000000",
-
   // ícones
   icons: {
     icon: "/icon",
     apple: "/icon",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -37,15 +38,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <head>
-        {/* 🚀 PRELOAD DA TEXTURA DO GLOBO */}
-        <link
-          rel="preload"
-          as="image"
-          href="/textures/earth-blue-marble.jpg"
-        />
-      </head>
-
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

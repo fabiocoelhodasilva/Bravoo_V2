@@ -20,20 +20,6 @@ export default function AppIndex() {
 
         const userId = data.session.user.id;
 
-        // Verifica cadastro complementar
-        const { data: usuario } = await supabase
-          .from("usuarios")
-          .select("id, ano_escolar_id")
-          .eq("id", userId)
-          .single();
-
-        const needsComplementaryData = !usuario?.ano_escolar_id;
-
-        if (needsComplementaryData) {
-          router.replace("/cadastro-complementar");
-          return;
-        }
-
         // Verifica se é professor aprovado
         const { data: prof } = await supabase
           .from("professores")
@@ -41,7 +27,7 @@ export default function AppIndex() {
           .eq("usuario_id", userId)
           .maybeSingle();
 
-        if (prof && prof.aprovado === true) {
+        if (prof?.aprovado === true) {
           router.replace("/professor");
         } else {
           router.replace("/aluno");

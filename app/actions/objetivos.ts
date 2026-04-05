@@ -20,6 +20,12 @@ function hojeISO() {
   return `${ano}-${mes}-${dia}`;
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Erro desconhecido.";
+}
+
 export async function createObjetivoAction(params: {
   categoriaId: string;
   titulo: string;
@@ -53,20 +59,26 @@ export async function createObjetivoAction(params: {
       titulo: tituloNormalizado,
       data_inicio: hojeISO(),
       data_prevista_conclusao: params.dataPrevistaConclusao,
-      status: "nao_iniciado",
+      status: "ativo",
       progresso_percentual: 0,
     };
 
-    const { error } = await supabase.from("next_objetivos").insert(payload);
+    const { error } = await supabase.from("next_objetivos").insert([payload]);
 
     if (error) {
-      return { ok: false, message: "Não foi possível criar o objetivo." };
+      return {
+        ok: false,
+        message: error.message || "Não foi possível criar o objetivo.",
+      };
     }
 
     revalidatePath("/objetivos");
     return { ok: true };
-  } catch {
-    return { ok: false, message: "Erro inesperado ao criar objetivo." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getErrorMessage(error),
+    };
   }
 }
 
@@ -99,13 +111,19 @@ export async function updateObjetivoProgressAction(params: {
       .eq("usuario_id", user.id);
 
     if (error) {
-      return { ok: false, message: "Não foi possível salvar o progresso." };
+      return {
+        ok: false,
+        message: error.message || "Não foi possível salvar o progresso.",
+      };
     }
 
     revalidatePath("/objetivos");
     return { ok: true };
-  } catch {
-    return { ok: false, message: "Erro inesperado ao salvar progresso." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getErrorMessage(error),
+    };
   }
 }
 
@@ -135,12 +153,18 @@ export async function deleteObjetivoAction(params: {
       .eq("usuario_id", user.id);
 
     if (error) {
-      return { ok: false, message: "Não foi possível excluir o objetivo." };
+      return {
+        ok: false,
+        message: error.message || "Não foi possível excluir o objetivo.",
+      };
     }
 
     revalidatePath("/objetivos");
     return { ok: true };
-  } catch {
-    return { ok: false, message: "Erro inesperado ao excluir objetivo." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: getErrorMessage(error),
+    };
   }
 }

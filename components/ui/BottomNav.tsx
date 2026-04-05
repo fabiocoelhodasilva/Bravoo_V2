@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Clock3, Target } from "lucide-react";
+import { Clock3, Target, BookOpen } from "lucide-react";
 
 type BottomNavProps = {
-  active: "objetivos" | "meu-dia";
+  active: "objetivos" | "livros" | "meu-dia";
 };
 
 export default function BottomNav({ active }: BottomNavProps) {
@@ -16,7 +16,8 @@ export default function BottomNav({ active }: BottomNavProps) {
 
   return (
     <nav className="fixed bottom-0 left-0 z-50 w-full border-t border-white/10 bg-[#111]/95 backdrop-blur">
-      <div className="mx-auto grid h-[64px] max-w-[1100px] grid-cols-2 px-6">
+      <div className="mx-auto grid h-[64px] max-w-[1100px] grid-cols-3 px-6">
+
         <Link
           href="/objetivos"
           className={`${itemBase} ${
@@ -32,6 +33,20 @@ export default function BottomNav({ active }: BottomNavProps) {
         </Link>
 
         <Link
+          href="/livros"
+          className={`${itemBase} ${
+            active === "livros" ? activeClass : inactiveClass
+          }`}
+          aria-label="Livros"
+        >
+          <BookOpen
+            className={iconBase}
+            strokeWidth={active === "livros" ? 2.4 : 2.1}
+          />
+          <span>Livros</span>
+        </Link>
+
+        <Link
           href="/meu-dia"
           className={`${itemBase} ${
             active === "meu-dia" ? activeClass : inactiveClass
@@ -44,6 +59,7 @@ export default function BottomNav({ active }: BottomNavProps) {
           />
           <span>Meu dia</span>
         </Link>
+
       </div>
     </nav>
   );
