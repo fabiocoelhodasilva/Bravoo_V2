@@ -1,247 +1,87 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import type {
-  ReactNode,
-  MouseEvent as ReactMouseEvent,
-  TouchEvent as ReactTouchEvent,
-} from "react";
+  ClassificacaoAtualMateriaView,
+  FaixaGamificacao,
+} from "@/lib/gamification/gamificacao-types";
+import CardFaixa from "@/components/gamification/CardFaixa";
+import RegrasGamificacao from "@/components/gamification/RegrasGamificacao";
 
 type GamificationBarProps = {
-  constancyCount: number;
-  coins: number;
-  constancyRank: number;
-  coinsRank: number;
+  classificacaoAtual: ClassificacaoAtualMateriaView | null;
+  faixas: FaixaGamificacao[];
+  escudosDisponiveis: number;
+  moedas: number;
+  diasSeguidos: number;
+  className?: string;
 };
 
-type RuleRowProps = {
-  icon: ReactNode;
-  title: string;
-  rule: string;
+type ItemResumoProps = {
+  icone: ReactNode;
+  valor: number;
 };
 
-type GemType = "weekly" | "monthly" | "yearly";
+function IconeMoeda() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" fill="#e9891d" />
+      <circle cx="12" cy="12" r="6" fill="#f1a94c" />
+    </svg>
+  );
+}
 
-type GemIconProps = {
-  type: GemType;
-  size?: number;
-};
-
-type BravooCoinIconProps = {
-  size?: number;
-};
+function ItemResumo({ icone, valor }: ItemResumoProps) {
+  return (
+    <div className="flex h-[34px] min-w-[64px] items-center justify-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5">
+      <span className="flex items-center justify-center leading-none">
+        {icone}
+      </span>
+      <span className="text-[12px] font-bold text-white">{valor}</span>
+    </div>
+  );
+}
 
 export default function GamificationBar({
-  constancyCount,
-  coins,
-  constancyRank,
-  coinsRank,
+  classificacaoAtual,
+  faixas,
+  escudosDisponiveis,
+  moedas,
+  diasSeguidos,
+  className = "",
 }: GamificationBarProps) {
-  const router = useRouter();
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
-
-  function goToRanking() {
-    router.push("/ranking");
-  }
-
-  function togglePopover(e: ReactMouseEvent<HTMLButtonElement> | ReactTouchEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    setOpen((prev) => !prev);
-  }
-
-  useEffect(() => {
-    function handleOutside(event: globalThis.MouseEvent | globalThis.TouchEvent) {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutside);
-    document.addEventListener("touchstart", handleOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutside);
-      document.removeEventListener("touchstart", handleOutside);
-    };
-  }, []);
-
-  return (
-    <div ref={wrapperRef} className="relative w-full max-w-sm mb-6">
-      <div
-        className="
-          w-full rounded-[24px]
-          border border-white/10
-          bg-[linear-gradient(180deg,rgba(24,24,24,0.98),rgba(10,10,10,0.98))]
-          px-4 py-[11px]
-          shadow-[0_10px_26px_rgba(0,0,0,0.45)]
-        "
-      >
-        <div className="flex items-stretch">
-          <button
-            type="button"
-            onClick={togglePopover}
-            onMouseEnter={() => setOpen(true)}
-            className="w-1/2 pr-3"
-          >
-            <div className="flex h-full flex-col">
-              <div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-                Minhas conquistas
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 flex flex-col items-center">
-                  <GemIcon type="weekly" size={24} />
-                  <div className="mt-1 text-[12px] font-semibold text-white/90">
-                    {constancyCount}
-                  </div>
-                </div>
-
-                <div className="h-9 w-px bg-white/10" />
-
-                <div className="flex-1 flex flex-col items-center">
-                  <BravooCoinIcon size={24} />
-                  <div className="mt-1 text-[12px] font-semibold text-white/90">
-                    {coins}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </button>
-
-          <div className="w-px bg-white/10" />
-
-          <button
-            type="button"
-            onClick={goToRanking}
-            className="w-1/2 pl-3"
-          >
-            <div className="flex h-full flex-col">
-              <div className="mb-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-                Ranking
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 flex flex-col items-center">
-                  <StackedGems />
-                  <div className="mt-1 text-[12px] font-semibold text-white/90">
-                    #{constancyRank}
-                  </div>
-                </div>
-
-                <div className="h-9 w-px bg-white/10" />
-
-                <div className="flex-1 flex flex-col items-center">
-                  <BravooCoinIcon size={28} />
-                  <div className="mt-1 text-[12px] font-semibold text-white/90">
-                    #{coinsRank}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div
-        className={`absolute left-1/2 top-full z-40 mt-3 w-[300px] -translate-x-1/2 rounded-[18px] border border-white/10 bg-[#0f0f0f] p-2.5 shadow-xl transition-all ${
-          open
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-1 pointer-events-none"
-        }`}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-      >
-        <div className="mb-1.5 text-center text-[11px] font-bold text-white/60">
-          Pedras Preciosas
-        </div>
-
-        <div className="space-y-1">
-          <RuleRow
-            icon={<GemIcon type="weekly" size={20} />}
-            title="Safira"
-            rule="7 dias"
-          />
-          <RuleRow
-            icon={<GemIcon type="monthly" size={20} />}
-            title="Rubi"
-            rule="30 dias"
-          />
-          <RuleRow
-            icon={<GemIcon type="yearly" size={20} />}
-            title="Diamante"
-            rule="365 dias"
-          />
-        </div>
-
-        <div className="my-2 h-px bg-white/10" />
-
-        <div className="mb-1 text-center text-[11px] text-white/60">
-          Bravoo Coins
-        </div>
-
-        <div className="flex items-center justify-center gap-2 text-[12px] text-white/80">
-          <BravooCoinIcon size={18} />
-          1 ponto = 1 Bravoo Coin
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RuleRow({ icon, title, rule }: RuleRowProps) {
-  return (
-    <div className="flex items-center gap-2 px-2 py-1.5">
-      {icon}
-      <div>
-        <div className="text-[12px] font-semibold text-white">{title}</div>
-        <div className="text-[10px] text-white/55">{rule}</div>
-      </div>
-    </div>
-  );
-}
-
-function StackedGems() {
-  return (
-    <div className="relative h-[28px] w-[48px]">
-      <div className="absolute left-0 top-[5px]">
-        <GemIcon type="weekly" size={18} />
-      </div>
-      <div className="absolute left-[13px] top-0">
-        <GemIcon type="monthly" size={22} />
-      </div>
-      <div className="absolute left-[26px] top-[5px]">
-        <GemIcon type="yearly" size={18} />
-      </div>
-    </div>
-  );
-}
-
-function GemIcon({ type, size = 30 }: GemIconProps) {
-  const colors =
-    type === "weekly"
-      ? "from-cyan-300 to-blue-500"
-      : type === "monthly"
-      ? "from-red-400 to-pink-600"
-      : "from-white to-sky-200";
-
   return (
     <div
-      className={`rotate-45 rounded-sm bg-gradient-to-br ${colors} shadow-md`}
-      style={{ width: size, height: size }}
-    />
-  );
-}
-
-function BravooCoinIcon({ size = 30 }: BravooCoinIconProps) {
-  return (
-    <div
-      className="flex items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500"
-      style={{ width: size, height: size }}
+      className={`relative mb-4 w-full max-w-sm rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,24,0.96),rgba(10,10,10,0.96))] p-3 shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${className}`}
     >
-      <span className="text-[10px] font-bold text-[#6a4300]">B</span>
+      <CardFaixa classificacaoAtual={classificacaoAtual} faixas={faixas} />
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ItemResumo
+            icone={<span className="text-[14px] text-white">🛡️</span>}
+            valor={escudosDisponiveis}
+          />
+
+          <ItemResumo icone={<IconeMoeda />} valor={moedas} />
+
+          <ItemResumo
+            icone={<span className="text-[14px] text-white">🔥</span>}
+            valor={diasSeguidos}
+          />
+        </div>
+
+        <div className="shrink-0">
+          <RegrasGamificacao />
+        </div>
+      </div>
     </div>
   );
 }

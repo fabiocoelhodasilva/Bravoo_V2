@@ -27,7 +27,7 @@ type ObjetivoRow = {
   categoria_id: string | null;
   titulo: string;
   progresso_percentual: number | null;
-  objetivos_categoria: ObjetivoCategoriaRow;
+  next_objetivos_categoria: ObjetivoCategoriaRow;
 };
 
 type CategoriaCompletaRow = {
@@ -76,19 +76,19 @@ function normalizarObjetivo(item: ObjetivoRow, userId: string): Objetivo {
     categoria_id: item.categoria_id,
     titulo: item.titulo,
     progresso_percentual: item.progresso_percentual ?? 0,
-    objetivos_categoria: normalizarCategoria(item.objetivos_categoria),
+    objetivos_categoria: normalizarCategoria(item.next_objetivos_categoria),
   };
 }
 
 export async function fetchObjetivosByUser(userId: string): Promise<Objetivo[]> {
   const { data, error } = await supabase
-    .from("objetivos")
+    .from("next_objetivos")
     .select(`
       id,
       categoria_id,
       titulo,
       progresso_percentual,
-      objetivos_categoria:categoria_id (
+      next_objetivos_categoria:categoria_id (
         id,
         nome,
         cor
@@ -108,7 +108,7 @@ export async function updateObjetivoProgress(params: {
   progresso: number;
 }) {
   const { error } = await supabase
-    .from("objetivos")
+    .from("next_objetivos")
     .update({ progresso_percentual: params.progresso })
     .eq("id", params.objetivoId)
     .eq("usuario_id", params.userId);
@@ -121,7 +121,7 @@ export async function deleteObjetivo(params: {
   userId: string;
 }) {
   const { error } = await supabase
-    .from("objetivos")
+    .from("next_objetivos")
     .delete()
     .eq("id", params.objetivoId)
     .eq("usuario_id", params.userId);
@@ -136,7 +136,7 @@ export async function signOutObjetivos() {
 
 export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption[]> {
   const tentativaCompleta = await supabase
-    .from("objetivos_categoria")
+    .from("next_objetivos_categoria")
     .select("id, nome, descricao, ordem, cor, ativo")
     .eq("ativo", true)
     .order("ordem", { ascending: true });
@@ -154,7 +154,7 @@ export async function fetchCategoriasObjetivo(): Promise<CategoriaObjetivoOption
   }
 
   const tentativaBasica = await supabase
-    .from("objetivos_categoria")
+    .from("next_objetivos_categoria")
     .select("id, nome, descricao")
     .order("nome", { ascending: true });
 
@@ -187,7 +187,7 @@ export async function createObjetivo(params: {
     progresso_percentual: 0,
   };
 
-  const { error } = await supabase.from("objetivos").insert(payload);
+  const { error } = await supabase.from("next_objetivos").insert(payload);
 
   if (error) throw error;
 }

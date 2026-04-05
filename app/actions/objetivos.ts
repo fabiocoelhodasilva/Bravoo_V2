@@ -57,7 +57,7 @@ export async function createObjetivoAction(params: {
       progresso_percentual: 0,
     };
 
-    const { error } = await supabase.from("objetivos").insert(payload);
+    const { error } = await supabase.from("next_objetivos").insert(payload);
 
     if (error) {
       return { ok: false, message: "Não foi possível criar o objetivo." };
@@ -93,7 +93,7 @@ export async function updateObjetivoProgressAction(params: {
     const progressoNormalizado = normalizarProgresso(params.progresso);
 
     const { error } = await supabase
-      .from("objetivos")
+      .from("next_objetivos")
       .update({ progresso_percentual: progressoNormalizado })
       .eq("id", params.objetivoId)
       .eq("usuario_id", user.id);
@@ -129,7 +129,7 @@ export async function deleteObjetivoAction(params: {
     }
 
     const { error } = await supabase
-      .from("objetivos")
+      .from("next_objetivos")
       .delete()
       .eq("id", params.objetivoId)
       .eq("usuario_id", user.id);

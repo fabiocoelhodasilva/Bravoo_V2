@@ -46,6 +46,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
   const [mensagem, setMensagem] = useState("");
   const [inicioJogo, setInicioJogo] = useState(Date.now());
   const [finalizado, setFinalizado] = useState(false);
+  const [interacaoLiberada, setInteracaoLiberada] = useState(false);
 
   const [correctCountries, setCorrectCountries] = useState<string[]>([]);
   const [flashingCountries, setFlashingCountries] = useState<string[]>([]);
@@ -54,6 +55,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
   );
 
   const audioRef = useRef<AudioContext | null>(null);
+  const sessaoJaFinalizadaRef = useRef(false);
 
   const paisesMap = useMemo(() => config.paises, [config.paises]);
 
@@ -74,9 +76,17 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setMensagem("");
     setInicioJogo(Date.now());
     setFinalizado(false);
+    setInteracaoLiberada(false);
     setCorrectCountries([]);
     setFlashingCountries([]);
     setCelebratingCountries([]);
+    sessaoJaFinalizadaRef.current = false;
+
+    const timer = window.setTimeout(() => {
+      setInteracaoLiberada(true);
+    }, 800);
+
+    return () => window.clearTimeout(timer);
   }, [config.pontuacaoInicial, paisesMap]);
 
   useEffect(() => {
@@ -128,6 +138,13 @@ export default function GeografiaPaisesPage({ config }: Props) {
   }
 
   async function finalizar(acertosFinais: number, pontuacaoFinal: number) {
+    if (sessaoJaFinalizadaRef.current) {
+      console.log("finalizar ignorado: sessão já finalizada");
+      return;
+    }
+
+    sessaoJaFinalizadaRef.current = true;
+
     setFinalizado(true);
     play("vitoria");
     setMensagem("");
@@ -147,10 +164,16 @@ export default function GeografiaPaisesPage({ config }: Props) {
       });
     } catch (e) {
       console.error("Erro ao salvar sessão:", e);
+      setMensagem("Erro ao salvar sessão.");
     }
   }
 
   function handleClick(nome: string) {
+    if (!interacaoLiberada) {
+      console.log("clique ignorado: interação ainda bloqueada");
+      return;
+    }
+
     if (finalizado || !paisAtual) return;
 
     const nomesValidos = [paisAtual.en, ...(paisAtual.aliases || [])];
@@ -170,12 +193,15 @@ export default function GeografiaPaisesPage({ config }: Props) {
         setCelebratingCountries([]);
       }, 350);
 
-      if (indiceAtual + 1 >= listaPaises.length) {
-        setTimeout(() => {
+      if (
+        indiceAtual + 1 >= listaPaises.length &&
+        !sessaoJaFinalizadaRef.current
+      ) {
+        window.setTimeout(() => {
           void finalizar(novosAcertos, pontuacao);
         }, 600);
       } else {
-        setTimeout(() => {
+        window.setTimeout(() => {
           setIndiceAtual((i) => i + 1);
           setMensagem("");
         }, 600);
@@ -190,7 +216,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
         prev.includes(nome) ? prev : [...prev, nome]
       );
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setFlashingCountries((prev) => prev.filter((x) => x !== nome));
       }, 300);
     }
@@ -204,9 +230,15 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setMensagem("");
     setInicioJogo(Date.now());
     setFinalizado(false);
+    setInteracaoLiberada(false);
     setCorrectCountries([]);
     setFlashingCountries([]);
     setCelebratingCountries([]);
+    sessaoJaFinalizadaRef.current = false;
+
+    window.setTimeout(() => {
+      setInteracaoLiberada(true);
+    }, 800);
   }
 
   async function logout() {
@@ -233,14 +265,14 @@ export default function GeografiaPaisesPage({ config }: Props) {
           {finalizado ? "Parabens, jogo concluído!" : paisAtual?.pt}
         </h1>
 
-        <p className="text-sm text-center mb-1">
+        <p className="text-sm text-center mb-3">
           Pontuação: {pontuacao} | Progresso {acertos}/{listaPaises.length}
         </p>
 
         {finalizado && (
           <button
             onClick={reset}
-            className="mt-2 text-sm underline hover:opacity-80 transition"
+            className="mt-1 mb-2 text-sm underline hover:opacity-80 transition"
           >
             Jogar novamente
           </button>

@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function requireAuth() {
+type RequireAuthOptions = {
+  redirectToLogin?: boolean;
+};
+
+export async function requireAuth(options: RequireAuthOptions = {}) {
+  const { redirectToLogin = true } = options;
+
   const supabase = await getSupabaseServerClient();
 
   const {
@@ -10,7 +16,11 @@ export async function requireAuth() {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/login");
+    if (redirectToLogin) {
+      redirect("/login");
+    }
+
+    throw new Error("UNAUTHORIZED");
   }
 
   return { supabase, user };

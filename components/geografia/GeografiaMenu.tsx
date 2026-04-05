@@ -1,26 +1,73 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
 import GamificationBar from "@/components/gamification/GamificationBar";
 import { supabase } from "@/lib/supabase/client";
+import {
+  buscarClassificacaoAtualPorMateria,
+  buscarFaixasClassificacao,
+  buscarSaldoMoedas,
+} from "@/lib/gamificacao/gamificacao-service";
+import type {
+  ClassificacaoAtualMateriaView,
+  FaixaGamificacao,
+} from "@/lib/gamificacao/gamificacao-types";
 
-type GeografiaMenuProps = {
-  constancyCount: number;
-  coins: number;
-  constancyRank: number;
-  coinsRank: number;
-};
+const GEOGRAFIA_MATERIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
 
-export default function GeografiaMenu({
-  constancyCount,
-  coins,
-  constancyRank,
-  coinsRank,
-}: GeografiaMenuProps) {
+export default function GeografiaMenu() {
   const router = useRouter();
+
+  const [classificacaoAtual, setClassificacaoAtual] =
+    useState<ClassificacaoAtualMateriaView | null>(null);
+  const [faixas, setFaixas] = useState<FaixaGamificacao[]>([]);
+  const [moedas, setMoedas] = useState(0);
+  const [carregandoGamificacao, setCarregandoGamificacao] = useState(true);
+
+  async function carregarGamificacao() {
+    try {
+      setCarregandoGamificacao(true);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setClassificacaoAtual(null);
+        setFaixas([]);
+        setMoedas(0);
+        return;
+      }
+
+      const [classificacao, listaFaixas, saldoMoedas] = await Promise.all([
+        buscarClassificacaoAtualPorMateria(supabase, {
+          usuarioId: user.id,
+          materiaId: GEOGRAFIA_MATERIA_ID,
+        }),
+        buscarFaixasClassificacao(supabase),
+        buscarSaldoMoedas(supabase, user.id),
+      ]);
+
+      setClassificacaoAtual(classificacao);
+      setFaixas(listaFaixas);
+      setMoedas(saldoMoedas);
+    } catch (error) {
+      console.error("Erro ao carregar gamificação do menu de Geografia:", error);
+      setClassificacaoAtual(null);
+      setFaixas([]);
+      setMoedas(0);
+    } finally {
+      setCarregandoGamificacao(false);
+    }
+  }
+
+  useEffect(() => {
+    void carregarGamificacao();
+  }, []);
 
   async function handleLogout() {
     try {
@@ -44,43 +91,40 @@ export default function GeografiaMenu({
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
-        {/* TÍTULO */}
         <h1 className="text-center text-4xl font-bold mb-6 gradient-text">
           Geografia
         </h1>
 
-        {/* GAMIFICAÇÃO */}
-        <GamificationBar
-          constancyCount={constancyCount}
-          coins={coins}
-          constancyRank={constancyRank}
-          coinsRank={coinsRank}
-        />
+        {!carregandoGamificacao && (
+          <GamificationBar
+            classificacaoAtual={classificacaoAtual}
+            faixas={faixas}
+            pontosConsistencia={classificacaoAtual?.pontos_consistencia ?? 0}
+            escudosDisponiveis={classificacaoAtual?.escudos_disponiveis ?? 0}
+            moedas={moedas}
+            diasSeguidos={classificacaoAtual?.dias_seguidos ?? 0}
+          />
+        )}
 
-        {/* CARDS FUNCIONAIS */}
         <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in mt-6">
-          {/* América do Sul */}
           <HomeFeatureCard
             title="América do Sul — Países"
             href="/geografia/america-do-sul/paises"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 
-          {/* América Central */}
           <HomeFeatureCard
             title="América Central — Países"
             href="/geografia/america-central/paises"
             colorClass="bg-[var(--color-6)] hover:brightness-110"
           />
 
-          {/* América do Norte */}
           <HomeFeatureCard
             title="América do Norte — Países"
             href="/geografia/america-do-norte/paises"
             colorClass="bg-[var(--color-7)] hover:brightness-110"
           />
 
-          {/* Europa Ocidental */}
           <HomeFeatureCard
             title="Europa Ocidental — Países"
             href="/geografia/europa/europa-ocidental/paises"
@@ -88,7 +132,6 @@ export default function GeografiaMenu({
           />
         </div>
 
-        {/* BOTÃO VOLTAR */}
         <div className="mt-12 mb-8">
           <BotaoVoltar />
         </div>
