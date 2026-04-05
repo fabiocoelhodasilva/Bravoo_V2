@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type {
   ClassificacaoAtualMateriaView,
   FaixaGamificacao,
-} from "@/lib/gamification/gamificacao-types";
+} from "@/lib/gamificacao/gamificacao-types";
 import CardFaixa from "@/components/gamification/CardFaixa";
 import RegrasGamificacao from "@/components/gamification/RegrasGamificacao";
 
