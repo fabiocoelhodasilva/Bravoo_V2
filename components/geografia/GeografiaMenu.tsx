@@ -107,24 +107,41 @@ export default function GeografiaMenu() {
   }, [carregarGamificacao]);
 
   useEffect(() => {
-    const recarregar = () => {
+    let timeoutId1: ReturnType<typeof setTimeout> | null = null;
+    let timeoutId2: ReturnType<typeof setTimeout> | null = null;
+
+    const recarregarComRefresco = () => {
       void carregarGamificacao();
+
+      if (timeoutId1) clearTimeout(timeoutId1);
+      if (timeoutId2) clearTimeout(timeoutId2);
+
+      timeoutId1 = setTimeout(() => {
+        void carregarGamificacao();
+      }, 600);
+
+      timeoutId2 = setTimeout(() => {
+        void carregarGamificacao();
+      }, 1500);
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void carregarGamificacao();
+        recarregarComRefresco();
       }
     };
 
-    window.addEventListener("focus", recarregar);
-    window.addEventListener("pageshow", recarregar);
+    window.addEventListener("focus", recarregarComRefresco);
+    window.addEventListener("pageshow", recarregarComRefresco);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", recarregar);
-      window.removeEventListener("pageshow", recarregar);
+      window.removeEventListener("focus", recarregarComRefresco);
+      window.removeEventListener("pageshow", recarregarComRefresco);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+      if (timeoutId1) clearTimeout(timeoutId1);
+      if (timeoutId2) clearTimeout(timeoutId2);
     };
   }, [carregarGamificacao]);
 
