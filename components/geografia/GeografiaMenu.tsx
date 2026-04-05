@@ -91,7 +91,7 @@ export default function GeografiaMenu() {
       <div className="h-[48px]" />
 
       <main className="flex flex-col items-center px-4 pt-10">
-        <h1 className="text-center text-4xl font-bold mb-6 gradient-text">
+        <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
           Geografia
         </h1>
 
@@ -99,14 +99,13 @@ export default function GeografiaMenu() {
           <GamificationBar
             classificacaoAtual={classificacaoAtual}
             faixas={faixas}
-            pontosConsistencia={classificacaoAtual?.pontos_consistencia ?? 0}
             escudosDisponiveis={classificacaoAtual?.escudos_disponiveis ?? 0}
             moedas={moedas}
             diasSeguidos={classificacaoAtual?.dias_seguidos ?? 0}
           />
         )}
 
-        <div className="flex flex-col gap-5 w-full max-w-sm animate-fade-in mt-6">
+        <div className="mt-6 flex w-full max-w-sm animate-fade-in flex-col gap-5">
           <HomeFeatureCard
             title="América do Sul — Países"
             href="/geografia/america-do-sul/paises"
