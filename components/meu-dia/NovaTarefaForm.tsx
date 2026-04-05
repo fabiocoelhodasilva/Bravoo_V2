@@ -289,13 +289,13 @@ export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
                           }`}
                           style={{
                             background: selecionado
-                              ? "var(--color-2)"
+                              ? "var(--color-4)"
                               : "rgba(255,255,255,0.02)",
                             borderColor: selecionado
-                              ? "var(--color-2)"
+                              ? "var(--color-4)"
                               : "rgba(255,255,255,0.14)",
                             boxShadow: selecionado
-                              ? "0 6px 18px rgba(233,137,29,0.28)"
+                              ? "0 6px 18px rgba(93,198,161,0.35)"
                               : "none",
                           }}
                         >

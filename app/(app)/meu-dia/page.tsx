@@ -46,53 +46,59 @@ export default function MeuDiaPage() {
   const [tarefas, setTarefas] = useState<TarefaMeuDia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvandoIds, setSalvandoIds] = useState<string[]>([]);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [dataSelecionada, setDataSelecionada] = useState<string>(
+    obterDataHojeLocal()
+  );
 
-  const carregarMeuDia = useCallback(async () => {
-    try {
-      setCarregando(true);
+  const carregarMeuDia = useCallback(
+    async (dataReferencia: string) => {
+      try {
+        setCarregando(true);
 
-      const {
-        data: { user },
-        error: erroAuth,
-      } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: erroAuth,
+        } = await supabase.auth.getUser();
 
-      if (erroAuth || !user) {
-        router.replace("/login");
-        return;
-      }
+        if (erroAuth || !user) {
+          router.replace("/login");
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from("vw_next_meu_dia_hoje_status")
-        .select("*")
-        .eq("usuario_id", user.id)
-        .order("tarefa_created_at", { ascending: true });
+        const { data, error } = await supabase.rpc("fn_next_meu_dia_status", {
+          p_usuario_id: user.id,
+          p_data: dataReferencia,
+        });
 
-      if (error) {
-        console.error("Erro ao buscar tarefas do Meu Dia:", error);
+        if (error) {
+          console.error("Erro ao buscar tarefas do Meu Dia:", error);
+          setTarefas([]);
+          return;
+        }
+
+        const tarefasFormatadas: TarefaMeuDia[] = (
+          (data as MeuDiaHojeStatusRow[] | null) ?? []
+        ).map((item) => ({
+          id: item.tarefa_id,
+          titulo: item.titulo,
+          concluida: item.concluida,
+        }));
+
+        setTarefas(tarefasFormatadas);
+      } catch (error) {
+        console.error("Erro inesperado ao carregar Meu Dia:", error);
         setTarefas([]);
-        return;
+      } finally {
+        setCarregando(false);
       }
-
-      const tarefasFormatadas: TarefaMeuDia[] = (
-        (data as MeuDiaHojeStatusRow[] | null) ?? []
-      ).map((item) => ({
-        id: item.tarefa_id,
-        titulo: item.titulo,
-        concluida: item.concluida,
-      }));
-
-      setTarefas(tarefasFormatadas);
-    } catch (error) {
-      console.error("Erro inesperado ao carregar Meu Dia:", error);
-      setTarefas([]);
-    } finally {
-      setCarregando(false);
-    }
-  }, [router]);
+    },
+    [router]
+  );
 
   useEffect(() => {
-    void carregarMeuDia();
-  }, [carregarMeuDia]);
+    void carregarMeuDia(dataSelecionada);
+  }, [carregarMeuDia, dataSelecionada]);
 
   async function handleLogout() {
     try {
@@ -132,15 +138,13 @@ export default function MeuDiaPage() {
         throw erroAuth ?? new Error("Usuário não autenticado.");
       }
 
-      const hoje = obterDataHojeLocal();
-
       const { error } = await supabase
         .from("next_meu_dia_tarefas_realizadas")
         .upsert(
           {
             tarefa_id: tarefaId,
             usuario_id: user.id,
-            data_referencia: hoje,
+            data_referencia: dataSelecionada,
             concluida: novoStatus,
             concluida_em: novoStatus ? new Date().toISOString() : null,
           },
@@ -167,12 +171,56 @@ export default function MeuDiaPage() {
     }
   }
 
+  async function handleDeleteTarefa(tarefaId: string) {
+    const hoje = obterDataHojeLocal();
+
+    if (dataSelecionada < hoje) {
+      throw new Error("Não é permitido excluir tarefas de dias passados.");
+    }
+
+    setDeletingIds((prev) =>
+      prev.includes(tarefaId) ? prev : [...prev, tarefaId]
+    );
+
+    try {
+      const {
+        data: { user },
+        error: erroAuth,
+      } = await supabase.auth.getUser();
+
+      if (erroAuth || !user) {
+        throw erroAuth ?? new Error("Usuário não autenticado.");
+      }
+
+      const { error } = await supabase
+        .from("next_meu_dia_tarefas")
+        .delete()
+        .eq("id", tarefaId)
+        .eq("usuario_id", user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setTarefas((prev) => prev.filter((item) => item.id !== tarefaId));
+    } catch (error) {
+      console.error("Erro ao excluir tarefa do Meu Dia:", error);
+      throw error;
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== tarefaId));
+    }
+  }
+
   return (
     <MeuDiaPageView
       onLogout={handleLogout}
       tarefasIniciais={carregando ? [] : tarefas}
       onToggleTarefa={handleToggleTarefa}
+      onDeleteTarefa={handleDeleteTarefa}
       salvandoIds={salvandoIds}
+      deletingIds={deletingIds}
+      dataSelecionada={dataSelecionada}
+      onSelecionarData={setDataSelecionada}
     />
   );
 }

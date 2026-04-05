@@ -66,12 +66,19 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
     <>
       <form
         onSubmit={handleSubmit}
-        className="rounded-[24px] border border-white/10 bg-[#111] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
+        className="rounded-[20px] border px-4 py-5 sm:px-5 sm:py-6"
+        style={{
+          background:
+            "radial-gradient(700px 240px at 0% 0%, rgba(255,255,255,0.04), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)), #111",
+          borderColor: "rgba(255,255,255,0.10)",
+          boxShadow:
+            "0 10px 26px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset",
+        }}
       >
         <div className="flex flex-col gap-4">
 
           <div>
-            <label className="mb-2 block text-[0.92rem] font-medium text-[#f3f3f3]">
+            <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
               Título
             </label>
             <input
@@ -79,12 +86,13 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               placeholder="Ex.: O Peregrino"
-              className="w-full rounded-[16px] border border-white/10 bg-black px-4 py-3 text-[0.95rem] text-white outline-none transition placeholder:text-white/30 focus:border-[var(--color-2)]"
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-[0.92rem] font-medium text-[#f3f3f3]">
+            <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
               Autor
             </label>
             <input
@@ -92,49 +100,58 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
               value={autor}
               onChange={(e) => setAutor(e.target.value)}
               placeholder="Ex.: John Bunyan"
-              className="w-full rounded-[16px] border border-white/10 bg-black px-4 py-3 text-[0.95rem] text-white outline-none transition placeholder:text-white/30 focus:border-[var(--color-2)]"
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-[0.92rem] font-medium text-[#f3f3f3]">
+              <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
                 Data de início
               </label>
               <input
                 type="date"
                 value={dtInicio}
                 onChange={(e) => setDtInicio(e.target.value)}
-                className="w-full rounded-[16px] border border-white/10 bg-black px-4 py-3 text-[0.95rem] text-white outline-none transition focus:border-[var(--color-2)]"
+                className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-[0.92rem] font-medium text-[#f3f3f3]">
+              <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
                 Data de conclusão
               </label>
               <input
                 type="date"
                 value={dtFim}
                 onChange={(e) => setDtFim(e.target.value)}
-                className="w-full rounded-[16px] border border-white/10 bg-black px-4 py-3 text-[0.95rem] text-white outline-none transition focus:border-[var(--color-2)]"
+                className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
               />
             </div>
           </div>
 
           {erro && (
-            <div className="rounded-[16px] border border-red-400/30 bg-red-500/10 px-4 py-3 text-[0.88rem] text-red-100">
+            <div
+              className="mt-1 text-[0.82rem] font-medium"
+              style={{ color: "#ff7a7a" }}
+            >
               {erro}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-2 w-full rounded-full bg-[var(--color-4)] px-5 py-3 text-[0.92rem] font-semibold text-black shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? "Salvando..." : "Salvar livro"}
-          </button>
+          <div className="mt-1 flex">
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full rounded-full px-5 py-3 text-[0.92rem] font-semibold text-black shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ background: "var(--color-4)" }}
+            >
+              {saving ? "Salvando..." : "Salvar livro"}
+            </button>
+          </div>
 
         </div>
       </form>

@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import type { Objetivo } from "@/types/objetivos";
 import { clampProgress } from "@/lib/objetivos/objetivos-utils";
+import DeleteButton from "@/components/ui/DeleteButton";
 
 type Props = {
   objetivo: Objetivo;
@@ -44,22 +45,19 @@ function ObjetivoItemCardComponent({
   const label = valor >= 100 ? "100% ✓" : `${valor}%`;
 
   return (
-    <article className="border-b border-white/8 py-1.5">
+    <article className="w-full border-b border-white/8 py-1.5">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1 truncate text-[0.74rem] font-medium leading-none text-white">
           {objetivo.titulo || "Sem título"}
         </div>
 
-        <button
-          type="button"
+        <DeleteButton
           onClick={() => onDelete(objetivo.id)}
           disabled={isDeleting}
-          aria-label="Excluir objetivo"
+          ariaLabel={`Excluir objetivo ${objetivo.titulo || ""}`.trim()}
           title="Excluir objetivo"
-          className="shrink-0 h-6 w-6 flex items-center justify-center text-[0.8rem] leading-none text-white/45 hover:text-[#ff8f8f] disabled:opacity-60"
-        >
-          {isDeleting ? "…" : "🗑️"}
-        </button>
+          className="mt-0 h-6 w-6 border-0 bg-transparent p-0 text-white/45 hover:bg-transparent hover:text-[#ff8f8f]"
+        />
       </div>
 
       <div className="mt-0.5 flex items-center gap-2">
@@ -73,18 +71,18 @@ function ObjetivoItemCardComponent({
           onMouseUp={handleCommit}
           onTouchEnd={handleCommit}
           disabled={isSaving || isDeleting}
-          className="w-[58%] cursor-pointer"
+          className="min-w-0 flex-1 cursor-pointer"
           style={{ accentColor: corCategoria }}
         />
 
         <div
-          className="text-[0.62rem] font-semibold leading-none"
+          className="shrink-0 text-[0.62rem] font-semibold leading-none"
           style={{ color: corCategoria }}
         >
           {label}
         </div>
 
-        <div className="text-[0.6rem] leading-none text-white/35 min-w-[44px]">
+        <div className="min-w-[44px] shrink-0 text-[0.6rem] leading-none text-white/35">
           {isSaving ? "Salvando" : ""}
         </div>
       </div>

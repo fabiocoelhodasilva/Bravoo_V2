@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import BottomNav from "@/components/ui/BottomNav";
+import DeleteButton from "@/components/ui/DeleteButton";
 
 type LivroLido = {
   id: string;
@@ -254,10 +254,11 @@ export default function LivrosPage() {
                 return (
                   <section
                     key={grupo.ano}
-                    className="rounded-[24px] border bg-white/[0.03] px-4 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.22)]"
+                    className="rounded-[20px] border px-4 py-4"
                     style={{
                       borderColor,
-                      boxShadow: `0 10px 30px rgba(0,0,0,0.22), 0 0 0 1px ${borderColor}20`,
+                      background: `radial-gradient(900px 260px at 0% 0%, ${borderColor}10, transparent 58%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)), #0d0d0d`,
+                      boxShadow: `0 10px 24px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.02) inset`,
                     }}
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
@@ -283,7 +284,7 @@ export default function LivrosPage() {
                         return (
                           <article
                             key={livro.id}
-                            className="rounded-[18px] border border-white/8 bg-[#0a0a0a] px-4 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:border-white/15 hover:bg-[#0d0d0d]"
+                            className="rounded-[16px] border border-white/8 bg-[#0a0a0a] px-4 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:border-white/15 hover:bg-[#0d0d0d]"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -321,16 +322,12 @@ export default function LivrosPage() {
                                 </div>
                               </div>
 
-                              <button
-                                type="button"
+                              <DeleteButton
                                 onClick={() => handleDelete(livro.id)}
                                 disabled={deleting}
-                                aria-label={`Excluir ${livro.titulo}`}
+                                ariaLabel={`Excluir ${livro.titulo}`}
                                 title="Excluir livro"
-                                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/60 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <Trash2 className="h-[17px] w-[17px]" strokeWidth={2.1} />
-                              </button>
+                              />
                             </div>
                           </article>
                         );

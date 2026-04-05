@@ -106,7 +106,7 @@ function ObjetivosCategoriaCardComponent({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[420px] gap-1.5 justify-start">
+        <div className="flex flex-col gap-1.5">
           {grupo.objetivos.map((objetivo) => (
             <ObjetivoItemCard
               key={objetivo.id}
