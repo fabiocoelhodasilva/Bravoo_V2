@@ -119,7 +119,7 @@ export default function CardFaixa({
         <div className="text-center">
           <div className="flex items-center justify-between gap-2">
             <div className="text-left text-[10px] font-bold uppercase tracking-[0.12em] text-white">
-              Seu Lugar na Galeria da Persistência
+              Galeria da Persistência
             </div>
 
             <div className="shrink-0">
