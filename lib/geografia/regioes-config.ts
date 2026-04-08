@@ -143,7 +143,6 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
       { en: "France", pt: "França" },
       { en: "Italy", pt: "Itália" },
       { en: "Switzerland", pt: "Suíça" },
-
       { en: "Germany", pt: "Alemanha" },
       { en: "Denmark", pt: "Dinamarca" },
       { en: "Czech Republic", pt: "Tchequia", aliases: ["Czechia"] },
@@ -156,18 +155,18 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
   },
 
   /* =================================
-     EUROPA — FALLBACK (EUROPA COMPLETA)
+     EUROPA — FASE 3
   ================================= */
 
-  "europa": {
-    slug: "europa",
-    tituloFinal: "Parabéns, você concluiu a Europa!",
+  "europa-fase-3": {
+    slug: "europa-fase-3",
+    tituloFinal: "Parabéns, você concluiu a fase!",
     modoGlobo: "europa",
-    pontuacaoInicial: 15,
+    pontuacaoInicial: 24,
     atividadeId: "22222222-2222-2222-2222-222222222004",
     materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
     assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310003",
-    detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320004",
+    detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320005",
     paises: [
       { en: "Portugal", pt: "Portugal" },
       { en: "Spain", pt: "Espanha" },
@@ -183,7 +182,16 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
       { en: "Croatia", pt: "Croácia" },
       { en: "Norway", pt: "Noruega" },
       { en: "Sweden", pt: "Suécia" },
-      { en: "Iceland", pt: "Islândia" }
+      { en: "Iceland", pt: "Islândia" },
+      { en: "Netherlands", pt: "Países Baixos" },
+      { en: "Belgium", pt: "Bélgica" },
+      { en: "Luxembourg", pt: "Luxemburgo" },
+      { en: "Slovenia", pt: "Eslovênia" },
+      { en: "Hungary", pt: "Hungria" },
+      { en: "Bosnia and Herzegovina", pt: "Bósnia e Herzegovina", aliases: ["Bosnia"] },
+      { en: "Montenegro", pt: "Montenegro" },
+      { en: "Albania", pt: "Albânia" },
+      { en: "Greece", pt: "Grécia" }
     ],
   },
 
