@@ -98,7 +98,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setCelebratingCountries([]);
     sessaoJaFinalizadaRef.current = false;
 
-    liberarInteracaoTimeoutRef.current = window.setTimeout(() => {
+    liberarInteracaoTimeoutRef.current = setTimeout(() => {
       setInteracaoLiberada(true);
       liberarInteracaoTimeoutRef.current = null;
     }, 800);
@@ -162,7 +162,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   async function finalizar(acertosFinais: number, pontuacaoFinal: number) {
     if (sessaoJaFinalizadaRef.current) {
-      console.log("finalizar ignorado: sessão já finalizada");
       return;
     }
 
@@ -193,7 +192,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   function handleClick(nome: string) {
     if (!interacaoLiberada) {
-      console.log("clique ignorado: interação ainda bloqueada");
       return;
     }
 
@@ -212,7 +210,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
       setCelebratingCountries(nomesValidos);
       setCorrectCountries((prev) => [...new Set([...prev, ...nomesValidos])]);
 
-      window.setTimeout(() => {
+      setTimeout(() => {
         setCelebratingCountries([]);
       }, 350);
 
@@ -220,11 +218,11 @@ export default function GeografiaPaisesPage({ config }: Props) {
         indiceAtual + 1 >= listaPaises.length &&
         !sessaoJaFinalizadaRef.current
       ) {
-        window.setTimeout(() => {
+        setTimeout(() => {
           void finalizar(novosAcertos, pontuacao);
         }, 600);
       } else {
-        window.setTimeout(() => {
+        setTimeout(() => {
           setIndiceAtual((i) => i + 1);
           setMensagem("");
         }, 600);
@@ -239,7 +237,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
         prev.includes(nome) ? prev : [...prev, nome]
       );
 
-      window.setTimeout(() => {
+      setTimeout(() => {
         setFlashingCountries((prev) => prev.filter((x) => x !== nome));
       }, 300);
     }
