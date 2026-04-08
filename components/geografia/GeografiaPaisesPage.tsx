@@ -15,7 +15,7 @@ const GlobeScene = dynamic(
     ssr: false,
     loading: () => (
       <div className="w-full h-full bg-black rounded-2xl flex items-center justify-center">
-        <div className="text-sm opacity-80">Carregando globo...</div>
+        <div className="text-sm opacity-80">Carregando globo.</div>
       </div>
     ),
   }
@@ -27,13 +27,11 @@ type Props = {
 
 function getGeoJsonPathByModo(modo: RegiaoConfig["modoGlobo"]) {
   if (modo === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modo === "america-central") {
-    return "/dados/america-central-simplified.geojson";
-  }
-  if (modo === "america-norte") {
-    return "/dados/america-norte-simplified.geojson";
-  }
-  return "/dados/europa-ocidental-simplified.geojson";
+  if (modo === "america-central") return "/dados/america-central-simplified.geojson";
+  if (modo === "america-norte") return "/dados/america-norte-simplified.geojson";
+  if (modo === "europa") return "/dados/europa-simplified.geojson";
+
+  return "/dados/europa-simplified.geojson";
 }
 
 export default function GeografiaPaisesPage({ config }: Props) {
@@ -50,25 +48,43 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   const [correctCountries, setCorrectCountries] = useState<string[]>([]);
   const [flashingCountries, setFlashingCountries] = useState<string[]>([]);
-  const [celebratingCountries, setCelebratingCountries] = useState<string[]>(
-    []
-  );
+  const [celebratingCountries, setCelebratingCountries] = useState<string[]>([]);
 
   const audioRef = useRef<AudioContext | null>(null);
   const sessaoJaFinalizadaRef = useRef(false);
+  const liberarInteracaoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const paisesMap = useMemo(() => config.paises, [config.paises]);
+
+  const allowedCountryNames = useMemo(() => {
+    return config.paises.flatMap((pais) => [
+      pais.en,
+      ...(pais.aliases ?? []),
+    ]);
+  }, [config.paises]);
 
   function embaralhar() {
     return [...paisesMap].sort(() => Math.random() - 0.5);
   }
 
   function traduzir(nome: string) {
-    const p = paisesMap.find((x) => [x.en, ...(x.aliases || [])].includes(nome));
-    return p?.pt || nome;
+    const paisEncontrado = paisesMap.find((pais) =>
+      [pais.en, ...(pais.aliases ?? [])].includes(nome)
+    );
+
+    return paisEncontrado?.pt || nome;
   }
 
-  useEffect(() => {
+  function limparTimerInteracao() {
+    if (liberarInteracaoTimeoutRef.current) {
+      clearTimeout(liberarInteracaoTimeoutRef.current);
+      liberarInteracaoTimeoutRef.current = null;
+    }
+  }
+
+  function iniciarJogo() {
+    limparTimerInteracao();
+
     setListaPaises(embaralhar());
     setIndiceAtual(0);
     setPontuacao(config.pontuacaoInicial);
@@ -82,12 +98,19 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setCelebratingCountries([]);
     sessaoJaFinalizadaRef.current = false;
 
-    const timer = window.setTimeout(() => {
+    liberarInteracaoTimeoutRef.current = window.setTimeout(() => {
       setInteracaoLiberada(true);
+      liberarInteracaoTimeoutRef.current = null;
     }, 800);
+  }
 
-    return () => window.clearTimeout(timer);
-  }, [config.pontuacaoInicial, paisesMap]);
+  useEffect(() => {
+    iniciarJogo();
+
+    return () => {
+      limparTimerInteracao();
+    };
+  }, [config.slug, config.pontuacaoInicial, paisesMap]);
 
   useEffect(() => {
     const path = getGeoJsonPathByModo(config.modoGlobo);
@@ -122,7 +145,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = tipo === "acerto" ? "sine" : "triangle";
+    osc.type = tipo === "erro" ? "sine" : "triangle";
     osc.frequency.value =
       tipo === "acerto" ? 600 : tipo === "vitoria" ? 760 : 200;
 
@@ -176,7 +199,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
     if (finalizado || !paisAtual) return;
 
-    const nomesValidos = [paisAtual.en, ...(paisAtual.aliases || [])];
+    const nomesValidos = [paisAtual.en, ...(paisAtual.aliases ?? [])];
     const ok = nomesValidos.includes(nome);
 
     if (ok) {
@@ -222,25 +245,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
     }
   }
 
-  function reset() {
-    setListaPaises(embaralhar());
-    setIndiceAtual(0);
-    setPontuacao(config.pontuacaoInicial);
-    setAcertos(0);
-    setMensagem("");
-    setInicioJogo(Date.now());
-    setFinalizado(false);
-    setInteracaoLiberada(false);
-    setCorrectCountries([]);
-    setFlashingCountries([]);
-    setCelebratingCountries([]);
-    sessaoJaFinalizadaRef.current = false;
-
-    window.setTimeout(() => {
-      setInteracaoLiberada(true);
-    }, 800);
-  }
-
   async function logout() {
     await supabase.auth.signOut();
     router.replace("/login");
@@ -262,7 +266,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
             finalizado ? "gradient-text" : "text-white"
           }`}
         >
-          {finalizado ? "Parabens, jogo concluído!" : paisAtual?.pt}
+          {finalizado ? config.tituloFinal : paisAtual?.pt}
         </h1>
 
         <p className="text-sm text-center mb-3">
@@ -271,7 +275,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
         {finalizado && (
           <button
-            onClick={reset}
+            onClick={iniciarJogo}
             className="mt-1 mb-2 text-sm underline hover:opacity-80 transition"
           >
             Jogar novamente
@@ -285,6 +289,8 @@ export default function GeografiaPaisesPage({ config }: Props) {
             <div className="h-full aspect-square max-w-full max-h-full md:w-full md:aspect-auto md:rounded-2xl md:overflow-hidden">
               <GlobeScene
                 modo={config.modoGlobo}
+                resetKey={config.slug}
+                allowedCountryNames={allowedCountryNames}
                 onCountryClick={handleClick}
                 correctCountries={correctCountries}
                 flashingCountries={flashingCountries}

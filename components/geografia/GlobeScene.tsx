@@ -7,6 +7,8 @@ type GeoJsonFeature = {
   properties?: {
     name?: string;
     ADMIN?: string;
+    admin?: string;
+    NAME?: string;
   };
   geometry?: {
     type?: string;
@@ -22,11 +24,21 @@ type GlobeMode =
   | "america-sul"
   | "america-central"
   | "america-norte"
-  | "europa-ocidental"
+  | "europa"
   | "mundo";
+
+type AllowedCountryItem =
+  | string
+  | {
+      en: string;
+      pt?: string;
+      aliases?: string[];
+    };
 
 type Props = {
   modo?: GlobeMode;
+  resetKey?: string;
+  allowedCountryNames?: AllowedCountryItem[];
   onCountryClick?: (nome: string) => void;
   correctCountries?: string[];
   flashingCountries?: string[];
@@ -81,8 +93,25 @@ const geoJsonCache = new Map<string, GeoJsonFeature[]>();
 const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
 
+function normalizeCountryName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/[^a-zA-Z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function getCountryName(feature: GeoJsonFeature) {
-  return feature.properties?.name || feature.properties?.ADMIN || "";
+  return (
+    feature.properties?.name ||
+    feature.properties?.ADMIN ||
+    feature.properties?.admin ||
+    feature.properties?.NAME ||
+    ""
+  );
 }
 
 function getCountrySeed(nome: string) {
@@ -133,12 +162,10 @@ function getNaturalStyle(nome: string): CountryVisualState {
 
 function getGeoJsonPath(modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modoAtual === "america-central")
-    return "/dados/america-central-simplified.geojson";
-  if (modoAtual === "america-norte")
-    return "/dados/america-norte-simplified.geojson";
-  if (modoAtual === "europa-ocidental")
-    return "/dados/europa-ocidental-simplified.geojson";
+  if (modoAtual === "america-central") return "/dados/america-central-simplified.geojson";
+  if (modoAtual === "america-norte") return "/dados/america-norte-simplified.geojson";
+  if (modoAtual === "europa") return "/dados/europa-simplified.geojson";
+
   return "/dados/countries.geojson";
 }
 
@@ -149,8 +176,8 @@ function aplicarVistaInicial(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.78 }, 0);
   } else if (modoAtual === "america-norte") {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
-  } else if (modoAtual === "europa-ocidental") {
-    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.82 }, 0);
+  } else if (modoAtual === "europa") {
+    globe.pointOfView({ lat: 54, lng: 15, altitude: 1.05 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
   }
@@ -163,8 +190,8 @@ function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 16, lng: -85, altitude: 0.64 }, 1200);
   } else if (modoAtual === "america-norte") {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
-  } else if (modoAtual === "europa-ocidental") {
-    globe.pointOfView({ lat: 47, lng: 6, altitude: 0.68 }, 1200);
+  } else if (modoAtual === "europa") {
+    globe.pointOfView({ lat: 54, lng: 15, altitude: 0.86 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
@@ -187,6 +214,8 @@ async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
 
 export default function GlobeScene({
   modo = "mundo",
+  resetKey = "default",
+  allowedCountryNames = [],
   onCountryClick,
   correctCountries = [],
   flashingCountries = [],
@@ -200,18 +229,50 @@ export default function GlobeScene({
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
   const clickLockRef = useRef(false);
-  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const clickUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
   }, [onCountryClick]);
 
-  const correctSet = useMemo(() => new Set(correctCountries), [correctCountries]);
-  const flashingSet = useMemo(() => new Set(flashingCountries), [flashingCountries]);
+  const allowedCountryMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    allowedCountryNames.forEach((item) => {
+      if (typeof item === "string") {
+        const normalized = normalizeCountryName(item);
+        if (normalized) {
+          map.set(normalized, item);
+        }
+        return;
+      }
+
+      const canonicalName = item.en;
+      const allNames = [item.en, ...(item.aliases ?? [])];
+
+      allNames.forEach((name) => {
+        const normalized = normalizeCountryName(name);
+        if (normalized) {
+          map.set(normalized, canonicalName);
+        }
+      });
+    });
+
+    return map;
+  }, [allowedCountryNames]);
+
+  const correctSet = useMemo(
+    () => new Set(correctCountries.map(normalizeCountryName)),
+    [correctCountries]
+  );
+
+  const flashingSet = useMemo(
+    () => new Set(flashingCountries.map(normalizeCountryName)),
+    [flashingCountries]
+  );
+
   const celebratingSet = useMemo(
-    () => new Set(celebratingCountries),
+    () => new Set(celebratingCountries.map(normalizeCountryName)),
     [celebratingCountries]
   );
 
@@ -233,9 +294,9 @@ export default function GlobeScene({
       ...celebratingSet,
     ]);
 
-    allNames.forEach((nome) => {
-      if (celebratingSet.has(nome)) {
-        map.set(nome, {
+    allNames.forEach((nomeNormalizado) => {
+      if (celebratingSet.has(nomeNormalizado)) {
+        map.set(nomeNormalizado, {
           capColor: celebrateCapColor,
           sideColor: celebrateSideColor,
           altitude: 0.05,
@@ -243,8 +304,8 @@ export default function GlobeScene({
         return;
       }
 
-      if (correctSet.has(nome)) {
-        map.set(nome, {
+      if (correctSet.has(nomeNormalizado)) {
+        map.set(nomeNormalizado, {
           capColor: correctCapColor,
           sideColor: correctSideColor,
           altitude: 0.032,
@@ -252,8 +313,8 @@ export default function GlobeScene({
         return;
       }
 
-      if (flashingSet.has(nome)) {
-        map.set(nome, {
+      if (flashingSet.has(nomeNormalizado)) {
+        map.set(nomeNormalizado, {
           capColor: flashWrongCapColor,
           sideColor: flashWrongSideColor,
           altitude: 0.032,
@@ -266,7 +327,8 @@ export default function GlobeScene({
 
   function getVisualState(feature: GeoJsonFeature): CountryVisualState {
     const nome = getCountryName(feature);
-    return visualStateByName.get(nome) || getNaturalStyle(nome);
+    const nomeNormalizado = normalizeCountryName(nome);
+    return visualStateByName.get(nomeNormalizado) || getNaturalStyle(nome);
   }
 
   function lockClickTemporarily() {
@@ -278,7 +340,7 @@ export default function GlobeScene({
 
     clickUnlockTimeoutRef.current = setTimeout(() => {
       clickLockRef.current = false;
-    }, 180);
+    }, 220);
   }
 
   useEffect(() => {
@@ -337,11 +399,15 @@ export default function GlobeScene({
         if (isDraggingRef.current) return;
         if (clickLockRef.current) return;
 
-        const nome = getCountryName(polygon as GeoJsonFeature);
-        if (!nome) return;
+        const nomeOriginal = getCountryName(polygon as GeoJsonFeature);
+        const nomeNormalizado = normalizeCountryName(nomeOriginal);
+        const nomeCanonico =
+          allowedCountryMap.get(nomeNormalizado) || nomeOriginal;
+
+        if (!nomeCanonico) return;
 
         lockClickTemporarily();
-        onCountryClickRef.current?.(nome);
+        onCountryClickRef.current?.(nomeCanonico);
       });
 
     globeRef.current = globe;
@@ -361,8 +427,6 @@ export default function GlobeScene({
       controls.zoomSpeed = 0.95;
       controls.autoRotate = false;
       controls.autoRotateSpeed = 0.5;
-
-      // Permite aproximar mais o globo manualmente
       controls.minDistance = 85;
       controls.maxDistance = 600;
     }
@@ -403,7 +467,7 @@ export default function GlobeScene({
 
       container.innerHTML = "";
     };
-  }, []);
+  }, [allowedCountryMap]);
 
   useEffect(() => {
     const globe = globeRef.current;
@@ -413,7 +477,17 @@ export default function GlobeScene({
 
     loadGeoJson(geoJsonPath)
       .then((features) => {
-        globe.polygonsData(features);
+        const filteredFeatures =
+          allowedCountryMap.size === 0
+            ? features
+            : features.filter((feature) => {
+                const nome = getCountryName(feature);
+                const nomeNormalizado = normalizeCountryName(nome);
+                return allowedCountryMap.has(nomeNormalizado);
+              });
+
+        globe.polygonsData(filteredFeatures);
+
         requestAnimationFrame(() => {
           aplicarVistaInicial(globe, modo);
         });
@@ -421,7 +495,16 @@ export default function GlobeScene({
       .catch((error) => {
         console.error("Erro ao carregar GeoJSON:", error);
       });
-  }, [modo]);
+  }, [modo, resetKey, allowedCountryMap]);
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    requestAnimationFrame(() => {
+      aplicarVistaInicial(globe, modo);
+    });
+  }, [resetKey, modo]);
 
   useEffect(() => {
     const globe = globeRef.current;
@@ -454,6 +537,7 @@ export default function GlobeScene({
     } else {
       controls.autoRotate = false;
       controls.autoRotateSpeed = 0.5;
+      aplicarVistaInicial(globe, modo);
     }
   }, [finalizado, modo]);
 

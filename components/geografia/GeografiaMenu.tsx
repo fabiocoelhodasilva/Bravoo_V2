@@ -34,11 +34,6 @@ export default function GeografiaMenu() {
     try {
       setCarregandoGamificacao(true);
 
-      // ANTES: supabase.auth.getUser() — fazia chamada de rede (~200-400ms) para
-      // verificar o JWT no servidor antes de disparar as 3 queries abaixo.
-      // AGORA: getSession() lê direto do localStorage (sem rede), eliminando essa
-      // espera. RLS do Supabase continua protegendo os dados normalmente.
-      // PARA REVERTER: trocar getSession() por getUser() e user.id por session.user.id.
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -210,8 +205,8 @@ export default function GeografiaMenu() {
           />
 
           <HomeFeatureCard
-            title="Europa Ocidental — Países"
-            href="/geografia/europa/europa-ocidental/paises"
+            title="Europa — Países"
+            href="/geografia/europa"
             colorClass="bg-[var(--color-2)] hover:brightness-110"
           />
         </div>
