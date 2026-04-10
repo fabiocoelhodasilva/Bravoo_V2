@@ -386,7 +386,10 @@ export default function GlobeScene({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
+  const allowedCountryMapRef = useRef<Map<string, string>>(new Map());
+
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
   const clickLockRef = useRef(false);
@@ -411,7 +414,7 @@ export default function GlobeScene({
       }
 
       const canonicalName = item.en;
-      const allNames = [item.en, ...(item.aliases ?? [])];
+      const allNames = [item.en, ...(item.aliases ?? []), item.pt ?? ""];
 
       allNames.forEach((name) => {
         const normalized = normalizeCountryName(name);
@@ -423,6 +426,10 @@ export default function GlobeScene({
 
     return map;
   }, [allowedCountryNames]);
+
+  useEffect(() => {
+    allowedCountryMapRef.current = allowedCountryMap;
+  }, [allowedCountryMap]);
 
   const correctSet = useMemo(
     () => new Set(correctCountries.map(normalizeCountryName)),
@@ -534,6 +541,7 @@ export default function GlobeScene({
             }
           );
         }
+
         return;
       }
 
@@ -593,9 +601,7 @@ export default function GlobeScene({
         regiaoDoEstado &&
         normalizeCountryName(regiaoDoEstado) === currentRegionNormalized
       ) {
-        return (
-          getBaseStyleByRegion(regiaoDoEstado) || getNaturalStyle(nome)
-        );
+        return getBaseStyleByRegion(regiaoDoEstado) || getNaturalStyle(nome);
       }
     }
 
@@ -673,7 +679,7 @@ export default function GlobeScene({
         const nomeOriginal = getCountryName(polygon as GeoJsonFeature);
         const nomeNormalizado = normalizeCountryName(nomeOriginal);
         const nomeCanonico =
-          allowedCountryMap.get(nomeNormalizado) || nomeOriginal;
+          allowedCountryMapRef.current.get(nomeNormalizado) || nomeOriginal;
 
         if (!nomeCanonico) return;
 
@@ -731,14 +737,16 @@ export default function GlobeScene({
           const rendererInstance = globeRef.current.renderer?.();
           rendererInstance?.dispose?.();
           rendererInstance?.forceContextLoss?.();
-        } catch {}
+        } catch {
+          // noop
+        }
 
         globeRef.current = null;
       }
 
       container.innerHTML = "";
     };
-  }, [allowedCountryMap, modo]);
+  }, []);
 
   useEffect(() => {
     const globe = globeRef.current;
