@@ -25,17 +25,97 @@ type Props = {
   config: RegiaoConfig;
 };
 
+type NomeRegiaoBrasil =
+  | "Norte"
+  | "Nordeste"
+  | "Centro-Oeste"
+  | "Sudeste"
+  | "Sul";
+
+const TODAS_AS_REGIOES_BRASIL: NomeRegiaoBrasil[] = [
+  "Norte",
+  "Nordeste",
+  "Centro-Oeste",
+  "Sudeste",
+  "Sul",
+];
+
+const ESTADOS_POR_REGIAO: Record<NomeRegiaoBrasil, string[]> = {
+  Norte: [
+    "Acre",
+    "Amapá",
+    "Amazonas",
+    "Pará",
+    "Rondônia",
+    "Roraima",
+    "Tocantins",
+  ],
+  Nordeste: [
+    "Alagoas",
+    "Bahia",
+    "Ceará",
+    "Maranhão",
+    "Paraíba",
+    "Pernambuco",
+    "Piauí",
+    "Rio Grande do Norte",
+    "Sergipe",
+  ],
+  "Centro-Oeste": [
+    "Distrito Federal",
+    "Goiás",
+    "Mato Grosso",
+    "Mato Grosso do Sul",
+  ],
+  Sudeste: [
+    "Espírito Santo",
+    "Minas Gerais",
+    "Rio de Janeiro",
+    "São Paulo",
+  ],
+  Sul: ["Paraná", "Rio Grande do Sul", "Santa Catarina"],
+};
+
 function getGeoJsonPathByModo(modo: RegiaoConfig["modoGlobo"]) {
   if (modo === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modo === "america-central") return "/dados/america-central-simplified.geojson";
-  if (modo === "america-norte") return "/dados/america-norte-simplified.geojson";
+  if (modo === "america-central")
+    return "/dados/america-central-simplified.geojson";
+  if (modo === "america-norte")
+    return "/dados/america-norte-simplified.geojson";
   if (modo === "europa") return "/dados/europa-simplified.geojson";
+  if (modo === "brasil-regioes")
+    return "/dados/brasil-regioes-simplified.geojson";
+  if (modo === "brasil-estados")
+    return "/dados/brasil-estados-simplified.geojson";
 
   return "/dados/europa-simplified.geojson";
 }
 
+function getTextoInstrucao(modo: RegiaoConfig["modoGlobo"]) {
+  if (modo === "brasil-regioes") return "Clique na região:";
+  if (modo === "brasil-estados") return "Clique no estado:";
+  return "Clique no país:";
+}
+
+function normalizarTexto(valor: string) {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function embaralharArray<T>(lista: T[]) {
+  return [...lista].sort(() => Math.random() - 0.5);
+}
+
+function sortearItem<T>(itens: T[]) {
+  return itens[Math.floor(Math.random() * itens.length)];
+}
+
 export default function GeografiaPaisesPage({ config }: Props) {
   const router = useRouter();
+  const isBrasilEstados = config.slug === "brasil-estados";
 
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [listaPaises, setListaPaises] = useState<PaisItem[]>([]);
@@ -48,31 +128,49 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   const [correctCountries, setCorrectCountries] = useState<string[]>([]);
   const [flashingCountries, setFlashingCountries] = useState<string[]>([]);
-  const [celebratingCountries, setCelebratingCountries] = useState<string[]>([]);
+  const [celebratingCountries, setCelebratingCountries] = useState<string[]>(
+    []
+  );
+
+  const [regioesPendentes, setRegioesPendentes] = useState<NomeRegiaoBrasil[]>(
+    []
+  );
+  const [regiaoAtual, setRegiaoAtual] = useState<NomeRegiaoBrasil | null>(null);
+  const [estadosDaRegiaoAtual, setEstadosDaRegiaoAtual] = useState<PaisItem[]>(
+    []
+  );
+  const [indiceEstadoDaRegiao, setIndiceEstadoDaRegiao] = useState(0);
 
   const audioRef = useRef<AudioContext | null>(null);
   const sessaoJaFinalizadaRef = useRef(false);
-  const liberarInteracaoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liberarInteracaoTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const paisesMap = useMemo(() => config.paises, [config.paises]);
 
   const allowedCountryNames = useMemo(() => {
-    return config.paises.flatMap((pais) => [
-      pais.en,
-      ...(pais.aliases ?? []),
-    ]);
+    return config.paises.flatMap((pais) => [pais.en, ...(pais.aliases ?? [])]);
   }, [config.paises]);
 
-  function embaralhar() {
-    return [...paisesMap].sort(() => Math.random() - 0.5);
-  }
-
   function traduzir(nome: string) {
-    const paisEncontrado = paisesMap.find((pais) =>
-      [pais.en, ...(pais.aliases ?? [])].includes(nome)
-    );
+    const nomeNormalizado = normalizarTexto(nome);
+
+    const paisEncontrado = paisesMap.find((pais) => {
+      const nomes = [pais.en, ...(pais.aliases ?? [])];
+      return nomes.some((item) => normalizarTexto(item) === nomeNormalizado);
+    });
 
     return paisEncontrado?.pt || nome;
+  }
+
+  function encontrarPaisPorNome(nome: string) {
+    const nomeNormalizado = normalizarTexto(nome);
+
+    return paisesMap.find((pais) => {
+      const nomes = [pais.en, ...(pais.aliases ?? [])];
+      return nomes.some((item) => normalizarTexto(item) === nomeNormalizado);
+    });
   }
 
   function limparTimerInteracao() {
@@ -82,10 +180,31 @@ export default function GeografiaPaisesPage({ config }: Props) {
     }
   }
 
+  function iniciarNovaRodadaBrasilEstados(
+    regioesDisponiveis: NomeRegiaoBrasil[]
+  ) {
+    if (regioesDisponiveis.length === 0) return;
+
+    const novaRegiao = sortearItem(regioesDisponiveis);
+    const nomesDaRegiao = ESTADOS_POR_REGIAO[novaRegiao];
+
+    const estadosFiltrados = paisesMap.filter((pais) =>
+      nomesDaRegiao.some(
+        (estado) => normalizarTexto(estado) === normalizarTexto(pais.en)
+      )
+    );
+
+    const estadosEmbaralhados = embaralharArray(estadosFiltrados);
+
+    setRegiaoAtual(novaRegiao);
+    setEstadosDaRegiaoAtual(estadosEmbaralhados);
+    setIndiceEstadoDaRegiao(0);
+    setMensagem("");
+  }
+
   function iniciarJogo() {
     limparTimerInteracao();
 
-    setListaPaises(embaralhar());
     setIndiceAtual(0);
     setPontuacao(config.pontuacaoInicial);
     setAcertos(0);
@@ -97,6 +216,18 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setFlashingCountries([]);
     setCelebratingCountries([]);
     sessaoJaFinalizadaRef.current = false;
+
+    if (isBrasilEstados) {
+      setListaPaises(config.paises);
+      setRegioesPendentes(TODAS_AS_REGIOES_BRASIL);
+      iniciarNovaRodadaBrasilEstados(TODAS_AS_REGIOES_BRASIL);
+    } else {
+      setListaPaises(embaralharArray(paisesMap));
+      setRegioesPendentes([]);
+      setRegiaoAtual(null);
+      setEstadosDaRegiaoAtual([]);
+      setIndiceEstadoDaRegiao(0);
+    }
 
     liberarInteracaoTimeoutRef.current = setTimeout(() => {
       setInteracaoLiberada(true);
@@ -110,7 +241,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
     return () => {
       limparTimerInteracao();
     };
-  }, [config.slug, config.pontuacaoInicial, paisesMap]);
+  }, [config.slug, config.pontuacaoInicial, paisesMap, isBrasilEstados]);
 
   useEffect(() => {
     const path = getGeoJsonPathByModo(config.modoGlobo);
@@ -121,6 +252,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
   }, [config.modoGlobo]);
 
   const paisAtual = listaPaises[indiceAtual];
+  const estadoAtualDaRegiao = estadosDaRegiaoAtual[indiceEstadoDaRegiao];
 
   function play(tipo: "acerto" | "erro" | "vitoria") {
     if (typeof window === "undefined") return;
@@ -181,7 +313,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
         detalhe_id: config.detalheId,
         pontuacao: pontuacaoFinal,
         acertos: acertosFinais,
-        total_itens: listaPaises.length,
+        total_itens: config.paises.length,
         tempo_total_segundos: tempo,
       });
     } catch (e) {
@@ -190,11 +322,92 @@ export default function GeografiaPaisesPage({ config }: Props) {
     }
   }
 
-  function handleClick(nome: string) {
-    if (!interacaoLiberada) {
+  function handleClickBrasilEstados(nome: string) {
+    if (finalizado || !regiaoAtual || !estadoAtualDaRegiao) return;
+
+    const paisClicado = encontrarPaisPorNome(nome);
+    if (!paisClicado) return;
+
+    const nomesValidos = [
+      estadoAtualDaRegiao.en,
+      ...(estadoAtualDaRegiao.aliases ?? []),
+    ];
+
+    const clicouCorreto = nomesValidos.some(
+      (item) => normalizarTexto(item) === normalizarTexto(nome)
+    );
+
+    if (!clicouCorreto) {
+      play("erro");
+
+      setMensagem(`Quase! Você clicou em ${paisClicado.pt}`);
+      setPontuacao((p) => Math.max(0, p - 1));
+
+      setFlashingCountries((prev) =>
+        prev.includes(paisClicado.en) ? prev : [...prev, paisClicado.en]
+      );
+
+      setTimeout(() => {
+        setFlashingCountries((prev) =>
+          prev.filter(
+            (x) => normalizarTexto(x) !== normalizarTexto(paisClicado.en)
+          )
+        );
+      }, 300);
+
       return;
     }
 
+    play("acerto");
+
+    const novosAcertos = acertos + 1;
+    const nomesDoEstadoCorreto = [
+      estadoAtualDaRegiao.en,
+      ...(estadoAtualDaRegiao.aliases ?? []),
+    ];
+
+    setAcertos(novosAcertos);
+    setMensagem("");
+    setCelebratingCountries(nomesDoEstadoCorreto);
+    setCorrectCountries((prev) => [
+      ...new Set([...prev, ...nomesDoEstadoCorreto]),
+    ]);
+
+    setTimeout(() => {
+      setCelebratingCountries([]);
+    }, 350);
+
+    const proximoIndice = indiceEstadoDaRegiao + 1;
+    const concluiuRegiao = proximoIndice >= estadosDaRegiaoAtual.length;
+
+    if (!concluiuRegiao) {
+      setTimeout(() => {
+        setIndiceEstadoDaRegiao(proximoIndice);
+      }, 600);
+      return;
+    }
+
+    const novasPendentes = regioesPendentes.filter(
+      (regiao) => regiao !== regiaoAtual
+    );
+
+    if (novasPendentes.length === 0) {
+      setTimeout(() => {
+        void finalizar(novosAcertos, pontuacao);
+      }, 700);
+      return;
+    }
+
+    setMensagem(`Muito bem! Região ${regiaoAtual} concluída.`);
+
+    setTimeout(() => {
+      setRegioesPendentes(novasPendentes);
+      iniciarNovaRodadaBrasilEstados(novasPendentes);
+      setMensagem("");
+    }, 900);
+  }
+
+  function handleClickPadrao(nome: string) {
     if (finalizado || !paisAtual) return;
 
     const nomesValidos = [paisAtual.en, ...(paisAtual.aliases ?? [])];
@@ -243,19 +456,52 @@ export default function GeografiaPaisesPage({ config }: Props) {
     }
   }
 
+  function handleClick(nome: string) {
+    if (!interacaoLiberada) return;
+    if (finalizado) return;
+
+    if (isBrasilEstados) {
+      handleClickBrasilEstados(nome);
+      return;
+    }
+
+    handleClickPadrao(nome);
+  }
+
   async function logout() {
     await supabase.auth.signOut();
     router.replace("/login");
   }
+
+  const textoInstrucaoBrasilEstados =
+    !finalizado && regiaoAtual
+      ? `Na região ${regiaoAtual}, clique no estado:`
+      : "";
+
+  const tituloPrincipal = finalizado
+    ? config.tituloFinal
+    : isBrasilEstados
+    ? estadoAtualDaRegiao?.pt || "Brasil"
+    : paisAtual?.pt;
+
+  const progressoTotal = isBrasilEstados
+    ? config.paises.length
+    : listaPaises.length;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       <HeaderInterno onLogout={logout} />
 
       <main className="h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-20 md:pt-10 lg:pt-12 pb-4">
-        {!finalizado && (
+        {!finalizado && !isBrasilEstados && (
           <p className="text-sm text-center mb-1 text-white">
-            Clique no país:
+            {getTextoInstrucao(config.modoGlobo)}
+          </p>
+        )}
+
+        {!finalizado && isBrasilEstados && (
+          <p className="text-sm text-center mb-1 text-white">
+            {textoInstrucaoBrasilEstados}
           </p>
         )}
 
@@ -264,11 +510,11 @@ export default function GeografiaPaisesPage({ config }: Props) {
             finalizado ? "gradient-text" : "text-white"
           }`}
         >
-          {finalizado ? config.tituloFinal : paisAtual?.pt}
+          {tituloPrincipal}
         </h1>
 
         <p className="text-sm text-center mb-3">
-          Pontuação: {pontuacao} | Progresso {acertos}/{listaPaises.length}
+          Pontuação: {pontuacao} | Progresso {acertos}/{progressoTotal}
         </p>
 
         {finalizado && (
@@ -294,6 +540,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
                 flashingCountries={flashingCountries}
                 celebratingCountries={celebratingCountries}
                 finalizado={finalizado}
+                currentRegion={regiaoAtual || undefined}
               />
             </div>
           </div>

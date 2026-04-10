@@ -209,6 +209,12 @@ export default function GeografiaMenu() {
             href="/geografia/europa"
             colorClass="bg-[var(--color-2)] hover:brightness-110"
           />
+
+          <HomeFeatureCard
+            title="Brasil"
+            href="/geografia/brasil"
+            colorClass="bg-[var(--color-4)] hover:brightness-110"
+          />
         </div>
 
         <div className="mt-12 mb-8">

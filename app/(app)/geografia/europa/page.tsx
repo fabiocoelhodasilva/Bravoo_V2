@@ -69,7 +69,7 @@ export default function EuropaMenuPage() {
 
           <HomeFeatureCard
             title="Fase 6 - Europa Completa"
-            href="/geografia/europa/paises"
+            href="/geografia/europa/paises?fase=6"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 

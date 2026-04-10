@@ -19,9 +19,9 @@ export default function StudentDashboard() {
         />
 
         <HomeFeatureCard
-          title="Bíblia"
-          colorClass="bg-[var(--color-1)]"
-          disabled
+          title="Espiritual"
+          href="/jardim"
+          colorClass="bg-[var(--color-1)] hover:brightness-110"
         />
 
         <HomeFeatureCard
