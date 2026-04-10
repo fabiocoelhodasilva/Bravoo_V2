@@ -1,10 +1,17 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
+const { execSync } = require("child_process");
 
 // Caminhos
 const inputPath = path.join(
   __dirname,
   "../public/dados/brazil-states.geojson"
+);
+
+const tempPath = path.join(
+  os.tmpdir(),
+  "brasil-estados-filtrados.geojson"
 );
 
 const outputPath = path.join(
@@ -65,16 +72,16 @@ function getStateName(feature) {
   );
 }
 
-function cloneFeatureWithOriginalCoordinates(feature) {
-  return {
-    ...feature,
-    geometry: feature?.geometry
-      ? {
-          ...feature.geometry,
-          coordinates: feature.geometry.coordinates,
-        }
-      : feature.geometry,
-  };
+function getCanonicalStateName(foundName) {
+  const nomeNormalizado = normalizeName(foundName);
+
+  for (const [canonico, aliases] of Object.entries(BRASIL_ESTADOS_ALIASES)) {
+    if (aliases.some((alias) => normalizeName(alias) === nomeNormalizado)) {
+      return aliases[0];
+    }
+  }
+
+  return foundName;
 }
 
 try {
@@ -92,7 +99,18 @@ try {
       const nome = getStateName(feature);
       return aliasesNormalizados.has(normalizeName(nome));
     })
-    .map(cloneFeatureWithOriginalCoordinates);
+    .map((feature) => {
+      const nomeOriginal = getStateName(feature);
+      const nomeCanonico = getCanonicalStateName(nomeOriginal);
+
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          name: nomeCanonico,
+        },
+      };
+    });
 
   const foundNames = filteredFeatures.map((f) => getStateName(f));
 
@@ -106,22 +124,31 @@ try {
     })
     .map(([estadoCanonico]) => estadoCanonico);
 
-  const output = {
+  const tempGeoJSON = {
     type: "FeatureCollection",
     features: filteredFeatures,
   };
 
-  const jsonFinal = JSON.stringify(output, null, 2);
+  fs.writeFileSync(tempPath, JSON.stringify(tempGeoJSON), "utf8");
 
-  fs.writeFileSync(outputPath, jsonFinal, "utf8");
+  console.log("🔧 Simplificando geometria dos estados...");
+
+  execSync(
+    `npx mapshaper "${tempPath}" -simplify weighted 6% keep-shapes -clean -o format=geojson "${outputPath}"`,
+    { stdio: "inherit" }
+  );
 
   const savedContent = fs.readFileSync(outputPath, "utf8");
+  const savedGeoJSON = JSON.parse(savedContent);
 
   console.log("✅ Arquivo gerado com sucesso:");
   console.log(outputPath);
-  console.log("🗺️ Total de estados:", filteredFeatures.length);
+  console.log("🗺️ Total de estados:", savedGeoJSON.features.length);
   console.log("📦 Tamanho em bytes:", Buffer.byteLength(savedContent, "utf8"));
-  console.log("📌 Estados encontrados:", foundNames);
+  console.log(
+    "📌 Estados encontrados:",
+    savedGeoJSON.features.map((f) => f?.properties?.name || "(sem nome)")
+  );
 
   if (missingStates.length > 0) {
     console.log("⚠️ Estados NÃO encontrados no geojson:", missingStates);
@@ -132,7 +159,7 @@ try {
   console.log("🔎 Primeiros 200 caracteres do arquivo salvo:");
   console.log(savedContent.slice(0, 200));
 
-  console.log("🔎 Conferência geral de nomes no GeoJSON:", allNames);
+  console.log("🔎 Conferência geral de nomes no GeoJSON original:", allNames);
 } catch (error) {
   console.error("❌ Erro ao gerar arquivo:");
   console.error(error);

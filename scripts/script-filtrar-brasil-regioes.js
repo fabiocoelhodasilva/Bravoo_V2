@@ -1,10 +1,17 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
+const { execSync } = require("child_process");
 
-// Caminhos
+// caminhos
 const inputPath = path.join(
   __dirname,
   "../public/dados/brazil-states.geojson"
+);
+
+const tempPath = path.join(
+  os.tmpdir(),
+  "brasil-estados-com-regiao.geojson"
 );
 
 const outputPath = path.join(
@@ -12,7 +19,7 @@ const outputPath = path.join(
   "../public/dados/brasil-regioes-simplified.geojson"
 );
 
-// Mapeamento: estado -> região
+// estado → região
 const ESTADO_PARA_REGIAO = {
   Acre: "Norte",
   Alagoas: "Nordeste",
@@ -43,25 +50,6 @@ const ESTADO_PARA_REGIAO = {
   Tocantins: "Norte",
 };
 
-// Ordem final desejada
-const ORDEM_REGIOES = [
-  "Norte",
-  "Nordeste",
-  "Centro-Oeste",
-  "Sudeste",
-  "Sul",
-];
-
-function normalizeName(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[’']/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
 function getStateName(feature) {
   return (
     feature?.properties?.name ||
@@ -69,130 +57,46 @@ function getStateName(feature) {
     feature?.properties?.NM_UF ||
     feature?.properties?.UF ||
     feature?.properties?.estado ||
-    feature?.properties?.NAME ||
     ""
   );
-}
-
-// Converte Polygon ou MultiPolygon em uma lista única de polígonos,
-// para no final montar uma geometria MultiPolygon por região.
-function extractPolygons(geometry) {
-  if (!geometry || !geometry.type || !geometry.coordinates) {
-    return [];
-  }
-
-  if (geometry.type === "Polygon") {
-    return [geometry.coordinates];
-  }
-
-  if (geometry.type === "MultiPolygon") {
-    return geometry.coordinates;
-  }
-
-  return [];
 }
 
 try {
   const raw = fs.readFileSync(inputPath, "utf8");
   const geojson = JSON.parse(raw);
 
-  const features = geojson.features || [];
-
-  const regioesMap = new Map();
-
-  for (const nomeRegiao of ORDEM_REGIOES) {
-    regioesMap.set(nomeRegiao, []);
-  }
-
-  const estadosEncontrados = [];
-  const estadosSemRegiao = [];
-
-  for (const feature of features) {
-    const estadoNome = getStateName(feature);
-    const regiao = ESTADO_PARA_REGIAO[estadoNome];
-
-    if (!regiao) {
-      estadosSemRegiao.push(estadoNome || "(sem nome)");
-      continue;
-    }
-
-    const polygons = extractPolygons(feature.geometry);
-
-    if (polygons.length === 0) {
-      console.log(`⚠️ Estado sem geometria compatível: ${estadoNome}`);
-      continue;
-    }
-
-    regioesMap.get(regiao).push(...polygons);
-    estadosEncontrados.push(estadoNome);
-  }
-
-  const regionFeatures = ORDEM_REGIOES.map((regiao) => {
-    const multipolygonCoordinates = regioesMap.get(regiao) || [];
+  const features = geojson.features.map((feature) => {
+    const estado = getStateName(feature);
+    const regiao = ESTADO_PARA_REGIAO[estado];
 
     return {
-      type: "Feature",
+      ...feature,
       properties: {
-        name: regiao,
-      },
-      geometry: {
-        type: "MultiPolygon",
-        coordinates: multipolygonCoordinates,
+        ...feature.properties,
+        regiao,
       },
     };
   });
 
-  const regioesEncontradas = regionFeatures
-    .filter(
-      (feature) =>
-        feature.geometry &&
-        feature.geometry.coordinates &&
-        feature.geometry.coordinates.length > 0
-    )
-    .map((feature) => feature.properties.name);
-
-  const regioesFaltantes = ORDEM_REGIOES.filter(
-    (regiao) => !regioesEncontradas.includes(regiao)
-  );
-
-  const output = {
+  const tempGeo = {
     type: "FeatureCollection",
-    features: regionFeatures,
+    features,
   };
 
-  const jsonFinal = JSON.stringify(output, null, 2);
+  fs.writeFileSync(tempPath, JSON.stringify(tempGeo));
 
-  fs.writeFileSync(outputPath, jsonFinal, "utf8");
+  console.log("🔧 Dissolvendo estados em regiões e simplificando...");
 
-  const savedContent = fs.readFileSync(outputPath, "utf8");
-
-  console.log("✅ Arquivo gerado com sucesso:");
-  console.log(outputPath);
-  console.log("🧭 Total de regiões:", regionFeatures.length);
-  console.log("📦 Tamanho em bytes:", Buffer.byteLength(savedContent, "utf8"));
-  console.log("📌 Regiões encontradas:", regioesEncontradas);
-  console.log("📌 Estados usados para montar as regiões:", estadosEncontrados);
-
-  if (regioesFaltantes.length > 0) {
-    console.log("⚠️ Regiões sem geometria:", regioesFaltantes);
-  } else {
-    console.log("✅ Todas as regiões foram montadas com geometria.");
-  }
-
-  if (estadosSemRegiao.length > 0) {
-    console.log("⚠️ Estados sem região mapeada:", estadosSemRegiao);
-  } else {
-    console.log("✅ Todos os estados encontrados foram mapeados em uma região.");
-  }
-
-  console.log("🔎 Primeiros 200 caracteres do arquivo salvo:");
-  console.log(savedContent.slice(0, 200));
-
-  console.log(
-    "🔎 Conferência geral de nomes no GeoJSON de estados:",
-    features.map(getStateName)
+  execSync(
+    `npx mapshaper "${tempPath}" -dissolve regiao -simplify weighted 8% keep-shapes -clean -o format=geojson "${outputPath}"`,
+    { stdio: "inherit" }
   );
-} catch (error) {
-  console.error("❌ Erro ao gerar arquivo:");
-  console.error(error);
+
+  const saved = fs.readFileSync(outputPath, "utf8");
+
+  console.log("✅ Arquivo criado:");
+  console.log(outputPath);
+  console.log("📦 Tamanho:", Buffer.byteLength(saved, "utf8"), "bytes");
+} catch (err) {
+  console.error("❌ erro:", err);
 }
