@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import Globe from "globe.gl";
+import { feature as topojsonFeature } from "topojson-client";
 
 type GeoJsonFeature = {
   properties?: {
@@ -10,21 +11,25 @@ type GeoJsonFeature = {
     admin?: string;
     NAME?: string;
     nome?: string;
-    NM_UF?: string;
-    UF?: string;
-    estado?: string;
-    NM_REGIAO?: string;
     regiao?: string;
     REGIAO?: string;
+    NM_REGIAO?: string;
+    regiaoJogo?: string;
   };
   geometry?: {
     type?: string;
     coordinates?: unknown;
   };
+  id?: string;
 };
 
 type GeoJsonData = {
   features?: GeoJsonFeature[];
+};
+
+type TopoJsonData = {
+  type?: string;
+  objects?: Record<string, unknown>;
 };
 
 type GlobeMode =
@@ -53,7 +58,9 @@ type Props = {
   flashingCountries?: string[];
   celebratingCountries?: string[];
   finalizado?: boolean;
-  currentRegion?: string;
+  activeRegion?: string;
+  blinkRegion?: string;
+  blinkRegionOn?: boolean;
 };
 
 type CountryVisualState = {
@@ -61,13 +68,6 @@ type CountryVisualState = {
   sideColor: string;
   altitude: number;
 };
-
-type NomeRegiaoBrasil =
-  | "Norte"
-  | "Nordeste"
-  | "Centro-Oeste"
-  | "Sudeste"
-  | "Sul";
 
 type GlobeInstance = {
   width: (value: number) => GlobeInstance;
@@ -110,33 +110,29 @@ const geoJsonCache = new Map<string, GeoJsonFeature[]>();
 const countrySeedCache = new Map<string, number>();
 const naturalStyleCache = new Map<string, CountryVisualState>();
 
-/* =================================
-   CORES PASTEL — BRASIL REGIÕES
-================================= */
-
 const BRASIL_REGIOES_BASE: Record<string, CountryVisualState> = {
   norte: {
-    capColor: "rgba(191, 219, 254, 0.28)",
+    capColor: "rgba(191, 219, 254, 0.30)",
     sideColor: "rgba(147, 197, 253, 0.08)",
     altitude: 0.02,
   },
   nordeste: {
-    capColor: "rgba(254, 215, 170, 0.28)",
+    capColor: "rgba(254, 215, 170, 0.30)",
     sideColor: "rgba(251, 146, 60, 0.08)",
     altitude: 0.02,
   },
   "centro-oeste": {
-    capColor: "rgba(187, 247, 208, 0.28)",
+    capColor: "rgba(187, 247, 208, 0.30)",
     sideColor: "rgba(74, 222, 128, 0.08)",
     altitude: 0.02,
   },
   sudeste: {
-    capColor: "rgba(251, 207, 232, 0.28)",
+    capColor: "rgba(251, 207, 232, 0.30)",
     sideColor: "rgba(244, 114, 182, 0.08)",
     altitude: 0.02,
   },
   sul: {
-    capColor: "rgba(221, 214, 254, 0.28)",
+    capColor: "rgba(221, 214, 254, 0.30)",
     sideColor: "rgba(168, 85, 247, 0.08)",
     altitude: 0.02,
   },
@@ -144,66 +140,64 @@ const BRASIL_REGIOES_BASE: Record<string, CountryVisualState> = {
 
 const BRASIL_REGIOES_ATIVO: Record<string, CountryVisualState> = {
   norte: {
-    capColor: "rgba(147, 197, 253, 0.60)",
+    capColor: "rgba(147, 197, 253, 0.62)",
     sideColor: "rgba(96, 165, 250, 0.18)",
     altitude: 0.034,
   },
   nordeste: {
-    capColor: "rgba(251, 146, 60, 0.60)",
+    capColor: "rgba(251, 146, 60, 0.62)",
     sideColor: "rgba(249, 115, 22, 0.18)",
     altitude: 0.034,
   },
   "centro-oeste": {
-    capColor: "rgba(74, 222, 128, 0.60)",
+    capColor: "rgba(74, 222, 128, 0.62)",
     sideColor: "rgba(34, 197, 94, 0.18)",
     altitude: 0.034,
   },
   sudeste: {
-    capColor: "rgba(244, 114, 182, 0.60)",
+    capColor: "rgba(244, 114, 182, 0.62)",
     sideColor: "rgba(236, 72, 153, 0.18)",
     altitude: 0.034,
   },
   sul: {
-    capColor: "rgba(168, 85, 247, 0.60)",
+    capColor: "rgba(168, 85, 247, 0.62)",
     sideColor: "rgba(147, 51, 234, 0.18)",
     altitude: 0.034,
   },
 };
 
-const ESTADOS_POR_REGIAO: Record<NomeRegiaoBrasil, string[]> = {
-  Norte: [
-    "Acre",
-    "Amapá",
-    "Amazonas",
-    "Pará",
-    "Rondônia",
-    "Roraima",
-    "Tocantins",
-  ],
-  Nordeste: [
-    "Alagoas",
-    "Bahia",
-    "Ceará",
-    "Maranhão",
-    "Paraíba",
-    "Pernambuco",
-    "Piauí",
-    "Rio Grande do Norte",
-    "Sergipe",
-  ],
-  "Centro-Oeste": [
-    "Distrito Federal",
-    "Goiás",
-    "Mato Grosso",
-    "Mato Grosso do Sul",
-  ],
-  Sudeste: [
-    "Espírito Santo",
-    "Minas Gerais",
-    "Rio de Janeiro",
-    "São Paulo",
-  ],
-  Sul: ["Paraná", "Rio Grande do Sul", "Santa Catarina"],
+const ESTADO_PARA_REGIAO: Record<string, string> = {
+  acre: "Norte",
+  amapa: "Norte",
+  amazonas: "Norte",
+  para: "Norte",
+  rondonia: "Norte",
+  roraima: "Norte",
+  tocantins: "Norte",
+
+  alagoas: "Nordeste",
+  bahia: "Nordeste",
+  ceara: "Nordeste",
+  maranhao: "Nordeste",
+  paraiba: "Nordeste",
+  pernambuco: "Nordeste",
+  piaui: "Nordeste",
+  "rio grande do norte": "Nordeste",
+  sergipe: "Nordeste",
+
+  "distrito federal": "Centro-Oeste",
+  goias: "Centro-Oeste",
+  "mato grosso": "Centro-Oeste",
+  "mato grosso do sul": "Centro-Oeste",
+
+  "espirito santo": "Sudeste",
+  "minas gerais": "Sudeste",
+  "rio de janeiro": "Sudeste",
+  "sao paulo": "Sudeste",
+
+  parana: "Sul",
+  "rio grande do sul": "Sul",
+  "santa catarina": "Sul",
 };
 
 function normalizeCountryName(value: string) {
@@ -217,21 +211,37 @@ function normalizeCountryName(value: string) {
     .toLowerCase();
 }
 
-function getCountryName(feature: GeoJsonFeature) {
+function getFeatureStateName(feature: GeoJsonFeature) {
   return (
     feature.properties?.name ||
     feature.properties?.nome ||
-    feature.properties?.NM_UF ||
-    feature.properties?.UF ||
-    feature.properties?.estado ||
-    feature.properties?.NM_REGIAO ||
-    feature.properties?.regiao ||
-    feature.properties?.REGIAO ||
     feature.properties?.ADMIN ||
     feature.properties?.admin ||
     feature.properties?.NAME ||
     ""
   );
+}
+
+function getFeatureRegionName(feature: GeoJsonFeature) {
+  const nomeEstado = getFeatureStateName(feature);
+  const nomeEstadoNormalizado = normalizeCountryName(nomeEstado);
+
+  return (
+    feature.properties?.regiaoJogo ||
+    feature.properties?.regiao ||
+    feature.properties?.REGIAO ||
+    feature.properties?.NM_REGIAO ||
+    ESTADO_PARA_REGIAO[nomeEstadoNormalizado] ||
+    ""
+  );
+}
+
+function getCountryName(feature: GeoJsonFeature, modo: GlobeMode) {
+  if (modo === "brasil-regioes") {
+    return getFeatureRegionName(feature);
+  }
+
+  return getFeatureStateName(feature) || getFeatureRegionName(feature);
 }
 
 function getCountrySeed(nome: string) {
@@ -282,15 +292,11 @@ function getNaturalStyle(nome: string): CountryVisualState {
 
 function getGeoJsonPath(modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
-  if (modoAtual === "america-central")
-    return "/dados/america-central-simplified.geojson";
-  if (modoAtual === "america-norte")
-    return "/dados/america-norte-simplified.geojson";
+  if (modoAtual === "america-central") return "/dados/america-central-simplified.geojson";
+  if (modoAtual === "america-norte") return "/dados/america-norte-simplified.geojson";
   if (modoAtual === "europa") return "/dados/europa-simplified.geojson";
-  if (modoAtual === "brasil-regioes")
-    return "/dados/brasil-regioes-simplified.geojson";
-  if (modoAtual === "brasil-estados")
-    return "/dados/brasil-estados-simplified.geojson";
+  if (modoAtual === "brasil-regioes") return "/dados/brasil-estados.json";
+  if (modoAtual === "brasil-estados") return "/dados/brasil-estados.json";
 
   return "/dados/countries.geojson";
 }
@@ -304,9 +310,7 @@ function aplicarVistaInicial(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
   } else if (modoAtual === "europa") {
     globe.pointOfView({ lat: 54, lng: 15, altitude: 1.05 }, 0);
-  } else if (modoAtual === "brasil-regioes") {
-    globe.pointOfView({ lat: -14, lng: -52, altitude: 1.15 }, 0);
-  } else if (modoAtual === "brasil-estados") {
+  } else if (modoAtual === "brasil-regioes" || modoAtual === "brasil-estados") {
     globe.pointOfView({ lat: -14, lng: -52, altitude: 1.15 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
@@ -322,13 +326,25 @@ function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
   } else if (modoAtual === "europa") {
     globe.pointOfView({ lat: 54, lng: 15, altitude: 0.86 }, 1200);
-  } else if (modoAtual === "brasil-regioes") {
-    globe.pointOfView({ lat: -14, lng: -52, altitude: 0.92 }, 1200);
-  } else if (modoAtual === "brasil-estados") {
+  } else if (modoAtual === "brasil-regioes" || modoAtual === "brasil-estados") {
     globe.pointOfView({ lat: -14, lng: -52, altitude: 0.92 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
   }
+}
+
+function mapearEstadoParaRegiao(feature: GeoJsonFeature): GeoJsonFeature {
+  const nomeEstado = feature.properties?.nome || feature.properties?.name || "";
+  const nomeEstadoNormalizado = normalizeCountryName(nomeEstado);
+  const regiao = ESTADO_PARA_REGIAO[nomeEstadoNormalizado] || "";
+
+  return {
+    ...feature,
+    properties: {
+      ...feature.properties,
+      regiaoJogo: regiao || nomeEstado,
+    },
+  };
 }
 
 async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
@@ -337,39 +353,44 @@ async function loadGeoJson(path: string): Promise<GeoJsonFeature[]> {
 
   const res = await fetch(path, { cache: "force-cache" });
   if (!res.ok) {
-    throw new Error(`Erro ao buscar GeoJSON: ${res.status}`);
+    throw new Error(`Erro ao buscar GeoJSON/TopoJSON: ${res.status}`);
   }
 
-  const data: GeoJsonData = await res.json();
-  const features = data.features ?? [];
-  geoJsonCache.set(path, features);
-  return features;
-}
+  const data = (await res.json()) as GeoJsonData & TopoJsonData;
 
-function obterRegiaoDoEstado(nomeEstado: string): NomeRegiaoBrasil | null {
-  const nomeNormalizado = normalizeCountryName(nomeEstado);
+  if (Array.isArray(data.features)) {
+    const features = data.features ?? [];
+    geoJsonCache.set(path, features);
+    return features;
+  }
 
-  for (const [regiao, estados] of Object.entries(ESTADOS_POR_REGIAO)) {
-    const encontrou = estados.some(
-      (estado) => normalizeCountryName(estado) === nomeNormalizado
-    );
+  if (data.type === "Topology" && data.objects) {
+    const objectKey =
+      "estados" in data.objects ? "estados" : Object.keys(data.objects)[0];
 
-    if (encontrou) {
-      return regiao as NomeRegiaoBrasil;
+    if (!objectKey) {
+      throw new Error("TopoJSON sem objeto válido.");
     }
+
+    const geojson = topojsonFeature(
+      data as never,
+      data.objects[objectKey] as never
+    ) as {
+      type: string;
+      features?: GeoJsonFeature[];
+    };
+
+    let features = geojson.features ?? [];
+
+    if (path.includes("/dados/brasil-estados.json")) {
+      features = features.map(mapearEstadoParaRegiao);
+    }
+
+    geoJsonCache.set(path, features);
+    return features;
   }
 
-  return null;
-}
-
-function getBaseStyleByRegion(regiao: NomeRegiaoBrasil | null): CountryVisualState | null {
-  if (!regiao) return null;
-  return BRASIL_REGIOES_BASE[normalizeCountryName(regiao)] || null;
-}
-
-function getActiveStyleByRegion(regiao: NomeRegiaoBrasil | null): CountryVisualState | null {
-  if (!regiao) return null;
-  return BRASIL_REGIOES_ATIVO[normalizeCountryName(regiao)] || null;
+  throw new Error("Formato de arquivo geográfico não reconhecido.");
 }
 
 export default function GlobeScene({
@@ -381,7 +402,9 @@ export default function GlobeScene({
   flashingCountries = [],
   celebratingCountries = [],
   finalizado = false,
-  currentRegion,
+  activeRegion,
+  blinkRegion,
+  blinkRegionOn = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
@@ -389,6 +412,7 @@ export default function GlobeScene({
 
   const onCountryClickRef = useRef<Props["onCountryClick"]>(onCountryClick);
   const allowedCountryMapRef = useRef<Map<string, string>>(new Map());
+  const modoRef = useRef<GlobeMode>(modo);
 
   const isDraggingRef = useRef(false);
   const lastPointerDownRef = useRef({ x: 0, y: 0 });
@@ -400,6 +424,10 @@ export default function GlobeScene({
   useEffect(() => {
     onCountryClickRef.current = onCountryClick;
   }, [onCountryClick]);
+
+  useEffect(() => {
+    modoRef.current = modo;
+  }, [modo]);
 
   const allowedCountryMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -446,13 +474,12 @@ export default function GlobeScene({
     [celebratingCountries]
   );
 
-  const currentRegionNormalized = useMemo(
-    () => (currentRegion ? normalizeCountryName(currentRegion) : ""),
-    [currentRegion]
-  );
+  function getVisualState(feature: GeoJsonFeature): CountryVisualState {
+    const nome = getCountryName(feature, modo);
+    const nomeNormalizado = normalizeCountryName(nome);
 
-  const visualStateByName = useMemo(() => {
-    const map = new Map<string, CountryVisualState>();
+    const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
+    const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
 
     const correctCapColor = "rgba(147, 197, 253, 0.20)";
     const correctSideColor = "rgba(96, 165, 250, 0.10)";
@@ -460,128 +487,23 @@ export default function GlobeScene({
     const celebrateCapColor = "rgba(191, 219, 254, 0.38)";
     const celebrateSideColor = "rgba(147, 197, 253, 0.20)";
 
-    const flashWrongCapColor = "rgba(248, 113, 113, 0.75)";
-    const flashWrongSideColor = "rgba(248, 113, 113, 0.22)";
-
-    const allNames = new Set<string>([
-      ...correctSet,
-      ...flashingSet,
-      ...celebratingSet,
-    ]);
-
-    allNames.forEach((nomeNormalizado) => {
-      if (modo === "brasil-regioes") {
-        if (celebratingSet.has(nomeNormalizado)) {
-          map.set(
-            nomeNormalizado,
-            BRASIL_REGIOES_ATIVO[nomeNormalizado] || {
-              capColor: celebrateCapColor,
-              sideColor: celebrateSideColor,
-              altitude: 0.05,
-            }
-          );
-          return;
-        }
-
-        if (correctSet.has(nomeNormalizado)) {
-          map.set(
-            nomeNormalizado,
-            BRASIL_REGIOES_ATIVO[nomeNormalizado] || {
-              capColor: correctCapColor,
-              sideColor: correctSideColor,
-              altitude: 0.032,
-            }
-          );
-          return;
-        }
-
-        if (flashingSet.has(nomeNormalizado)) {
-          map.set(nomeNormalizado, {
-            capColor: flashWrongCapColor,
-            sideColor: flashWrongSideColor,
-            altitude: 0.032,
-          });
-        }
-
-        return;
-      }
-
-      if (modo === "brasil-estados") {
-        if (flashingSet.has(nomeNormalizado)) {
-          map.set(nomeNormalizado, {
-            capColor: flashWrongCapColor,
-            sideColor: flashWrongSideColor,
-            altitude: 0.032,
-          });
-          return;
-        }
-
-        const regiaoDoEstado = obterRegiaoDoEstado(nomeNormalizado);
-        const activeStyle = getActiveStyleByRegion(regiaoDoEstado);
-
-        if (celebratingSet.has(nomeNormalizado)) {
-          map.set(
-            nomeNormalizado,
-            activeStyle || {
-              capColor: celebrateCapColor,
-              sideColor: celebrateSideColor,
-              altitude: 0.05,
-            }
-          );
-          return;
-        }
-
-        if (correctSet.has(nomeNormalizado)) {
-          map.set(
-            nomeNormalizado,
-            activeStyle || {
-              capColor: correctCapColor,
-              sideColor: correctSideColor,
-              altitude: 0.032,
-            }
-          );
-        }
-
-        return;
-      }
-
-      if (celebratingSet.has(nomeNormalizado)) {
-        map.set(nomeNormalizado, {
-          capColor: celebrateCapColor,
-          sideColor: celebrateSideColor,
-          altitude: 0.05,
-        });
-        return;
-      }
-
-      if (correctSet.has(nomeNormalizado)) {
-        map.set(nomeNormalizado, {
-          capColor: correctCapColor,
-          sideColor: correctSideColor,
-          altitude: 0.032,
-        });
-        return;
-      }
-
+    if (modo === "brasil-regioes") {
       if (flashingSet.has(nomeNormalizado)) {
-        map.set(nomeNormalizado, {
+        return {
           capColor: flashWrongCapColor,
           sideColor: flashWrongSideColor,
           altitude: 0.032,
-        });
+        };
       }
-    });
 
-    return map;
-  }, [correctSet, flashingSet, celebratingSet, modo]);
-
-  function getVisualState(feature: GeoJsonFeature): CountryVisualState {
-    const nome = getCountryName(feature);
-    const nomeNormalizado = normalizeCountryName(nome);
-
-    if (modo === "brasil-regioes") {
-      if (visualStateByName.has(nomeNormalizado)) {
-        return visualStateByName.get(nomeNormalizado)!;
+      if (correctSet.has(nomeNormalizado) || celebratingSet.has(nomeNormalizado)) {
+        return (
+          BRASIL_REGIOES_ATIVO[nomeNormalizado] || {
+            capColor: celebrateCapColor,
+            sideColor: celebrateSideColor,
+            altitude: 0.034,
+          }
+        );
       }
 
       if (BRASIL_REGIOES_BASE[nomeNormalizado]) {
@@ -590,22 +512,103 @@ export default function GlobeScene({
     }
 
     if (modo === "brasil-estados") {
-      if (visualStateByName.has(nomeNormalizado)) {
-        return visualStateByName.get(nomeNormalizado)!;
-      }
+      const nomeEstado = getFeatureStateName(feature);
+      const nomeEstadoNormalizado = normalizeCountryName(nomeEstado);
+      const nomeRegiao = getFeatureRegionName(feature);
+      const nomeRegiaoNormalizado = normalizeCountryName(nomeRegiao);
 
-      const regiaoDoEstado = obterRegiaoDoEstado(nome);
+      const regiaoAtivaNormalizada = normalizeCountryName(activeRegion || "");
+      const regiaoBlinkNormalizada = normalizeCountryName(blinkRegion || "");
+
+      const estiloBase =
+        BRASIL_REGIOES_BASE[nomeRegiaoNormalizado] || {
+          capColor: "rgba(255,255,255,0.07)",
+          sideColor: "rgba(255,255,255,0.03)",
+          altitude: 0.02,
+        };
+
+      const estiloAtivo =
+        BRASIL_REGIOES_ATIVO[nomeRegiaoNormalizado] || {
+          capColor: "rgba(191, 219, 254, 0.45)",
+          sideColor: "rgba(147, 197, 253, 0.18)",
+          altitude: 0.034,
+        };
+
+      if (flashingSet.has(nomeEstadoNormalizado)) {
+        return {
+          capColor: flashWrongCapColor,
+          sideColor: flashWrongSideColor,
+          altitude: 0.032,
+        };
+      }
 
       if (
-        currentRegionNormalized &&
-        regiaoDoEstado &&
-        normalizeCountryName(regiaoDoEstado) === currentRegionNormalized
+        correctSet.has(nomeEstadoNormalizado) ||
+        celebratingSet.has(nomeEstadoNormalizado)
       ) {
-        return getBaseStyleByRegion(regiaoDoEstado) || getNaturalStyle(nome);
+        return {
+          capColor: estiloAtivo.capColor,
+          sideColor: estiloAtivo.sideColor,
+          altitude: 0.042,
+        };
       }
+
+      if (
+        !regiaoAtivaNormalizada ||
+        nomeRegiaoNormalizado !== regiaoAtivaNormalizada
+      ) {
+        return {
+          capColor: "rgba(255,255,255,0.035)",
+          sideColor: "rgba(255,255,255,0.015)",
+          altitude: 0.012,
+        };
+      }
+
+      if (
+        regiaoBlinkNormalizada &&
+        nomeRegiaoNormalizado === regiaoBlinkNormalizada &&
+        blinkRegionOn
+      ) {
+        return {
+          capColor: estiloAtivo.capColor,
+          sideColor: estiloAtivo.sideColor,
+          altitude: 0.034,
+        };
+      }
+
+      return {
+        capColor: estiloBase.capColor,
+        sideColor: estiloBase.sideColor,
+        altitude: 0.022,
+      };
     }
 
-    return visualStateByName.get(nomeNormalizado) || getNaturalStyle(nome);
+    // Jogos de países: restaurado o destaque do acerto/celebração
+    if (flashingSet.has(nomeNormalizado)) {
+      return {
+        capColor: flashWrongCapColor,
+        sideColor: flashWrongSideColor,
+        altitude: 0.032,
+      };
+    }
+
+    if (celebratingSet.has(nomeNormalizado)) {
+      return {
+        capColor: celebrateCapColor,
+        sideColor: celebrateSideColor,
+        altitude: 0.05,
+      };
+    }
+
+    if (correctSet.has(nomeNormalizado)) {
+      return {
+        capColor: correctCapColor,
+        sideColor: correctSideColor,
+        altitude: 0.032,
+      };
+    }
+
+    return getNaturalStyle(nome);
   }
 
   function lockClickTemporarily() {
@@ -676,7 +679,11 @@ export default function GlobeScene({
         if (isDraggingRef.current) return;
         if (clickLockRef.current) return;
 
-        const nomeOriginal = getCountryName(polygon as GeoJsonFeature);
+        const modoAtual = modoRef.current;
+        const nomeOriginal = getCountryName(
+          polygon as GeoJsonFeature,
+          modoAtual
+        );
         const nomeNormalizado = normalizeCountryName(nomeOriginal);
         const nomeCanonico =
           allowedCountryMapRef.current.get(nomeNormalizado) || nomeOriginal;
@@ -760,7 +767,7 @@ export default function GlobeScene({
           allowedCountryMap.size === 0
             ? features
             : features.filter((feature) => {
-                const nome = getCountryName(feature);
+                const nome = getCountryName(feature, modo);
                 const nomeNormalizado = normalizeCountryName(nome);
                 return allowedCountryMap.has(nomeNormalizado);
               });
@@ -800,7 +807,15 @@ export default function GlobeScene({
         getVisualState(feature as GeoJsonFeature).altitude
       )
       .polygonsTransitionDuration(0);
-  }, [visualStateByName, modo, currentRegionNormalized]);
+  }, [
+    modo,
+    correctSet,
+    celebratingSet,
+    flashingSet,
+    activeRegion,
+    blinkRegion,
+    blinkRegionOn,
+  ]);
 
   useEffect(() => {
     const globe = globeRef.current;

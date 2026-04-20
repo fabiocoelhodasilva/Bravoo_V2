@@ -2,6 +2,7 @@ export type PaisItem = {
   en: string;
   pt: string;
   aliases?: string[];
+  regiao?: string;
 };
 
 export type GlobeMode =
@@ -93,10 +94,7 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
     assuntoId: "a1c4b6d2-7f31-4f5e-9c11-2a8d8f310002",
     detalheId: "c1d4b6d2-7f31-4f5e-9c11-2a8d8f320002",
     paises: [
-      {
-        en: "Canada",
-        pt: "Canadá",
-      },
+      { en: "Canada", pt: "Canadá" },
       {
         en: "United States of America",
         pt: "Estados Unidos",
@@ -367,7 +365,7 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
 
   "brasil-regioes": {
     slug: "brasil-regioes",
-    tituloFinal: "Parabéns, você encontrou todas as regiões do Brasil!",
+    tituloFinal: "Parabéns, você concluiu o jogo!",
     modoGlobo: "brasil-regioes",
     pontuacaoInicial: 5,
     atividadeId: "22222222-2222-2222-2222-222222222009",
@@ -375,11 +373,15 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
     assuntoId: "33333333-3333-3333-3333-333333333011",
     detalheId: "33333333-3333-3333-3333-333333333021",
     paises: [
-      { en: "Norte", pt: "Norte" },
-      { en: "Nordeste", pt: "Nordeste" },
-      { en: "Centro-Oeste", pt: "Centro-Oeste", aliases: ["Centro Oeste"] },
-      { en: "Sudeste", pt: "Sudeste" },
-      { en: "Sul", pt: "Sul" },
+      { en: "Norte", pt: "Norte", aliases: ["N"] },
+      { en: "Nordeste", pt: "Nordeste", aliases: ["NE"] },
+      {
+        en: "Centro-Oeste",
+        pt: "Centro-Oeste",
+        aliases: ["CO", "Centro Oeste"],
+      },
+      { en: "Sudeste", pt: "Sudeste", aliases: ["SE"] },
+      { en: "Sul", pt: "Sul", aliases: ["S"] },
     ],
   },
 
@@ -389,7 +391,7 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
 
   "brasil-estados": {
     slug: "brasil-estados",
-    tituloFinal: "Parabéns, você encontrou todos os estados do Brasil!",
+    tituloFinal: "Parabéns, você concluiu o jogo!",
     modoGlobo: "brasil-estados",
     pontuacaoInicial: 27,
     atividadeId: "22222222-2222-2222-2222-222222222010",
@@ -397,101 +399,46 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
     assuntoId: "33333333-3333-3333-3333-333333333012",
     detalheId: "33333333-3333-3333-3333-333333333022",
     paises: [
-      { en: "Acre", pt: "Acre" },
-      { en: "Alagoas", pt: "Alagoas" },
-      { en: "Amapá", pt: "Amapá", aliases: ["Amapa"] },
-      { en: "Amazonas", pt: "Amazonas" },
-      { en: "Bahia", pt: "Bahia" },
-      { en: "Ceará", pt: "Ceará", aliases: ["Ceara"] },
-      { en: "Distrito Federal", pt: "Distrito Federal", aliases: ["DF"] },
+      { en: "Acre", pt: "Acre", regiao: "Norte" },
+      { en: "Amapá", pt: "Amapá", regiao: "Norte", aliases: ["Amapa"] },
+      { en: "Amazonas", pt: "Amazonas", regiao: "Norte" },
+      { en: "Pará", pt: "Pará", regiao: "Norte", aliases: ["Para"] },
+      { en: "Rondônia", pt: "Rondônia", regiao: "Norte", aliases: ["Rondonia"] },
+      { en: "Roraima", pt: "Roraima", regiao: "Norte" },
+      { en: "Tocantins", pt: "Tocantins", regiao: "Norte" },
+
+      { en: "Alagoas", pt: "Alagoas", regiao: "Nordeste" },
+      { en: "Bahia", pt: "Bahia", regiao: "Nordeste" },
+      { en: "Ceará", pt: "Ceará", regiao: "Nordeste", aliases: ["Ceara"] },
+      { en: "Maranhão", pt: "Maranhão", regiao: "Nordeste", aliases: ["Maranhao"] },
+      { en: "Paraíba", pt: "Paraíba", regiao: "Nordeste", aliases: ["Paraiba"] },
+      { en: "Pernambuco", pt: "Pernambuco", regiao: "Nordeste" },
+      { en: "Piauí", pt: "Piauí", regiao: "Nordeste", aliases: ["Piaui"] },
+      {
+        en: "Rio Grande do Norte",
+        pt: "Rio Grande do Norte",
+        regiao: "Nordeste",
+      },
+      { en: "Sergipe", pt: "Sergipe", regiao: "Nordeste" },
+
+      { en: "Distrito Federal", pt: "Distrito Federal", regiao: "Centro-Oeste" },
+      { en: "Goiás", pt: "Goiás", regiao: "Centro-Oeste", aliases: ["Goias"] },
+      { en: "Mato Grosso", pt: "Mato Grosso", regiao: "Centro-Oeste" },
+      { en: "Mato Grosso do Sul", pt: "Mato Grosso do Sul", regiao: "Centro-Oeste" },
+
       {
         en: "Espírito Santo",
         pt: "Espírito Santo",
+        regiao: "Sudeste",
         aliases: ["Espirito Santo"],
       },
-      { en: "Goiás", pt: "Goiás", aliases: ["Goias"] },
-      { en: "Maranhão", pt: "Maranhão", aliases: ["Maranhao"] },
-      { en: "Mato Grosso", pt: "Mato Grosso" },
-      { en: "Mato Grosso do Sul", pt: "Mato Grosso do Sul" },
-      { en: "Minas Gerais", pt: "Minas Gerais" },
-      { en: "Pará", pt: "Pará", aliases: ["Para"] },
-      { en: "Paraíba", pt: "Paraíba", aliases: ["Paraiba"] },
-      { en: "Paraná", pt: "Paraná", aliases: ["Parana"] },
-      { en: "Pernambuco", pt: "Pernambuco" },
-      { en: "Piauí", pt: "Piauí", aliases: ["Piaui"] },
-      { en: "Rio de Janeiro", pt: "Rio de Janeiro" },
-      { en: "Rio Grande do Norte", pt: "Rio Grande do Norte" },
-      { en: "Rio Grande do Sul", pt: "Rio Grande do Sul" },
-      { en: "Rondônia", pt: "Rondônia", aliases: ["Rondonia"] },
-      { en: "Roraima", pt: "Roraima" },
-      { en: "Santa Catarina", pt: "Santa Catarina" },
-      { en: "São Paulo", pt: "São Paulo", aliases: ["Sao Paulo"] },
-      { en: "Sergipe", pt: "Sergipe" },
-      { en: "Tocantins", pt: "Tocantins" },
-    ],
-  },
+      { en: "Minas Gerais", pt: "Minas Gerais", regiao: "Sudeste" },
+      { en: "Rio de Janeiro", pt: "Rio de Janeiro", regiao: "Sudeste" },
+      { en: "São Paulo", pt: "São Paulo", regiao: "Sudeste", aliases: ["Sao Paulo"] },
 
-  /* =================================
-     BRASIL — CAPITAIS
-  ================================= */
-
-  "brasil-capitais": {
-    slug: "brasil-capitais",
-    tituloFinal: "Parabéns, você encontrou todos os estados pelas capitais!",
-    modoGlobo: "brasil-estados",
-    pontuacaoInicial: 27,
-    atividadeId: "33333333-3333-3333-3333-333333333003",
-    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
-    assuntoId: "33333333-3333-3333-3333-333333333013",
-    detalheId: "33333333-3333-3333-3333-333333333023",
-    paises: [
-      { en: "Acre", pt: "Rio Branco" },
-      { en: "Alagoas", pt: "Maceió", aliases: ["Maceio"] },
-      { en: "Amapá", pt: "Macapá", aliases: ["Amapa", "Macapa"] },
-      { en: "Amazonas", pt: "Manaus" },
-      { en: "Bahia", pt: "Salvador" },
-      { en: "Ceará", pt: "Fortaleza", aliases: ["Ceara"] },
-      {
-        en: "Distrito Federal",
-        pt: "Brasília",
-        aliases: ["DF", "Brasilia"],
-      },
-      {
-        en: "Espírito Santo",
-        pt: "Vitória",
-        aliases: ["Espirito Santo", "Vitoria"],
-      },
-      { en: "Goiás", pt: "Goiânia", aliases: ["Goias", "Goiania"] },
-      {
-        en: "Maranhão",
-        pt: "São Luís",
-        aliases: ["Maranhao", "Sao Luis"],
-      },
-      { en: "Mato Grosso", pt: "Cuiabá", aliases: ["Cuiaba"] },
-      { en: "Mato Grosso do Sul", pt: "Campo Grande" },
-      { en: "Minas Gerais", pt: "Belo Horizonte" },
-      { en: "Pará", pt: "Belém", aliases: ["Para", "Belem"] },
-      { en: "Paraíba", pt: "João Pessoa", aliases: ["Paraiba"] },
-      { en: "Paraná", pt: "Curitiba", aliases: ["Parana"] },
-      { en: "Pernambuco", pt: "Recife" },
-      { en: "Piauí", pt: "Teresina", aliases: ["Piaui"] },
-      { en: "Rio de Janeiro", pt: "Rio de Janeiro" },
-      { en: "Rio Grande do Norte", pt: "Natal" },
-      { en: "Rio Grande do Sul", pt: "Porto Alegre" },
-      {
-        en: "Rondônia",
-        pt: "Porto Velho",
-        aliases: ["Rondonia"],
-      },
-      { en: "Roraima", pt: "Boa Vista" },
-      {
-        en: "Santa Catarina",
-        pt: "Florianópolis",
-        aliases: ["Florianopolis"],
-      },
-      { en: "São Paulo", pt: "São Paulo", aliases: ["Sao Paulo"] },
-      { en: "Sergipe", pt: "Aracaju" },
-      { en: "Tocantins", pt: "Palmas" },
+      { en: "Paraná", pt: "Paraná", regiao: "Sul", aliases: ["Parana"] },
+      { en: "Rio Grande do Sul", pt: "Rio Grande do Sul", regiao: "Sul" },
+      { en: "Santa Catarina", pt: "Santa Catarina", regiao: "Sul" },
     ],
   },
 };
