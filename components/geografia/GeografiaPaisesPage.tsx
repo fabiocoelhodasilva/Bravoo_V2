@@ -361,7 +361,7 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
 
         <div className="w-full flex items-center justify-center">
           <div className="w-full max-w-[1400px]">
-            <div className="relative overflow-hidden rounded-2xl h-[70vh] min-h-[360px] max-h-[700px] md:h-[60vh]">
+            <div className="relative overflow-hidden rounded-2xl h-[60vh] min-h-[360px] max-h-[700px] md:h-[60vh]">
               <GlobeScene
                 modo={config.modoGlobo}
                 resetKey={config.slug}
