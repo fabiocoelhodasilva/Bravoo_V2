@@ -85,6 +85,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
   const liberarInteracaoTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const instrucaoJaMostradaRef = useRef(false);
 
   const paisesMap = useMemo(() => config.paises, [config.paises]);
 
@@ -148,9 +149,12 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setMostrarInstrucao(false);
     sessaoJaFinalizadaRef.current = false;
 
-    requestAnimationFrame(() => {
-      setMostrarInstrucao(true);
-    });
+    if (!instrucaoJaMostradaRef.current) {
+      requestAnimationFrame(() => {
+        setMostrarInstrucao(true);
+        instrucaoJaMostradaRef.current = true;
+      });
+    }
 
     liberarInteracaoTimeoutRef.current = setTimeout(() => {
       setInteracaoLiberada(true);
@@ -329,11 +333,11 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   const textoInstrucao =
     config.modoGlobo === "brasil-capitais"
-      ? "Descubra no mapa de qual estado é esta capital"
+      ? "Descubra no globo de qual estado é esta capital"
       : config.modoGlobo === "brasil-estados"
-      ? "Descubra no mapa onde fica este estado"
+      ? "Descubra no globo onde fica este estado"
       : config.modoGlobo === "brasil-regioes"
-      ? "Descubra no mapa onde fica esta região"
+      ? "Descubra no globo onde fica esta região"
       : "Descubra no globo onde fica este país";
 
   return (
