@@ -1,84 +1,48 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import HeaderInterno from "@/components/ui/HeaderInterno";
-import BotaoVoltar from "@/components/ui/BotaoVoltar";
-import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
-import { supabase } from "@/lib/supabase/client";
+import { useMemo, useState } from "react";
+import GeografiaPaisesPage from "@/components/geografia/GeografiaPaisesPage";
+import BarraFasesEuropa from "@/components/geografia/BarraFasesEuropa";
+import { REGIOES_CONFIG } from "@/lib/geografia/regioes-config";
 
-export default function EuropaMenuPage() {
-  const router = useRouter();
+const FASES_EUROPA = [
+  { id: "europa-fase-1", label: "Fase 1", status: "concluida" as const },
+  { id: "europa-fase-2", label: "Fase 2", status: "concluida" as const },
+  { id: "europa-fase-3", label: "Fase 3", status: "ativa" as const },
+  { id: "europa-fase-4", label: "Fase 4", status: "concluida" as const },
+  { id: "europa-fase-5", label: "Fase 5", status: "concluida" as const },
+  { id: "europa-fase-6", label: "Fase 6", status: "concluida" as const },
+];
 
-  async function handleLogout() {
-    try {
-      const { error } = await supabase.auth.signOut();
+export default function EuropaPage() {
+  const [faseAtualId, setFaseAtualId] = useState("europa-fase-3");
 
-      if (error) {
-        console.error("Erro ao fazer logout:", error);
-        return;
-      }
+  const configAtual = useMemo(() => {
+    return REGIOES_CONFIG[faseAtualId];
+  }, [faseAtualId]);
 
-      router.replace("/login");
-    } catch (error) {
-      console.error("Erro inesperado ao fazer logout:", error);
-    }
+  const fasesComEstado = useMemo(() => {
+    return FASES_EUROPA.map((fase) => ({
+      ...fase,
+      status: fase.id === faseAtualId ? ("ativa" as const) : ("concluida" as const),
+    }));
+  }, [faseAtualId]);
+
+  function handleSelecionarFase(id: string) {
+    const fase = FASES_EUROPA.find((item) => item.id === id);
+    if (!fase) return;
+
+    setFaseAtualId(id);
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans">
-      <HeaderInterno onLogout={handleLogout} />
-
-      <div className="h-[48px]" />
-
-      <main className="flex flex-col items-center px-4 pt-10">
-        <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
-          Europa
-        </h1>
-
-        <div className="mt-2 flex w-full max-w-sm animate-fade-in flex-col gap-5">
-
-          <HomeFeatureCard
-            title="Fase 1"
-            href="/geografia/europa/paises?fase=1"
-            colorClass="bg-[var(--color-2)] hover:brightness-110"
-          />
-
-          <HomeFeatureCard
-            title="Fase 2"
-            href="/geografia/europa/paises?fase=2"
-            colorClass="bg-[var(--color-5)] hover:brightness-110"
-          />
-
-          <HomeFeatureCard
-            title="Fase 3"
-            href="/geografia/europa/paises?fase=3"
-            colorClass="bg-[var(--color-6)] hover:brightness-110"
-          />
-
-          <HomeFeatureCard
-            title="Fase 4"
-            href="/geografia/europa/paises?fase=4"
-            colorClass="bg-[var(--color-7)] hover:brightness-110"
-          />
-
-          <HomeFeatureCard
-            title="Fase 5"
-            href="/geografia/europa/paises?fase=5"
-            colorClass="bg-[var(--color-4)] hover:brightness-110"
-          />
-
-          <HomeFeatureCard
-            title="Fase 6 - Europa Completa"
-            href="/geografia/europa/paises?fase=6"
-            colorClass="bg-[var(--color-5)] hover:brightness-110"
-          />
-
-        </div>
-
-        <div className="mt-12 mb-8">
-          <BotaoVoltar />
-        </div>
-      </main>
-    </div>
+    <GeografiaPaisesPage config={configAtual}>
+      <div className="mt-4 px-4 pb-6 md:px-6">
+        <BarraFasesEuropa
+          fases={fasesComEstado}
+          onSelecionarFase={handleSelecionarFase}
+        />
+      </div>
+    </GeografiaPaisesPage>
   );
 }

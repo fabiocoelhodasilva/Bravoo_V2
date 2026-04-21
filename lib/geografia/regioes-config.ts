@@ -3,6 +3,7 @@ export type PaisItem = {
   pt: string;
   aliases?: string[];
   regiao?: string;
+  estadoNome?: string;
 };
 
 export type GlobeMode =
@@ -11,7 +12,8 @@ export type GlobeMode =
   | "america-norte"
   | "europa"
   | "brasil-regioes"
-  | "brasil-estados";
+  | "brasil-estados"
+  | "brasil-capitais";
 
 export type RegiaoConfig = {
   slug: string;
@@ -439,6 +441,60 @@ export const REGIOES_CONFIG: Record<string, RegiaoConfig> = {
       { en: "Paraná", pt: "Paraná", regiao: "Sul", aliases: ["Parana"] },
       { en: "Rio Grande do Sul", pt: "Rio Grande do Sul", regiao: "Sul" },
       { en: "Santa Catarina", pt: "Santa Catarina", regiao: "Sul" },
+    ],
+  },
+
+  /* =================================
+     BRASIL — CAPITAIS
+  ================================= */
+
+  "brasil-capitais": {
+    slug: "brasil-capitais",
+    tituloFinal: "Parabéns, você concluiu o jogo!",
+    modoGlobo: "brasil-capitais",
+    pontuacaoInicial: 27,
+    atividadeId: "22222222-2222-2222-2222-222222222011",
+    materiaId: "d366c6de-2345-4bb2-ac1f-a88747a2248d",
+    assuntoId: "33333333-3333-3333-3333-333333333013",
+    detalheId: "33333333-3333-3333-3333-333333333023",
+    paises: [
+      { en: "Acre", pt: "Rio Branco", regiao: "Norte", estadoNome: "Acre" },
+      { en: "Amapá", pt: "Macapá", regiao: "Norte", estadoNome: "Amapá", aliases: ["Amapa"] },
+      { en: "Amazonas", pt: "Manaus", regiao: "Norte", estadoNome: "Amazonas" },
+      { en: "Pará", pt: "Belém", regiao: "Norte", estadoNome: "Pará", aliases: ["Para"] },
+      { en: "Rondônia", pt: "Porto Velho", regiao: "Norte", estadoNome: "Rondônia", aliases: ["Rondonia"] },
+      { en: "Roraima", pt: "Boa Vista", regiao: "Norte", estadoNome: "Roraima" },
+      { en: "Tocantins", pt: "Palmas", regiao: "Norte", estadoNome: "Tocantins" },
+
+      { en: "Alagoas", pt: "Maceió", regiao: "Nordeste", estadoNome: "Alagoas" },
+      { en: "Bahia", pt: "Salvador", regiao: "Nordeste", estadoNome: "Bahia" },
+      { en: "Ceará", pt: "Fortaleza", regiao: "Nordeste", estadoNome: "Ceará", aliases: ["Ceara"] },
+      { en: "Maranhão", pt: "São Luís", regiao: "Nordeste", estadoNome: "Maranhão", aliases: ["Maranhao"] },
+      { en: "Paraíba", pt: "João Pessoa", regiao: "Nordeste", estadoNome: "Paraíba", aliases: ["Paraiba"] },
+      { en: "Pernambuco", pt: "Recife", regiao: "Nordeste", estadoNome: "Pernambuco" },
+      { en: "Piauí", pt: "Teresina", regiao: "Nordeste", estadoNome: "Piauí", aliases: ["Piaui"] },
+      { en: "Rio Grande do Norte", pt: "Natal", regiao: "Nordeste", estadoNome: "Rio Grande do Norte" },
+      { en: "Sergipe", pt: "Aracaju", regiao: "Nordeste", estadoNome: "Sergipe" },
+
+      { en: "Distrito Federal", pt: "Brasília", regiao: "Centro-Oeste", estadoNome: "Distrito Federal" },
+      { en: "Goiás", pt: "Goiânia", regiao: "Centro-Oeste", estadoNome: "Goiás", aliases: ["Goias"] },
+      { en: "Mato Grosso", pt: "Cuiabá", regiao: "Centro-Oeste", estadoNome: "Mato Grosso" },
+      { en: "Mato Grosso do Sul", pt: "Campo Grande", regiao: "Centro-Oeste", estadoNome: "Mato Grosso do Sul" },
+
+      {
+        en: "Espírito Santo",
+        pt: "Vitória",
+        regiao: "Sudeste",
+        estadoNome: "Espírito Santo",
+        aliases: ["Espirito Santo"],
+      },
+      { en: "Minas Gerais", pt: "Belo Horizonte", regiao: "Sudeste", estadoNome: "Minas Gerais" },
+      { en: "Rio de Janeiro", pt: "Rio de Janeiro", regiao: "Sudeste", estadoNome: "Rio de Janeiro" },
+      { en: "São Paulo", pt: "São Paulo", regiao: "Sudeste", estadoNome: "São Paulo", aliases: ["Sao Paulo"] },
+
+      { en: "Paraná", pt: "Curitiba", regiao: "Sul", estadoNome: "Paraná", aliases: ["Parana"] },
+      { en: "Rio Grande do Sul", pt: "Porto Alegre", regiao: "Sul", estadoNome: "Rio Grande do Sul" },
+      { en: "Santa Catarina", pt: "Florianópolis", regiao: "Sul", estadoNome: "Santa Catarina" },
     ],
   },
 };

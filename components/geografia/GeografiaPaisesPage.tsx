@@ -23,6 +23,7 @@ const GlobeScene = dynamic(
 
 type Props = {
   config: RegiaoConfig;
+  children?: React.ReactNode;
 };
 
 function normalizarTexto(valor: string) {
@@ -61,7 +62,7 @@ function montarListaBrasilEstadosPorRegiao(lista: PaisItem[]) {
   return resultado;
 }
 
-export default function GeografiaPaisesPage({ config }: Props) {
+export default function GeografiaPaisesPage({ config, children }: Props) {
   const router = useRouter();
 
   const [indiceAtual, setIndiceAtual] = useState(0);
@@ -79,15 +80,11 @@ export default function GeografiaPaisesPage({ config }: Props) {
     []
   );
 
-  const [blinkRegionName, setBlinkRegionName] = useState("");
-  const [blinkRegionOn, setBlinkRegionOn] = useState(false);
-
   const audioRef = useRef<AudioContext | null>(null);
   const sessaoJaFinalizadaRef = useRef(false);
   const liberarInteracaoTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
-  const blinkTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const paisesMap = useMemo(() => config.paises, [config.paises]);
 
@@ -95,15 +92,27 @@ export default function GeografiaPaisesPage({ config }: Props) {
     return config.paises.flatMap((pais) => [pais.en, ...(pais.aliases ?? [])]);
   }, [config.paises]);
 
-  function traduzir(nome: string) {
+  const mostrarBotaoVoltarPadrao = !config.slug.startsWith("europa-fase-");
+
+  function encontrarPaisPorNome(nome: string) {
     const nomeNormalizado = normalizarTexto(nome);
 
-    const paisEncontrado = paisesMap.find((pais) => {
+    return paisesMap.find((pais) => {
       const nomes = [pais.en, ...(pais.aliases ?? [])];
       return nomes.some((item) => normalizarTexto(item) === nomeNormalizado);
     });
+  }
 
-    return paisEncontrado?.pt || nome;
+  function traduzir(nome: string) {
+    const paisEncontrado = encontrarPaisPorNome(nome);
+
+    if (!paisEncontrado) return nome;
+
+    if (config.modoGlobo === "brasil-capitais") {
+      return paisEncontrado.estadoNome || paisEncontrado.en;
+    }
+
+    return paisEncontrado.pt || nome;
   }
 
   function limparTimerInteracao() {
@@ -113,20 +122,11 @@ export default function GeografiaPaisesPage({ config }: Props) {
     }
   }
 
-  function limparPiscaRegiao() {
-    blinkTimeoutsRef.current.forEach(clearTimeout);
-    blinkTimeoutsRef.current = [];
-    setBlinkRegionOn(false);
-  }
-
-  function iniciarPiscaRegiao(nomeRegiao: string) {
-    limparPiscaRegiao();
-    setBlinkRegionName(nomeRegiao);
-    setBlinkRegionOn(false);
-  }
-
   function montarListaInicial() {
-    if (config.modoGlobo === "brasil-estados") {
+    if (
+      config.modoGlobo === "brasil-estados" ||
+      config.modoGlobo === "brasil-capitais"
+    ) {
       return montarListaBrasilEstadosPorRegiao(paisesMap);
     }
 
@@ -135,7 +135,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   function iniciarJogo() {
     limparTimerInteracao();
-    limparPiscaRegiao();
 
     setIndiceAtual(0);
     setListaPaises(montarListaInicial());
@@ -148,8 +147,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setCorrectCountries([]);
     setFlashingCountries([]);
     setCelebratingCountries([]);
-    setBlinkRegionName("");
-    setBlinkRegionOn(false);
     sessaoJaFinalizadaRef.current = false;
 
     liberarInteracaoTimeoutRef.current = setTimeout(() => {
@@ -163,27 +160,10 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
     return () => {
       limparTimerInteracao();
-      limparPiscaRegiao();
     };
   }, [config.slug, config.pontuacaoInicial, paisesMap]);
 
   const paisAtual = listaPaises[indiceAtual];
-
-  useEffect(() => {
-    if (!paisAtual) return;
-    if (finalizado) return;
-
-    if (config.modoGlobo === "brasil-estados" && paisAtual.regiao) {
-      setBlinkRegionName(paisAtual.regiao);
-      setBlinkRegionOn(false);
-    } else {
-      limparPiscaRegiao();
-    }
-
-    return () => {
-      limparPiscaRegiao();
-    };
-  }, [indiceAtual, paisAtual, finalizado, config.modoGlobo]);
 
   function play(tipo: "acerto" | "erro" | "vitoria") {
     if (typeof window === "undefined") return;
@@ -233,7 +213,6 @@ export default function GeografiaPaisesPage({ config }: Props) {
     setFinalizado(true);
     play("vitoria");
     setMensagem("");
-    limparPiscaRegiao();
 
     const tempo = Math.floor((Date.now() - inicioJogo) / 1000);
 
@@ -295,7 +274,18 @@ export default function GeografiaPaisesPage({ config }: Props) {
     } else {
       play("erro");
 
-      setMensagem(`Quase! Você clicou em ${traduzir(nome)}`);
+      if (config.modoGlobo === "brasil-capitais") {
+        const paisClicado = encontrarPaisPorNome(nome);
+        const estadoClicado = paisClicado?.estadoNome || traduzir(nome);
+        const capitalClicada = paisClicado?.pt || "";
+
+        setMensagem(
+          `Você clicou em ${estadoClicado}, onde a capital é ${capitalClicada}.`
+        );
+      } else {
+        setMensagem(`Quase! Você clicou em ${traduzir(nome)}`);
+      }
+
       setPontuacao((p) => Math.max(0, p - 1));
 
       setFlashingCountries((prev) =>
@@ -318,17 +308,28 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   const frasePergunta =
     !finalizado &&
-    config.modoGlobo === "brasil-estados" &&
+    config.modoGlobo === "brasil-capitais" &&
     paisAtual?.regiao &&
-    paisAtual?.pt
-      ? `Na região ${paisAtual.regiao}, clique no seguinte estado: ${paisAtual.pt}`
-      : !finalizado &&
-          config.modoGlobo === "brasil-regioes" &&
-          paisAtual?.pt
-        ? `Clique na região: ${paisAtual.pt}`
-        : !finalizado && paisAtual?.pt
-          ? `Clique no país: ${paisAtual.pt}`
-          : null;
+    paisAtual?.pt ? (
+      <>
+        No {paisAtual.regiao},{" "}
+        <span className="font-bold text-4xl md:text-[2.4rem]">
+          {paisAtual.pt}
+        </span>{" "}
+        é a capital de qual estado?
+      </>
+    ) : !finalizado &&
+      config.modoGlobo === "brasil-estados" &&
+      paisAtual?.regiao &&
+      paisAtual?.pt ? (
+      `Na região ${paisAtual.regiao}, clique no seguinte estado: ${paisAtual.pt}`
+    ) : !finalizado &&
+      config.modoGlobo === "brasil-regioes" &&
+      paisAtual?.pt ? (
+      `Clique na região: ${paisAtual.pt}`
+    ) : !finalizado && paisAtual?.pt ? (
+      `Clique no país: ${paisAtual.pt}`
+    ) : null;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -358,9 +359,9 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
         <p className="text-sm min-h-[20px] text-center mb-2">{mensagem}</p>
 
-        <div className="flex-1 w-full flex items-center justify-center min-h-0">
-          <div className="w-full h-full flex items-center justify-center min-h-0">
-            <div className="h-full aspect-square max-w-full max-h-full md:w-full md:aspect-auto md:rounded-2xl md:overflow-hidden">
+        <div className="w-full flex items-center justify-center">
+          <div className="w-full max-w-[1400px]">
+            <div className="relative overflow-hidden rounded-2xl h-[70vh] min-h-[360px] max-h-[700px] md:h-[60vh]">
               <GlobeScene
                 modo={config.modoGlobo}
                 resetKey={config.slug}
@@ -371,24 +372,23 @@ export default function GeografiaPaisesPage({ config }: Props) {
                 celebratingCountries={celebratingCountries}
                 finalizado={finalizado}
                 activeRegion={
-                  config.modoGlobo === "brasil-estados"
+                  config.modoGlobo === "brasil-estados" ||
+                  config.modoGlobo === "brasil-capitais"
                     ? paisAtual?.regiao
                     : undefined
                 }
-                blinkRegion={
-                  config.modoGlobo === "brasil-estados"
-                    ? blinkRegionName
-                    : undefined
-                }
-                blinkRegionOn={false}
               />
             </div>
           </div>
         </div>
 
-        <div className="h-10 flex items-center justify-center">
-          <BotaoVoltar />
-        </div>
+        <div className="mt-2 md:mt-3 w-full">{children}</div>
+
+        {mostrarBotaoVoltarPadrao && (
+          <div className="mt-6 mb-4">
+            <BotaoVoltar />
+          </div>
+        )}
       </main>
     </div>
   );

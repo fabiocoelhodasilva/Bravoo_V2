@@ -39,6 +39,7 @@ type GlobeMode =
   | "europa"
   | "brasil-regioes"
   | "brasil-estados"
+  | "brasil-capitais"
   | "mundo";
 
 type AllowedCountryItem =
@@ -59,8 +60,6 @@ type Props = {
   celebratingCountries?: string[];
   finalizado?: boolean;
   activeRegion?: string;
-  blinkRegion?: string;
-  blinkRegionOn?: boolean;
 };
 
 type CountryVisualState = {
@@ -290,13 +289,27 @@ function getNaturalStyle(nome: string): CountryVisualState {
   return style;
 }
 
+function isBrasilModo(modoAtual: GlobeMode) {
+  return (
+    modoAtual === "brasil-regioes" ||
+    modoAtual === "brasil-estados" ||
+    modoAtual === "brasil-capitais"
+  );
+}
+
+function isBrasilEstadosLike(modoAtual: GlobeMode) {
+  return modoAtual === "brasil-estados" || modoAtual === "brasil-capitais";
+}
+
 function getGeoJsonPath(modoAtual: GlobeMode) {
   if (modoAtual === "america-sul") return "/dados/america-sul-simplified.geojson";
   if (modoAtual === "america-central") return "/dados/america-central-simplified.geojson";
   if (modoAtual === "america-norte") return "/dados/america-norte-simplified.geojson";
   if (modoAtual === "europa") return "/dados/europa-simplified.geojson";
   if (modoAtual === "brasil-regioes") return "/dados/brasil-estados.json";
-  if (modoAtual === "brasil-estados") return "/dados/brasil-estados.json";
+  if (modoAtual === "brasil-estados" || modoAtual === "brasil-capitais") {
+    return "/dados/brasil-estados.json";
+  }
 
   return "/dados/countries.geojson";
 }
@@ -310,7 +323,7 @@ function aplicarVistaInicial(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 1.2 }, 0);
   } else if (modoAtual === "europa") {
     globe.pointOfView({ lat: 54, lng: 15, altitude: 1.05 }, 0);
-  } else if (modoAtual === "brasil-regioes" || modoAtual === "brasil-estados") {
+  } else if (isBrasilModo(modoAtual)) {
     globe.pointOfView({ lat: -14, lng: -52, altitude: 1.15 }, 0);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 2.1 }, 0);
@@ -326,7 +339,7 @@ function aplicarVistaFinal(globe: GlobeInstance, modoAtual: GlobeMode) {
     globe.pointOfView({ lat: 40, lng: -100, altitude: 0.95 }, 1200);
   } else if (modoAtual === "europa") {
     globe.pointOfView({ lat: 54, lng: 15, altitude: 0.86 }, 1200);
-  } else if (modoAtual === "brasil-regioes" || modoAtual === "brasil-estados") {
+  } else if (isBrasilModo(modoAtual)) {
     globe.pointOfView({ lat: -14, lng: -52, altitude: 0.92 }, 1200);
   } else {
     globe.pointOfView({ lat: 10, lng: -30, altitude: 1.75 }, 1200);
@@ -403,8 +416,6 @@ export default function GlobeScene({
   celebratingCountries = [],
   finalizado = false,
   activeRegion,
-  blinkRegion,
-  blinkRegionOn = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
@@ -511,14 +522,13 @@ export default function GlobeScene({
       }
     }
 
-    if (modo === "brasil-estados") {
+    if (isBrasilEstadosLike(modo)) {
       const nomeEstado = getFeatureStateName(feature);
       const nomeEstadoNormalizado = normalizeCountryName(nomeEstado);
       const nomeRegiao = getFeatureRegionName(feature);
       const nomeRegiaoNormalizado = normalizeCountryName(nomeRegiao);
 
       const regiaoAtivaNormalizada = normalizeCountryName(activeRegion || "");
-      const regiaoBlinkNormalizada = normalizeCountryName(blinkRegion || "");
 
       const estiloBase =
         BRASIL_REGIOES_BASE[nomeRegiaoNormalizado] || {
@@ -564,18 +574,6 @@ export default function GlobeScene({
         };
       }
 
-      if (
-        regiaoBlinkNormalizada &&
-        nomeRegiaoNormalizado === regiaoBlinkNormalizada &&
-        blinkRegionOn
-      ) {
-        return {
-          capColor: estiloAtivo.capColor,
-          sideColor: estiloAtivo.sideColor,
-          altitude: 0.034,
-        };
-      }
-
       return {
         capColor: estiloBase.capColor,
         sideColor: estiloBase.sideColor,
@@ -583,7 +581,6 @@ export default function GlobeScene({
       };
     }
 
-    // Jogos de países: restaurado o destaque do acerto/celebração
     if (flashingSet.has(nomeNormalizado)) {
       return {
         capColor: flashWrongCapColor,
@@ -807,15 +804,7 @@ export default function GlobeScene({
         getVisualState(feature as GeoJsonFeature).altitude
       )
       .polygonsTransitionDuration(0);
-  }, [
-    modo,
-    correctSet,
-    celebratingSet,
-    flashingSet,
-    activeRegion,
-    blinkRegion,
-    blinkRegionOn,
-  ]);
+  }, [modo, correctSet, celebratingSet, flashingSet, activeRegion]);
 
   useEffect(() => {
     const globe = globeRef.current;
