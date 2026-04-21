@@ -15,7 +15,7 @@ const FASES_EUROPA = [
 ];
 
 export default function EuropaPage() {
-  const [faseAtualId, setFaseAtualId] = useState("europa-fase-3");
+  const [faseAtualId, setFaseAtualId] = useState("europa-fase-1");
 
   const configAtual = useMemo(() => {
     return REGIOES_CONFIG[faseAtualId];
@@ -24,7 +24,10 @@ export default function EuropaPage() {
   const fasesComEstado = useMemo(() => {
     return FASES_EUROPA.map((fase) => ({
       ...fase,
-      status: fase.id === faseAtualId ? "ativa" : "concluida",
+      status:
+        fase.id === faseAtualId
+          ? ("ativa" as const)
+          : ("concluida" as const),
     }));
   }, [faseAtualId]);
 

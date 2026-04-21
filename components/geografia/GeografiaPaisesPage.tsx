@@ -395,7 +395,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
               {!finalizado && mostrarInstrucao && (
                 <InstrucaoTemporaria
                   texto={textoInstrucao}
-                  duracaoMs={5000}
+                  duracaoMs={4000}
                   visivel={mostrarInstrucao}
                   mostrarGesto={true}
                   onFinalizar={() => setMostrarInstrucao(false)}
