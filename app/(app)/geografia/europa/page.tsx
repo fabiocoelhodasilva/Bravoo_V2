@@ -24,25 +24,28 @@ export default function EuropaPage() {
   const fasesComEstado = useMemo(() => {
     return FASES_EUROPA.map((fase) => ({
       ...fase,
-      status: fase.id === faseAtualId ? ("ativa" as const) : ("concluida" as const),
+      status: fase.id === faseAtualId ? "ativa" : "concluida",
     }));
   }, [faseAtualId]);
 
   function handleSelecionarFase(id: string) {
     const fase = FASES_EUROPA.find((item) => item.id === id);
     if (!fase) return;
-
     setFaseAtualId(id);
   }
 
   return (
-    <GeografiaPaisesPage config={configAtual}>
-      <div className="mt-4 px-4 pb-6 md:px-6">
+    <div className="min-h-screen bg-black relative overflow-x-hidden">
+      <div className="pb-[96px]">
+        <GeografiaPaisesPage config={configAtual} />
+      </div>
+
+      <footer className="fixed bottom-0 left-0 right-0 z-50 bg-black/92 backdrop-blur-sm border-t border-white/10 px-4 py-2 md:px-6">
         <BarraFasesEuropa
           fases={fasesComEstado}
           onSelecionarFase={handleSelecionarFase}
         />
-      </div>
-    </GeografiaPaisesPage>
+      </footer>
+    </div>
   );
 }

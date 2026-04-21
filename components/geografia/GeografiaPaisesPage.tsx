@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
-import BotaoVoltar from "@/components/ui/BotaoVoltar";
+import InstrucaoTemporaria from "@/components/geografia/InstrucaoTemporaria";
 import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import type { RegiaoConfig, PaisItem } from "@/lib/geografia/regioes-config";
@@ -23,7 +23,6 @@ const GlobeScene = dynamic(
 
 type Props = {
   config: RegiaoConfig;
-  children?: React.ReactNode;
 };
 
 function normalizarTexto(valor: string) {
@@ -62,7 +61,7 @@ function montarListaBrasilEstadosPorRegiao(lista: PaisItem[]) {
   return resultado;
 }
 
-export default function GeografiaPaisesPage({ config, children }: Props) {
+export default function GeografiaPaisesPage({ config }: Props) {
   const router = useRouter();
 
   const [indiceAtual, setIndiceAtual] = useState(0);
@@ -73,6 +72,7 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
   const [inicioJogo, setInicioJogo] = useState(Date.now());
   const [finalizado, setFinalizado] = useState(false);
   const [interacaoLiberada, setInteracaoLiberada] = useState(false);
+  const [mostrarInstrucao, setMostrarInstrucao] = useState(false);
 
   const [correctCountries, setCorrectCountries] = useState<string[]>([]);
   const [flashingCountries, setFlashingCountries] = useState<string[]>([]);
@@ -91,8 +91,6 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
   const allowedCountryNames = useMemo(() => {
     return config.paises.flatMap((pais) => [pais.en, ...(pais.aliases ?? [])]);
   }, [config.paises]);
-
-  const mostrarBotaoVoltarPadrao = !config.slug.startsWith("europa-fase-");
 
   function encontrarPaisPorNome(nome: string) {
     const nomeNormalizado = normalizarTexto(nome);
@@ -147,7 +145,12 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
     setCorrectCountries([]);
     setFlashingCountries([]);
     setCelebratingCountries([]);
+    setMostrarInstrucao(false);
     sessaoJaFinalizadaRef.current = false;
+
+    requestAnimationFrame(() => {
+      setMostrarInstrucao(true);
+    });
 
     liberarInteracaoTimeoutRef.current = setTimeout(() => {
       setInteracaoLiberada(true);
@@ -211,6 +214,7 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
     sessaoJaFinalizadaRef.current = true;
 
     setFinalizado(true);
+    setMostrarInstrucao(false);
     play("vitoria");
     setMensagem("");
 
@@ -303,65 +307,74 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
     router.replace("/login");
   }
 
-  const tituloPrincipal = finalizado ? config.tituloFinal : paisAtual?.pt;
   const progressoTotal = listaPaises.length;
 
-  const frasePergunta =
+  const linhaSuperior =
     !finalizado &&
     config.modoGlobo === "brasil-capitais" &&
-    paisAtual?.regiao &&
-    paisAtual?.pt ? (
-      <>
-        No {paisAtual.regiao},{" "}
-        <span className="font-bold text-4xl md:text-[2.4rem]">
-          {paisAtual.pt}
-        </span>{" "}
-        é a capital de qual estado?
-      </>
+    paisAtual?.regiao ? (
+      `Região: ${paisAtual.regiao}`
     ) : !finalizado &&
       config.modoGlobo === "brasil-estados" &&
-      paisAtual?.regiao &&
-      paisAtual?.pt ? (
-      `Na região ${paisAtual.regiao}, clique no seguinte estado: ${paisAtual.pt}`
+      paisAtual?.regiao ? (
+      `Região: ${paisAtual.regiao}`
     ) : !finalizado &&
-      config.modoGlobo === "brasil-regioes" &&
-      paisAtual?.pt ? (
-      `Clique na região: ${paisAtual.pt}`
-    ) : !finalizado && paisAtual?.pt ? (
-      `Clique no país: ${paisAtual.pt}`
+      config.modoGlobo === "brasil-regioes" ? (
+      "Região:"
+    ) : !finalizado ? (
+      "País:"
     ) : null;
+
+  const linhaPrincipal = finalizado ? config.tituloFinal : paisAtual?.pt || "";
+
+  const textoInstrucao =
+    config.modoGlobo === "brasil-capitais"
+      ? "Descubra no mapa de qual estado é esta capital"
+      : config.modoGlobo === "brasil-estados"
+      ? "Descubra no mapa onde fica este estado"
+      : config.modoGlobo === "brasil-regioes"
+      ? "Descubra no mapa onde fica esta região"
+      : "Descubra no globo onde fica este país";
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
       <HeaderInterno onLogout={logout} />
 
-      <main className="h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-20 md:pt-10 lg:pt-12 pb-4">
+      <main className="h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-16 md:pt-9 lg:pt-10 pb-6 gap-1">
+        {!finalizado && linhaSuperior && (
+          <p className="mt-6 md:mt-7 text-sm md:text-base font-semibold text-center text-white/85 mb-[1px] leading-[1]">
+            {linhaSuperior}
+          </p>
+        )}
+
         <h1
-          className={`text-3xl md:text-[2.1rem] font-bold text-center leading-none mb-2 ${
+          className={`text-3xl md:text-[2.1rem] font-bold text-center leading-[1] mb-0 min-h-[40px] md:min-h-[48px] ${
             finalizado ? "gradient-text" : "text-white"
           }`}
         >
-          {frasePergunta || tituloPrincipal}
+          {linhaPrincipal}
         </h1>
 
-        <p className="text-sm text-center mb-3">
+        <p className="text-sm text-center mb-0 leading-[1]">
           Pontuação: {pontuacao} | Progresso {acertos}/{progressoTotal}
         </p>
 
         {finalizado && (
           <button
             onClick={iniciarJogo}
-            className="mt-1 mb-2 text-sm underline hover:opacity-80 transition"
+            className="mt-1 mb-1 text-sm underline hover:opacity-80 transition"
           >
             Jogar novamente
           </button>
         )}
 
-        <p className="text-sm min-h-[20px] text-center mb-2">{mensagem}</p>
+        <p className="text-sm min-h-[16px] text-center mb-0 leading-[1]">
+          {mensagem}
+        </p>
 
-        <div className="w-full flex items-center justify-center">
+        <div className="w-full flex items-start justify-center flex-1 min-h-[260px] mt-[-2px]">
           <div className="w-full max-w-[1400px]">
-            <div className="relative overflow-hidden rounded-2xl h-[60vh] min-h-[360px] max-h-[700px] md:h-[60vh]">
+            <div className="relative overflow-hidden rounded-2xl h-[70vh]">
               <GlobeScene
                 modo={config.modoGlobo}
                 resetKey={config.slug}
@@ -378,17 +391,19 @@ export default function GeografiaPaisesPage({ config, children }: Props) {
                     : undefined
                 }
               />
+
+              {!finalizado && mostrarInstrucao && (
+                <InstrucaoTemporaria
+                  texto={textoInstrucao}
+                  duracaoMs={5000}
+                  visivel={mostrarInstrucao}
+                  mostrarGesto={true}
+                  onFinalizar={() => setMostrarInstrucao(false)}
+                />
+              )}
             </div>
           </div>
         </div>
-
-        <div className="mt-2 md:mt-3 w-full">{children}</div>
-
-        {mostrarBotaoVoltarPadrao && (
-          <div className="mt-6 mb-4">
-            <BotaoVoltar />
-          </div>
-        )}
       </main>
     </div>
   );

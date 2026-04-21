@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 type FaseItem = {
   id: string;
   label: string;
@@ -17,37 +15,12 @@ export default function BarraFasesEuropa({
   fases,
   onSelecionarFase,
 }: Props) {
-  const router = useRouter();
 
   return (
     <div className="w-full mt-0 px-2 pb-0 md:mt-2">
       <div className="relative mx-auto max-w-[1100px]">
         <div className="relative">
           <div className="relative flex gap-2 md:gap-3 overflow-x-auto md:overflow-visible px-2 pb-0 md:justify-center">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="relative z-10 flex h-[62px] min-w-[72px] flex-col items-center justify-center border border-[#ff9f43] bg-[linear-gradient(180deg,rgba(255,159,67,0.28)_0%,rgba(70,32,0,0.94)_100%)] text-[#ffd9b0] shadow-[0_0_14px_rgba(255,159,67,0.35),inset_0_0_8px_rgba(255,190,120,0.1)] transition-all duration-300 hover:scale-[1.02]"
-              style={{
-                clipPath:
-                  "polygon(10% 0%, 90% 0%, 100% 14%, 100% 78%, 50% 100%, 0% 78%, 0% 14%)",
-              }}
-            >
-              <div className="pointer-events-none absolute left-[12%] right-[12%] top-[6px] h-[1px] bg-gradient-to-r from-[#ffd9b0] via-[#ff9f43] to-transparent opacity-95" />
-
-              <div className="relative z-10 text-[0.72rem] font-bold tracking-wide">
-                Voltar
-              </div>
-
-              <div className="relative z-10 mt-1 text-[1rem] leading-none">
-                ↩
-              </div>
-
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-[6px] mx-auto h-[5px] w-[54%] rounded-full blur-md opacity-75"
-                style={{ background: "rgba(255,159,67,0.28)" }}
-              />
-            </button>
 
             {fases.map((fase) => {
               const ativa = fase.status === "ativa";
