@@ -29,9 +29,9 @@ const MIN_CAMERA_HEIGHT = 1.8;
 const MAX_CAMERA_HEIGHT = 18;
 
 const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
-  arvore_cerrado: "/models/jardim/tree_beautiful.glb",
-  arvore_selva: "/models/jardim/tree_jungle.glb",
-  arvore_carvalho: "/models/jardim/tree_oak.glb",
+  arvore_cerrado: "/models/jardim/arvore_cerrado.glb",
+  arvore_selva: "/models/jardim/arvore_selva.glb",
+  arvore_carvalho: "/models/jardim/arvore_carvalho.glb",
   flor_roxa: "/models/jardim/flor_roxa_c_planta.glb",
   flor_branca: "/models/jardim/flor_branca.glb",
 };
