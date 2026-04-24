@@ -1,12 +1,11 @@
 "use client";
 
 export type JardimItemTipo =
-  | "tree_beautiful"
-  | "tree_jungle"
-  | "tree_oak"
+  | "arvore_cerrado"
+  | "arvore_selva"
+  | "arvore_carvalho"
   | "flor_roxa"
-  | "flor_branca"
- 
+  | "flor_branca";
 
 type ItensDoJardimPanelProps = {
   onClose: () => void;
@@ -15,8 +14,8 @@ type ItensDoJardimPanelProps = {
 
 const itens = [
   {
-    type: "tree_beautiful" as const,
-    nome: "Árvore bonita",
+    type: "arvore_cerrado" as const,
+    nome: "Árvore do cerrado",
     emoji: "🌳",
   },
   {
@@ -30,16 +29,15 @@ const itens = [
     emoji: "🤍",
   },
   {
-    type: "tree_jungle" as const,
-    nome: "Árvore jungle",
+    type: "arvore_selva" as const,
+    nome: "Árvore da selva",
     emoji: "🌴",
   },
   {
-    type: "tree_oak" as const,
-    nome: "Carvalho",
+    type: "arvore_carvalho" as const,
+    nome: "Árvore carvalho",
     emoji: "🌳",
   },
-  
 ];
 
 export default function ItensDoJardimPanel({

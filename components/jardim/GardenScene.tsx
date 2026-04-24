@@ -29,17 +29,17 @@ const MIN_CAMERA_HEIGHT = 1.8;
 const MAX_CAMERA_HEIGHT = 18;
 
 const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
-  tree_beautiful: "/models/jardim/tree_beautiful.glb",
-  tree_jungle: "/models/jardim/tree_jungle.glb",
-  tree_oak: "/models/jardim/tree_oak.glb",
+  arvore_cerrado: "/models/jardim/tree_beautiful.glb",
+  arvore_selva: "/models/jardim/tree_jungle.glb",
+  arvore_carvalho: "/models/jardim/tree_oak.glb",
   flor_roxa: "/models/jardim/flor_roxa_c_planta.glb",
   flor_branca: "/models/jardim/flor_branca.glb",
 };
 
 const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
-  tree_beautiful: 0.01,
-  tree_jungle: 1.102,
-  tree_oak: 11.12,
+  arvore_cerrado: 0.01,
+  arvore_selva: 1.102,
+  arvore_carvalho: 11.12,
   flor_roxa: 0.03,
   flor_branca: 3.53,
 };
@@ -84,7 +84,7 @@ function GardenModel({
   const clonedScene = useMemo(() => scene.clone(), [scene]);
 
   const isSelected = placementMode && selectedItemId === item.id;
-  const markerRadius = item.type.startsWith("tree") ? 1.2 : 0.6;
+  const markerRadius = item.type.startsWith("arvore") ? 1.2 : 0.6;
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
     if (!placementMode) return;
@@ -335,22 +335,22 @@ export default function GardenScene() {
 
   const [items, setItems] = useState<GardenItem[]>([
     {
-      id: "tree-beautiful-1",
-      type: "tree_beautiful",
+      id: "arvore-cerrado-1",
+      type: "arvore_cerrado",
       position: [-4, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.tree_beautiful,
+      scale: ITEM_DEFAULT_SCALES.arvore_cerrado,
     },
     {
-      id: "tree-jungle-1",
-      type: "tree_jungle",
+      id: "arvore-selva-1",
+      type: "arvore_selva",
       position: [-2, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.tree_jungle,
+      scale: ITEM_DEFAULT_SCALES.arvore_selva,
     },
     {
-      id: "tree-oak-1",
-      type: "tree_oak",
+      id: "arvore-carvalho-1",
+      type: "arvore_carvalho",
       position: [0, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.tree_oak,
+      scale: ITEM_DEFAULT_SCALES.arvore_carvalho,
     },
     {
       id: "flor-roxa-1",
