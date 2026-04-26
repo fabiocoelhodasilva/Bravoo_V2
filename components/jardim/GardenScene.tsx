@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import BottomNavJardim from "./BottomNavJardim";
 import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
+import { supabase } from "@/lib/supabase/client";
 
 type MoveState = {
   forward: number;
@@ -25,24 +26,195 @@ type GardenItem = {
   scale: number;
 };
 
-const MIN_CAMERA_HEIGHT = 1.8;
+type JardimItemBanco = {
+  id: string;
+  tipo: JardimItemTipo;
+  pos_x: string | number;
+  pos_y: string | number;
+  pos_z: string | number;
+  escala_base: string | number;
+  percentual_escala: string | number;
+};
+
+const MIN_CAMERA_HEIGHT = 2.07;
 const MAX_CAMERA_HEIGHT = 18;
+
+const ENTRY_CAMERA_POSITION: [number, number, number] = [
+  0,
+  MIN_CAMERA_HEIGHT,
+  98,
+];
+
+const GREENHOUSE_AREA = {
+  centerX: -15,
+  centerZ: 80,
+  width: 20,
+  depth: 12,
+};
+
+const PLANTING_AREA = {
+  centerX: 0,
+  centerZ: 35,
+  size: 120,
+  cellSize: 4,
+};
+
+const PORTAL_ENTRADA_PATH = "/models/jardim/arco_entrada.glb";
 
 const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
   arvore_cerrado: "/models/jardim/arvore_cerrado.glb",
   arvore_selva: "/models/jardim/arvore_selva.glb",
   arvore_carvalho: "/models/jardim/arvore_carvalho.glb",
+  arvore_japonesa: "/models/jardim/arvore_japonesa.glb",
+  arvore_vermelha: "/models/jardim/arvore_vermelha.glb",
+
   flor_roxa: "/models/jardim/flor_roxa_c_planta.glb",
-  flor_branca: "/models/jardim/flor_branca.glb",
+  flor_geranio_roxo: "/models/jardim/flor_geranio_roxo.glb",
+  flor_margarida_branca: "/models/jardim/flor_margarida_branca.glb",
 };
 
 const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   arvore_cerrado: 0.01,
   arvore_selva: 1.102,
   arvore_carvalho: 11.12,
-  flor_roxa: 0.03,
-  flor_branca: 3.53,
+  arvore_japonesa: 0.025,
+  arvore_vermelha: 0.03,
+
+  flor_roxa: 0.02,
+  flor_geranio_roxo: 0.1,
+  flor_margarida_branca: 1.8,
 };
+
+function isInsideGreenhouseArea(x: number, z: number) {
+  const minX = GREENHOUSE_AREA.centerX - GREENHOUSE_AREA.width / 2;
+  const maxX = GREENHOUSE_AREA.centerX + GREENHOUSE_AREA.width / 2;
+  const minZ = GREENHOUSE_AREA.centerZ - GREENHOUSE_AREA.depth / 2;
+  const maxZ = GREENHOUSE_AREA.centerZ + GREENHOUSE_AREA.depth / 2;
+
+  return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
+}
+
+function snapToPlantingGrid(
+  point: THREE.Vector3
+): [number, number, number] | null {
+  const { centerX, centerZ, size, cellSize } = PLANTING_AREA;
+
+  const minX = centerX - size / 2;
+  const maxX = centerX + size / 2;
+  const minZ = centerZ - size / 2;
+  const maxZ = centerZ + size / 2;
+
+  if (point.x < minX || point.x > maxX || point.z < minZ || point.z > maxZ) {
+    return null;
+  }
+
+  const snappedX =
+    minX + Math.floor((point.x - minX) / cellSize) * cellSize + cellSize / 2;
+
+  const snappedZ =
+    minZ + Math.floor((point.z - minZ) / cellSize) * cellSize + cellSize / 2;
+
+  if (isInsideGreenhouseArea(snappedX, snappedZ)) {
+    return null;
+  }
+
+  return [snappedX, 0, snappedZ];
+}
+
+function PortalEntrada() {
+  const { scene } = useGLTF(PORTAL_ENTRADA_PATH);
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={[0, 0, 91]}
+      scale={0.25}
+      rotation={[0, Math.PI, 0]}
+    />
+  );
+}
+
+function AimPlacementSquare({
+  pendingItemType,
+  onAimPositionChange,
+}: {
+  pendingItemType: JardimItemTipo | null;
+  onAimPositionChange: (position: [number, number, number] | null) => void;
+}) {
+  const { camera } = useThree();
+
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const groundPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+  const intersectionRef = useRef(new THREE.Vector3());
+  const lastKeyRef = useRef<string>("");
+
+  const [position, setPosition] = useState<[number, number, number] | null>(
+    null
+  );
+
+  useFrame(() => {
+    if (!pendingItemType) {
+      if (lastKeyRef.current !== "none") {
+        lastKeyRef.current = "none";
+        setPosition(null);
+        onAimPositionChange(null);
+      }
+      return;
+    }
+
+    raycasterRef.current.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+    const hit = raycasterRef.current.ray.intersectPlane(
+      groundPlaneRef.current,
+      intersectionRef.current
+    );
+
+    const snapped = hit ? snapToPlantingGrid(intersectionRef.current) : null;
+
+    const key = snapped ? `${snapped[0]}|${snapped[2]}` : "none";
+
+    if (key === lastKeyRef.current) return;
+
+    lastKeyRef.current = key;
+    setPosition(snapped);
+    onAimPositionChange(snapped);
+  });
+
+  if (!pendingItemType || !position) return null;
+
+  return (
+    <group position={[position[0], 0.09, position[2]]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[PLANTING_AREA.cellSize, PLANTING_AREA.cellSize]} />
+        <meshBasicMaterial
+          color="#5dc6a1"
+          transparent
+          opacity={0.35}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry
+          args={[
+            PLANTING_AREA.cellSize * 0.42,
+            PLANTING_AREA.cellSize * 0.5,
+            4,
+          ]}
+        />
+        <meshBasicMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.9}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  );
+}
 
 function SelectionMarker({
   position,
@@ -58,9 +230,9 @@ function SelectionMarker({
     >
       <ringGeometry args={[radius * 0.62, radius, 48]} />
       <meshStandardMaterial
-        color="#b91c1c"
+        color="#ef4444"
         transparent
-        opacity={0.7}
+        opacity={0.85}
         roughness={1}
         metalness={0}
       />
@@ -70,24 +242,21 @@ function SelectionMarker({
 
 function GardenModel({
   item,
-  placementMode,
-  selectedItemId,
+  selectedGardenItemId,
   onSelectItem,
 }: {
   item: GardenItem;
-  placementMode: boolean;
-  selectedItemId: string | null;
+  selectedGardenItemId: string | null;
   onSelectItem: (id: string) => void;
 }) {
   const modelPath = ITEM_MODEL_PATHS[item.type];
   const { scene } = useGLTF(modelPath);
   const clonedScene = useMemo(() => scene.clone(), [scene]);
 
-  const isSelected = placementMode && selectedItemId === item.id;
-  const markerRadius = item.type.startsWith("arvore") ? 1.2 : 0.6;
+  const isSelected = selectedGardenItemId === item.id;
+  const markerRadius = item.type.startsWith("arvore") ? 1.35 : 0.75;
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
-    if (!placementMode) return;
     event.stopPropagation();
     onSelectItem(item.id);
   }
@@ -109,17 +278,7 @@ function GardenModel({
   );
 }
 
-function Ground({
-  onPlaceOnGround,
-  placementMode,
-  selectedItemId,
-  pendingItemType,
-}: {
-  onPlaceOnGround: (point: THREE.Vector3) => void;
-  placementMode: boolean;
-  selectedItemId: string | null;
-  pendingItemType: JardimItemTipo | null;
-}) {
+function Ground() {
   const [color, normal, roughness, ao] = useTexture([
     "/textures/jardim/grama/Grass004_1K-JPG_Color.jpg",
     "/textures/jardim/grama/Grass004_1K-JPG_NormalGL.jpg",
@@ -133,30 +292,16 @@ function Ground({
     textures.forEach((tex) => {
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(20, 20);
-      tex.anisotropy = 8;
+      tex.repeat.set(10, 10);
+      tex.anisotropy = 4;
       tex.needsUpdate = true;
     });
 
     color.colorSpace = THREE.SRGBColorSpace;
   }, [color, normal, roughness, ao]);
 
-  function handlePlace(event: ThreeEvent<PointerEvent>) {
-    if (!placementMode) return;
-    if (!selectedItemId && !pendingItemType) return;
-
-    event.stopPropagation();
-
-    const { x, z } = event.point;
-    onPlaceOnGround(new THREE.Vector3(x, 0, z));
-  }
-
   return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      receiveShadow
-      onPointerDown={handlePlace}
-    >
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[200, 200]} />
       <meshStandardMaterial
         map={color}
@@ -180,13 +325,13 @@ function PlayerRig({
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(0, MIN_CAMERA_HEIGHT, 8);
+    camera.position.set(...ENTRY_CAMERA_POSITION);
     camera.rotation.order = "YXZ";
   }, [camera]);
 
   useFrame((_, delta) => {
-    const horizontalSpeed = 4;
-    const verticalSpeed = 5;
+    const horizontalSpeed = 4.4;
+    const verticalSpeed = 5.5;
 
     camera.rotation.y = lookRef.current.yaw;
     camera.rotation.x = lookRef.current.pitch;
@@ -223,13 +368,11 @@ function PlayerRig({
 
 function GardenItems({
   items,
-  placementMode,
-  selectedItemId,
+  selectedGardenItemId,
   onSelectItem,
 }: {
   items: GardenItem[];
-  placementMode: boolean;
-  selectedItemId: string | null;
+  selectedGardenItemId: string | null;
   onSelectItem: (id: string) => void;
 }) {
   return (
@@ -238,8 +381,7 @@ function GardenItems({
         <GardenModel
           key={item.id}
           item={item}
-          placementMode={placementMode}
-          selectedItemId={selectedItemId}
+          selectedGardenItemId={selectedGardenItemId}
           onSelectItem={onSelectItem}
         />
       ))}
@@ -250,20 +392,18 @@ function GardenItems({
 function Scene({
   moveRef,
   lookRef,
-  placementMode,
-  selectedItemId,
   pendingItemType,
+  selectedGardenItemId,
+  onAimPositionChange,
   onSelectItem,
-  onPlaceOnGround,
   items,
 }: {
   moveRef: React.MutableRefObject<MoveState>;
   lookRef: React.MutableRefObject<LookState>;
-  placementMode: boolean;
-  selectedItemId: string | null;
   pendingItemType: JardimItemTipo | null;
+  selectedGardenItemId: string | null;
+  onAimPositionChange: (position: [number, number, number] | null) => void;
   onSelectItem: (id: string) => void;
-  onPlaceOnGround: (point: THREE.Vector3) => void;
   items: GardenItem[];
 }) {
   return (
@@ -283,26 +423,20 @@ function Scene({
       />
 
       <ambientLight intensity={0.65} />
+      <directionalLight position={[5, 10, 2]} intensity={1.7} />
 
-      <directionalLight
-        position={[5, 10, 2]}
-        intensity={1.7}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-      />
+      <Ground />
 
-      <Ground
-        placementMode={placementMode}
-        selectedItemId={selectedItemId}
+      <AimPlacementSquare
         pendingItemType={pendingItemType}
-        onPlaceOnGround={onPlaceOnGround}
+        onAimPositionChange={onAimPositionChange}
       />
+
+      <PortalEntrada />
 
       <GardenItems
         items={items}
-        placementMode={placementMode}
-        selectedItemId={selectedItemId}
+        selectedGardenItemId={selectedGardenItemId}
         onSelectItem={onSelectItem}
       />
 
@@ -313,6 +447,7 @@ function Scene({
 
 export default function GardenScene() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const aimedPlantPositionRef = useRef<[number, number, number] | null>(null);
 
   const moveRef = useRef<MoveState>({
     forward: 0,
@@ -321,50 +456,19 @@ export default function GardenScene() {
   });
 
   const lookRef = useRef<LookState>({
-    yaw: Math.PI,
+    yaw: 0,
     pitch: 0,
   });
 
   const [isMobile, setIsMobile] = useState(false);
   const [flyMode, setFlyMode] = useState(true);
-  const [placementMode, setPlacementMode] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [pendingItemType, setPendingItemType] =
     useState<JardimItemTipo | null>(null);
   const [itemsPanelOpen, setItemsPanelOpen] = useState(false);
-
-  const [items, setItems] = useState<GardenItem[]>([
-    {
-      id: "arvore-cerrado-1",
-      type: "arvore_cerrado",
-      position: [-4, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.arvore_cerrado,
-    },
-    {
-      id: "arvore-selva-1",
-      type: "arvore_selva",
-      position: [-2, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.arvore_selva,
-    },
-    {
-      id: "arvore-carvalho-1",
-      type: "arvore_carvalho",
-      position: [0, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.arvore_carvalho,
-    },
-    {
-      id: "flor-roxa-1",
-      type: "flor_roxa",
-      position: [2, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.flor_roxa,
-    },
-    {
-      id: "flor-branca-1",
-      type: "flor_branca",
-      position: [4, 0, -8],
-      scale: ITEM_DEFAULT_SCALES.flor_branca,
-    },
-  ]);
+  const [items, setItems] = useState<GardenItem[]>([]);
+  const [selectedGardenItemId, setSelectedGardenItemId] = useState<
+    string | null
+  >(null);
 
   const joystickThumbRef = useRef<HTMLDivElement>(null);
   const joystickCenterRef = useRef<{ x: number; y: number } | null>(null);
@@ -374,6 +478,62 @@ export default function GardenScene() {
   const joystickRadius = joystickSize / 2;
   const thumbSize = 44;
   const maxThumbDistance = joystickRadius - thumbSize / 2;
+
+  useEffect(() => {
+    async function carregarItensDoJardim() {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Erro ao buscar usuário:", userError);
+        return;
+      }
+
+      if (!user) {
+        console.warn("Usuário não logado. Jardim não carregado.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("next_jardim_itens_usuario")
+        .select(
+          "id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala"
+        )
+        .eq("usuario_id", user.id)
+        .eq("ativo", true)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Erro ao carregar itens do jardim:", error);
+        return;
+      }
+
+      const itensConvertidos: GardenItem[] = (data ?? []).map(
+        (item: JardimItemBanco) => {
+          const tipo = item.tipo;
+          const escalaBase = Number(item.escala_base);
+          const percentualEscala = Number(item.percentual_escala);
+
+          return {
+            id: item.id,
+            type: tipo,
+            position: [
+              Number(item.pos_x),
+              Number(item.pos_y),
+              Number(item.pos_z),
+            ],
+            scale: escalaBase * percentualEscala,
+          };
+        }
+      );
+
+      setItems(itensConvertidos);
+    }
+
+    carregarItensDoJardim();
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(pointer: coarse)");
@@ -388,28 +548,7 @@ export default function GardenScene() {
   }, []);
 
   useEffect(() => {
-    if (placementMode) {
-      moveRef.current.forward = 0;
-      moveRef.current.strafe = 0;
-      moveRef.current.vertical = 0;
-      lookTouchRef.current = null;
-
-      if (joystickThumbRef.current) {
-        joystickThumbRef.current.style.transform =
-          "translate(-50%, -50%) translate(0px, 0px)";
-      }
-
-      if (document.pointerLockElement === containerRef.current) {
-        document.exitPointerLock?.();
-      }
-    } else {
-      setSelectedItemId(null);
-      setPendingItemType(null);
-    }
-  }, [placementMode]);
-
-  useEffect(() => {
-    if (isMobile || placementMode || !flyMode) return;
+    if (isMobile || !flyMode) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -465,19 +604,15 @@ export default function GardenScene() {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [isMobile, placementMode, flyMode]);
+  }, [isMobile, flyMode]);
 
   const instructionText = useMemo(() => {
-    if (placementMode) {
-      if (pendingItemType) {
-        return "Clique no local do chão onde deseja plantar o novo item.";
-      }
+    if (pendingItemType) {
+      return "Ande pelo jardim, mire no chão e clique para plantar.";
+    }
 
-      if (!selectedItemId) {
-        return "Modo edição: clique no item que deseja alterar ou escolha um item em Itens do Jardim.";
-      }
-
-      return "Agora clique no local do chão onde deseja mover o item.";
+    if (selectedGardenItemId) {
+      return "Item selecionado. Use o botão Deletar se quiser removê-lo.";
     }
 
     if (isMobile) {
@@ -485,7 +620,49 @@ export default function GardenScene() {
     }
 
     return "Movimento: W A S D para mover, Q para subir e E para descer. Use a barra inferior para alternar os modos.";
-  }, [isMobile, placementMode, selectedItemId, pendingItemType]);
+  }, [isMobile, pendingItemType, selectedGardenItemId]);
+
+  function handleAimPositionChange(position: [number, number, number] | null) {
+    aimedPlantPositionRef.current = position;
+  }
+
+  function plantPendingItemAtAim() {
+    if (!pendingItemType) return;
+
+    const position = aimedPlantPositionRef.current;
+
+    if (!position) {
+      alert("Mire para um ponto válido do chão para plantar.");
+      return;
+    }
+
+    const newItem: GardenItem = {
+      id: `${pendingItemType}-${Date.now()}`,
+      type: pendingItemType,
+      position,
+      scale: ITEM_DEFAULT_SCALES[pendingItemType],
+    };
+
+    setItems((prev) => [...prev, newItem]);
+    setPendingItemType(null);
+    setSelectedGardenItemId(null);
+    aimedPlantPositionRef.current = null;
+  }
+
+  function handleSelectGardenItem(id: string) {
+    if (pendingItemType) return;
+    setSelectedGardenItemId((current) => (current === id ? null : id));
+  }
+
+  function handleDeleteSelectedItem() {
+    if (!selectedGardenItemId) return;
+
+    setItems((prev) =>
+      prev.filter((item) => item.id !== selectedGardenItemId)
+    );
+
+    setSelectedGardenItemId(null);
+  }
 
   async function lockPointer(
     event?: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -494,7 +671,17 @@ export default function GardenScene() {
 
     if (target?.closest("nav, button, a")) return;
     if (itemsPanelOpen) return;
-    if (isMobile || placementMode || !flyMode) return;
+
+    if (pendingItemType) {
+      plantPendingItemAtAim();
+      return;
+    }
+
+    if (selectedGardenItemId) {
+      return;
+    }
+
+    if (isMobile || !flyMode) return;
     if (!containerRef.current) return;
     if (document.pointerLockElement === containerRef.current) return;
 
@@ -507,10 +694,8 @@ export default function GardenScene() {
 
   async function activateFlyMode() {
     setFlyMode(true);
-    setPlacementMode(false);
-    setSelectedItemId(null);
-    setPendingItemType(null);
     setItemsPanelOpen(false);
+    setSelectedGardenItemId(null);
 
     if (isMobile || !containerRef.current) return;
 
@@ -521,57 +706,27 @@ export default function GardenScene() {
     }
   }
 
-  function handleSelectItem(id: string) {
-    if (!placementMode) return;
-    setPendingItemType(null);
-    setSelectedItemId(id);
-  }
-
-  function handleSelectNewGardenItem(type: JardimItemTipo) {
-    if (document.pointerLockElement === containerRef.current) {
-      document.exitPointerLock?.();
-    }
-
+  async function handleSelectNewGardenItem(type: JardimItemTipo) {
     moveRef.current.forward = 0;
     moveRef.current.strafe = 0;
     moveRef.current.vertical = 0;
 
     setItemsPanelOpen(false);
-    setFlyMode(false);
-    setPlacementMode(true);
-    setSelectedItemId(null);
+    setFlyMode(true);
+    setSelectedGardenItemId(null);
     setPendingItemType(type);
-  }
 
-  function handlePlaceOnGround(point: THREE.Vector3) {
-    const newPosition: [number, number, number] = [point.x, 0, point.z];
+    if (isMobile || !containerRef.current) return;
 
-    if (pendingItemType) {
-      const newItem: GardenItem = {
-        id: `${pendingItemType}-${Date.now()}`,
-        type: pendingItemType,
-        position: newPosition,
-        scale: ITEM_DEFAULT_SCALES[pendingItemType],
-      };
-
-      setItems((prev) => [...prev, newItem]);
-      setPendingItemType(null);
-      return;
+    try {
+      await containerRef.current.requestPointerLock();
+    } catch {
+      // se o navegador bloquear, o usuário pode clicar na cena depois
     }
-
-    if (!selectedItemId) return;
-
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === selectedItemId ? { ...item, position: newPosition } : item
-      )
-    );
-
-    setSelectedItemId(null);
   }
 
   function handleJoystickStart(event: React.TouchEvent<HTMLDivElement>) {
-    if (placementMode || !flyMode) return;
+    if (!flyMode) return;
 
     const touch = event.touches[0];
     const rect = event.currentTarget.getBoundingClientRect();
@@ -585,7 +740,7 @@ export default function GardenScene() {
   }
 
   function handleJoystickMove(event: React.TouchEvent<HTMLDivElement>) {
-    if (placementMode || !flyMode) return;
+    if (!flyMode) return;
 
     const touch = event.touches[0];
     updateJoystick(touch.clientX, touch.clientY);
@@ -626,14 +781,14 @@ export default function GardenScene() {
   }
 
   function handleLookStart(event: React.TouchEvent<HTMLDivElement>) {
-    if (placementMode || !flyMode) return;
+    if (!flyMode) return;
 
     const touch = event.touches[0];
     lookTouchRef.current = { x: touch.clientX, y: touch.clientY };
   }
 
   function handleLookMove(event: React.TouchEvent<HTMLDivElement>) {
-    if (placementMode || !flyMode) return;
+    if (!flyMode) return;
 
     const touch = event.touches[0];
 
@@ -664,12 +819,12 @@ export default function GardenScene() {
   }
 
   function startFlyUp() {
-    if (!flyMode || placementMode) return;
+    if (!flyMode) return;
     moveRef.current.vertical = 1;
   }
 
   function startFlyDown() {
-    if (!flyMode || placementMode) return;
+    if (!flyMode) return;
     moveRef.current.vertical = -1;
   }
 
@@ -684,23 +839,40 @@ export default function GardenScene() {
       onClick={lockPointer}
     >
       {instructionText && (
-        <div className="absolute left-4 top-4 z-20 max-w-[340px] rounded-lg bg-black/45 px-4 py-2 text-sm text-white">
+        <div className="absolute left-4 top-4 z-20 max-w-[360px] rounded-lg bg-black/45 px-4 py-2 text-sm text-white">
           {instructionText}
         </div>
       )}
 
+      {pendingItemType && (
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-black/30" />
+      )}
+
+      {selectedGardenItemId && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleDeleteSelectedItem();
+          }}
+          className="absolute right-5 top-24 z-30 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
+        >
+          Deletar
+        </button>
+      )}
+
       <Canvas
-        camera={{ position: [0, MIN_CAMERA_HEIGHT, 8], fov: 60 }}
-        shadows="basic"
+        camera={{ position: ENTRY_CAMERA_POSITION, fov: 60 }}
+        shadows={false}
+        dpr={isMobile ? 1 : [1, 2]}
       >
         <Scene
           moveRef={moveRef}
           lookRef={lookRef}
-          placementMode={placementMode}
-          selectedItemId={selectedItemId}
           pendingItemType={pendingItemType}
-          onSelectItem={handleSelectItem}
-          onPlaceOnGround={handlePlaceOnGround}
+          selectedGardenItemId={selectedGardenItemId}
+          onAimPositionChange={handleAimPositionChange}
+          onSelectItem={handleSelectGardenItem}
           items={items}
         />
       </Canvas>
@@ -709,12 +881,12 @@ export default function GardenScene() {
         <ItensDoJardimPanel
           onClose={() => setItemsPanelOpen(false)}
           onSelectItem={handleSelectNewGardenItem}
+          plantedItemTypes={items.map((item) => item.type)}
         />
       )}
 
       <BottomNavJardim
         flyMode={flyMode}
-        editMode={placementMode}
         onMenu={() => {
           console.log("abrir menu");
         }}
@@ -730,23 +902,13 @@ export default function GardenScene() {
           moveRef.current.strafe = 0;
           moveRef.current.vertical = 0;
 
-          setItemsPanelOpen(true);
-        }}
-        onEdit={() => {
-          if (document.pointerLockElement === containerRef.current) {
-            document.exitPointerLock?.();
-          }
-
-          moveRef.current.vertical = 0;
-          setFlyMode(false);
-          setPlacementMode(true);
-          setSelectedItemId(null);
           setPendingItemType(null);
-          setItemsPanelOpen(false);
+          setSelectedGardenItemId(null);
+          setItemsPanelOpen(true);
         }}
       />
 
-      {isMobile && flyMode && !placementMode && (
+      {isMobile && flyMode && (
         <>
           <div
             className="absolute bottom-[92px] left-6 z-30 rounded-full border border-white/30 bg-black/25"
@@ -812,6 +974,8 @@ export default function GardenScene() {
 Object.values(ITEM_MODEL_PATHS).forEach((path) => {
   useGLTF.preload(path);
 });
+
+useGLTF.preload(PORTAL_ENTRADA_PATH);
 
 useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_Color.jpg");
 useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_NormalGL.jpg");
