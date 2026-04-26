@@ -76,13 +76,13 @@ const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
 const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   arvore_cerrado: 0.01,
   arvore_selva: 1.102,
-  arvore_carvalho: 11.12,
-  arvore_japonesa: 0.025,
-  arvore_vermelha: 0.03,
+  arvore_carvalho: 15.12,
+  arvore_japonesa: .080,
+  arvore_vermelha: .10,
 
-  flor_roxa: 0.02,
-  flor_geranio_roxo: 0.1,
-  flor_margarida_branca: 1.8,
+  flor_roxa: 0.05,
+  flor_geranio_roxo: 0.5,
+  flor_margarida_branca: 5.8,
 };
 
 function isInsideGreenhouseArea(x: number, z: number) {
