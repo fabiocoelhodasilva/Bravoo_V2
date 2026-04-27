@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import BottomNavJardim from "./BottomNavJardim";
 import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
+import BotaoOracao from "./BotaoOracao";
 import { supabase } from "@/lib/supabase/client";
 
 type MoveState = {
@@ -77,6 +78,18 @@ const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   flor_geranio_roxo: 0.5,
   flor_margarida_branca: 5.8,
 };
+
+function safePreventDefault(
+  event:
+    | React.TouchEvent<HTMLElement>
+    | React.MouseEvent<HTMLElement>
+    | React.SyntheticEvent<HTMLElement>
+    | undefined
+) {
+  if (event?.cancelable) {
+    event.preventDefault();
+  }
+}
 
 function snapToPlantingGrid(
   point: THREE.Vector3
@@ -644,6 +657,20 @@ export default function GardenScene() {
     setSelectedGardenItemId(null);
   }
 
+  function handleOpenOracao() {
+    if (document.pointerLockElement === containerRef.current) {
+      document.exitPointerLock?.();
+    }
+
+    moveRef.current.forward = 0;
+    moveRef.current.strafe = 0;
+    moveRef.current.vertical = 0;
+
+    setPendingItemType(null);
+    setSelectedGardenItemId(null);
+    setItemsPanelOpen(true);
+  }
+
   async function lockPointer(
     event?: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) {
@@ -702,7 +729,7 @@ export default function GardenScene() {
   function handleJoystickStart(event: React.TouchEvent<HTMLDivElement>) {
     if (!flyMode) return;
 
-    event.preventDefault();
+    safePreventDefault(event);
 
     const touch = event.touches[0];
     const rect = event.currentTarget.getBoundingClientRect();
@@ -718,14 +745,14 @@ export default function GardenScene() {
   function handleJoystickMove(event: React.TouchEvent<HTMLDivElement>) {
     if (!flyMode) return;
 
-    event.preventDefault();
+    safePreventDefault(event);
 
     const touch = event.touches[0];
     updateJoystick(touch.clientX, touch.clientY);
   }
 
   function handleJoystickEnd(event?: React.TouchEvent<HTMLDivElement>) {
-    event?.preventDefault();
+    safePreventDefault(event);
 
     moveRef.current.forward = 0;
     moveRef.current.strafe = 0;
@@ -763,7 +790,7 @@ export default function GardenScene() {
   function handleLookStart(event: React.TouchEvent<HTMLDivElement>) {
     if (!flyMode) return;
 
-    event.preventDefault();
+    safePreventDefault(event);
 
     const touch = event.touches[0];
     lookTouchRef.current = { x: touch.clientX, y: touch.clientY };
@@ -772,7 +799,7 @@ export default function GardenScene() {
   function handleLookMove(event: React.TouchEvent<HTMLDivElement>) {
     if (!flyMode) return;
 
-    event.preventDefault();
+    safePreventDefault(event);
 
     const touch = event.touches[0];
 
@@ -799,26 +826,26 @@ export default function GardenScene() {
   }
 
   function handleLookEnd(event?: React.TouchEvent<HTMLDivElement>) {
-    event?.preventDefault();
+    safePreventDefault(event);
     lookTouchRef.current = null;
   }
 
   function startFlyUp(event?: React.TouchEvent<HTMLButtonElement>) {
-    event?.preventDefault();
+    safePreventDefault(event);
 
     if (!flyMode) return;
     moveRef.current.vertical = 1;
   }
 
   function startFlyDown(event?: React.TouchEvent<HTMLButtonElement>) {
-    event?.preventDefault();
+    safePreventDefault(event);
 
     if (!flyMode) return;
     moveRef.current.vertical = -1;
   }
 
   function stopVerticalMovement(event?: React.TouchEvent<HTMLButtonElement>) {
-    event?.preventDefault();
+    safePreventDefault(event);
     moveRef.current.vertical = 0;
   }
 
@@ -830,9 +857,10 @@ export default function GardenScene() {
         WebkitUserSelect: "none",
         userSelect: "none",
         WebkitTouchCallout: "none",
+        touchAction: "none",
       }}
       onClick={lockPointer}
-      onContextMenu={(event) => event.preventDefault()}
+      onContextMenu={(event) => safePreventDefault(event)}
     >
       {instructionText && (
         <div className="absolute left-4 top-4 z-20 max-w-[360px] select-none rounded-lg bg-black/45 px-4 py-2 text-sm text-white">
@@ -847,7 +875,7 @@ export default function GardenScene() {
             event.stopPropagation();
             handleDeleteSelectedItem();
           }}
-          onContextMenu={(event) => event.preventDefault()}
+          onContextMenu={(event) => safePreventDefault(event)}
           className="absolute right-5 top-24 z-30 select-none rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
           style={{
             WebkitUserSelect: "none",
@@ -882,6 +910,8 @@ export default function GardenScene() {
           plantedItemTypes={items.map((item) => item.type)}
         />
       )}
+
+      <BotaoOracao onClick={handleOpenOracao} />
 
       <BottomNavJardim
         flyMode={flyMode}
@@ -918,7 +948,7 @@ export default function GardenScene() {
               userSelect: "none",
               WebkitTouchCallout: "none",
             }}
-            onContextMenu={(event) => event.preventDefault()}
+            onContextMenu={(event) => safePreventDefault(event)}
             onTouchStart={handleJoystickStart}
             onTouchMove={handleJoystickMove}
             onTouchEnd={handleJoystickEnd}
@@ -946,7 +976,7 @@ export default function GardenScene() {
               userSelect: "none",
               WebkitTouchCallout: "none",
             }}
-            onContextMenu={(event) => event.preventDefault()}
+            onContextMenu={(event) => safePreventDefault(event)}
             onTouchStart={handleLookStart}
             onTouchMove={handleLookMove}
             onTouchEnd={handleLookEnd}
@@ -960,7 +990,7 @@ export default function GardenScene() {
               userSelect: "none",
               WebkitTouchCallout: "none",
             }}
-            onContextMenu={(event) => event.preventDefault()}
+            onContextMenu={(event) => safePreventDefault(event)}
           >
             <button
               type="button"
@@ -971,8 +1001,8 @@ export default function GardenScene() {
                 userSelect: "none",
                 WebkitTouchCallout: "none",
               }}
-              onContextMenu={(event) => event.preventDefault()}
-              onSelect={(event) => event.preventDefault()}
+              onContextMenu={(event) => safePreventDefault(event)}
+              onSelect={(event) => safePreventDefault(event)}
               onTouchStart={startFlyUp}
               onTouchEnd={stopVerticalMovement}
               onTouchCancel={stopVerticalMovement}
@@ -989,8 +1019,8 @@ export default function GardenScene() {
                 userSelect: "none",
                 WebkitTouchCallout: "none",
               }}
-              onContextMenu={(event) => event.preventDefault()}
-              onSelect={(event) => event.preventDefault()}
+              onContextMenu={(event) => safePreventDefault(event)}
+              onSelect={(event) => safePreventDefault(event)}
               onTouchStart={startFlyDown}
               onTouchEnd={stopVerticalMovement}
               onTouchCancel={stopVerticalMovement}

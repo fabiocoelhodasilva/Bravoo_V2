@@ -47,21 +47,44 @@ type SalvarSessaoResponse = {
   details?: string;
 };
 
+/**
+ * Resolve a URL corretamente para client e server
+ */
+function getSessoesUrl() {
+  // 👉 quando rodando no navegador (seus jogos)
+  if (typeof window !== "undefined") {
+    return "/api/sessoes";
+  }
+
+  // 👉 quando rodando no servidor (oração)
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return `${process.env.NEXT_PUBLIC_SITE_URL}/api/sessoes`;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api/sessoes`;
+  }
+
+  return "http://localhost:3000/api/sessoes";
+}
+
 export async function salvarSessaoAtividade(
   params: SalvarSessaoParams
 ): Promise<SalvarSessaoResponse> {
-  const response = await fetch("/api/sessoes", {
+  const response = await fetch(getSessoesUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(params),
+    cache: "no-store",
   });
 
   const result = (await response.json()) as SalvarSessaoResponse;
 
   if (!response.ok) {
     console.error("Erro retornado por /api/sessoes:", result);
+
     throw new Error(
       result?.details || result?.error || "Não foi possível salvar a sessão."
     );
