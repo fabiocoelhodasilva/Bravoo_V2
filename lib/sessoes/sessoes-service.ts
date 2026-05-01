@@ -1,3 +1,8 @@
+import { cookies } from "next/headers";
+
+/**
+ * PARAMETROS PARA SALVAR SESSÃO
+ */
 type SalvarSessaoParams = {
   atividade_id: string;
   materia_id: string;
@@ -9,6 +14,9 @@ type SalvarSessaoParams = {
   tempo_total_segundos: number;
 };
 
+/**
+ * SESSÃO SALVA
+ */
 type SessaoAtividadeSalva = {
   id: string;
   usuario_id: string;
@@ -23,6 +31,9 @@ type SessaoAtividadeSalva = {
   data_execucao: string;
 };
 
+/**
+ * RESULTADO DE GAMIFICAÇÃO
+ */
 type ResultadoGamificacao = {
   streakAtualizado: boolean;
   moedasCreditadas: boolean;
@@ -37,6 +48,9 @@ type ResultadoGamificacao = {
     | "sequencia_reiniciada";
 };
 
+/**
+ * RESPOSTA DA API
+ */
 type SalvarSessaoResponse = {
   ok: boolean;
   data?: {
@@ -51,12 +65,12 @@ type SalvarSessaoResponse = {
  * Resolve a URL corretamente para client e server
  */
 function getSessoesUrl() {
-  // 👉 quando rodando no navegador (seus jogos)
+  // 👉 CLIENTE (browser)
   if (typeof window !== "undefined") {
     return "/api/sessoes";
   }
 
-  // 👉 quando rodando no servidor (oração)
+  // 👉 SERVER (produção)
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return `${process.env.NEXT_PUBLIC_SITE_URL}/api/sessoes`;
   }
@@ -65,16 +79,42 @@ function getSessoesUrl() {
     return `https://${process.env.VERCEL_URL}/api/sessoes`;
   }
 
+  // 👉 LOCAL fallback
   return "http://localhost:3000/api/sessoes";
 }
 
+/**
+ * 🔥 CAPTURA OS COOKIES DO USUÁRIO NO SERVER
+ */
+async function getCookieHeader() {
+  // 👉 no client não precisa
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  const cookieStore = await cookies();
+
+  return cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+}
+
+/**
+ * 🔥 SALVAR SESSÃO DE ATIVIDADE
+ */
 export async function salvarSessaoAtividade(
   params: SalvarSessaoParams
 ): Promise<SalvarSessaoResponse> {
+  const cookieHeader = await getCookieHeader();
+
   const response = await fetch(getSessoesUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+
+      // 🔥 ESSA LINHA RESOLVE SEU BUG
+      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
     },
     body: JSON.stringify(params),
     cache: "no-store",

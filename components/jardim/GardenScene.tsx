@@ -37,7 +37,7 @@ type JardimItemBanco = {
   percentual_escala: string | number;
 };
 
-const MIN_CAMERA_HEIGHT = 2.07;
+const MIN_CAMERA_HEIGHT = 4.07;
 const MAX_CAMERA_HEIGHT = 18;
 
 const ENTRY_CAMERA_POSITION: [number, number, number] = [
@@ -48,8 +48,8 @@ const ENTRY_CAMERA_POSITION: [number, number, number] = [
 
 const PLANTING_AREA = {
   centerX: 0,
-  centerZ: 35,
-  size: 120,
+  centerZ: 0,
+  size: 196,
   cellSize: 4,
 };
 
@@ -69,14 +69,20 @@ const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
 
 const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   arvore_cerrado: 0.01,
-  arvore_selva: 1.102,
-  arvore_carvalho: 15.12,
+  arvore_selva: 0.4,
+  arvore_carvalho: 10.12,
   arvore_japonesa: 0.08,
-  arvore_vermelha: 0.1,
+  arvore_vermelha: 0.08,
 
-  flor_roxa: 0.05,
-  flor_geranio_roxo: 0.5,
-  flor_margarida_branca: 5.8,
+  flor_roxa: 0.04,
+  flor_geranio_roxo: 0.1,
+  flor_margarida_branca: 3.8,
+};
+
+const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
+  flor_geranio_roxo: 0.7,
+  arvore_japonesa: -0.5,
+  arvore_selva: 3.2,
 };
 
 function safePreventDefault(
@@ -122,7 +128,7 @@ function PortalEntrada() {
     <primitive
       object={clonedScene}
       position={[0, 0, 91]}
-      scale={0.25}
+      scale={0.5}
       rotation={[0, Math.PI, 0]}
     />
   );
@@ -153,6 +159,7 @@ function AimPlacementSquare({
         setPosition(null);
         onAimPositionChange(null);
       }
+
       return;
     }
 
@@ -164,7 +171,6 @@ function AimPlacementSquare({
     );
 
     const snapped = hit ? snapToPlantingGrid(intersectionRef.current) : null;
-
     const key = snapped ? `${snapped[0]}|${snapped[2]}` : "none";
 
     if (key === lastKeyRef.current) return;
@@ -184,23 +190,6 @@ function AimPlacementSquare({
           color="#5dc6a1"
           transparent
           opacity={0.35}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry
-          args={[
-            PLANTING_AREA.cellSize * 0.42,
-            PLANTING_AREA.cellSize * 0.5,
-            4,
-          ]}
-        />
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.9}
           depthWrite={false}
           side={THREE.DoubleSide}
         />
@@ -244,13 +233,23 @@ function GardenModel({
 }) {
   const modelPath = ITEM_MODEL_PATHS[item.type];
   const { scene } = useGLTF(modelPath);
-  const clonedScene = useMemo(() => scene.clone(), [scene]);
+  const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
   const isSelected = selectedGardenItemId === item.id;
   const markerRadius = item.type.startsWith("arvore") ? 1.35 : 0.75;
+  const yOffset = ITEM_Y_OFFSETS[item.type] ?? 0;
+
+  const hitboxSize: [number, number, number] = item.type.startsWith("arvore")
+    ? [3.4, 7.2, 3.4]
+    : [1.8, 1.8, 1.8];
+
+  const hitboxCenterY = item.type.startsWith("arvore")
+    ? item.position[1] + 3.6
+    : item.position[1] + 0.9;
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
+    event.nativeEvent.stopImmediatePropagation?.();
     onSelectItem(item.id);
   }
 
@@ -260,9 +259,26 @@ function GardenModel({
         <SelectionMarker position={item.position} radius={markerRadius} />
       )}
 
+      <mesh
+        position={[item.position[0], hitboxCenterY, item.position[2]]}
+        onPointerDown={handlePointerDown}
+      >
+        <boxGeometry args={hitboxSize} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+          color="#ffffff"
+        />
+      </mesh>
+
       <primitive
         object={clonedScene}
-        position={item.position}
+        position={[
+          item.position[0],
+          item.position[1] + yOffset,
+          item.position[2],
+        ]}
         scale={item.scale}
         rotation={[0, 0, 0]}
         onPointerDown={handlePointerDown}
@@ -272,38 +288,21 @@ function GardenModel({
 }
 
 function Ground() {
-  const [color, normal, roughness, ao] = useTexture([
-    "/textures/jardim/grama/Grass004_1K-JPG_Color.jpg",
-    "/textures/jardim/grama/Grass004_1K-JPG_NormalGL.jpg",
-    "/textures/jardim/grama/Grass004_1K-JPG_Roughness.jpg",
-    "/textures/jardim/grama/Grass004_1K-JPG_AmbientOcclusion.jpg",
-  ]);
+  const color = useTexture("/textures/jardim/grama/Grass004_1K-JPG_Color.jpg");
 
   useEffect(() => {
-    const textures = [color, normal, roughness, ao];
-
-    textures.forEach((tex) => {
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(10, 10);
-      tex.anisotropy = 4;
-      tex.needsUpdate = true;
-    });
-
+    color.wrapS = THREE.RepeatWrapping;
+    color.wrapT = THREE.RepeatWrapping;
+    color.repeat.set(10, 10);
+    color.anisotropy = 4;
     color.colorSpace = THREE.SRGBColorSpace;
-  }, [color, normal, roughness, ao]);
+    color.needsUpdate = true;
+  }, [color]);
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[200, 200]} />
-      <meshStandardMaterial
-        map={color}
-        normalMap={normal}
-        roughnessMap={roughness}
-        aoMap={ao}
-        roughness={1}
-        metalness={0}
-      />
+      <meshBasicMaterial map={color} toneMapped={false} />
     </mesh>
   );
 }
@@ -323,7 +322,7 @@ function PlayerRig({
   }, [camera]);
 
   useFrame((_, delta) => {
-    const horizontalSpeed = 4.4;
+    const horizontalSpeed = 6.6;
     const verticalSpeed = 5.5;
 
     camera.rotation.y = lookRef.current.yaw;
@@ -505,13 +504,12 @@ export default function GardenScene() {
 
       const itensConvertidos: GardenItem[] = (data ?? []).map(
         (item: JardimItemBanco) => {
-          const tipo = item.tipo;
           const escalaBase = Number(item.escala_base);
           const percentualEscala = Number(item.percentual_escala);
 
           return {
             id: item.id,
-            type: tipo,
+            type: item.tipo,
             position: [
               Number(item.pos_x),
               Number(item.pos_y),
@@ -558,19 +556,29 @@ export default function GardenScene() {
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
-      if (key === "w" && moveRef.current.forward > 0)
+      if (key === "w" && moveRef.current.forward > 0) {
         moveRef.current.forward = 0;
-      if (key === "s" && moveRef.current.forward < 0)
-        moveRef.current.forward = 0;
-      if (key === "a" && moveRef.current.strafe < 0)
-        moveRef.current.strafe = 0;
-      if (key === "d" && moveRef.current.strafe > 0)
-        moveRef.current.strafe = 0;
+      }
 
-      if (key === "q" && moveRef.current.vertical > 0)
+      if (key === "s" && moveRef.current.forward < 0) {
+        moveRef.current.forward = 0;
+      }
+
+      if (key === "a" && moveRef.current.strafe < 0) {
+        moveRef.current.strafe = 0;
+      }
+
+      if (key === "d" && moveRef.current.strafe > 0) {
+        moveRef.current.strafe = 0;
+      }
+
+      if (key === "q" && moveRef.current.vertical > 0) {
         moveRef.current.vertical = 0;
-      if (key === "e" && moveRef.current.vertical < 0)
+      }
+
+      if (key === "e" && moveRef.current.vertical < 0) {
         moveRef.current.vertical = 0;
+      }
     };
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -582,6 +590,7 @@ export default function GardenScene() {
       lookRef.current.pitch -= event.movementY * sensitivity;
 
       const maxPitch = Math.PI / 2.4;
+
       lookRef.current.pitch = Math.max(
         -maxPitch,
         Math.min(maxPitch, lookRef.current.pitch)
@@ -619,7 +628,7 @@ export default function GardenScene() {
     aimedPlantPositionRef.current = position;
   }
 
-  function plantPendingItemAtAim() {
+  async function plantPendingItemAtAim() {
     if (!pendingItemType) return;
 
     const position = aimedPlantPositionRef.current;
@@ -629,11 +638,50 @@ export default function GardenScene() {
       return;
     }
 
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("Erro ao buscar usuário:", userError);
+      alert("Você precisa estar logado para plantar no jardim.");
+      return;
+    }
+
+    const escalaBase = ITEM_DEFAULT_SCALES[pendingItemType];
+
+    const { data, error } = await supabase
+      .from("next_jardim_itens_usuario")
+      .insert({
+        usuario_id: user.id,
+        tipo: pendingItemType,
+        pos_x: position[0],
+        pos_y: position[1],
+        pos_z: position[2],
+        escala_base: escalaBase,
+        percentual_escala: 1,
+        ativo: true,
+        status: "plantado",
+      })
+      .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
+      .single();
+
+    if (error || !data) {
+      console.error("Erro ao plantar item no jardim:", error);
+      alert("Não foi possível plantar este item agora.");
+      return;
+    }
+
     const newItem: GardenItem = {
-      id: `${pendingItemType}-${Date.now()}`,
-      type: pendingItemType,
-      position,
-      scale: ITEM_DEFAULT_SCALES[pendingItemType],
+      id: data.id,
+      type: data.tipo as JardimItemTipo,
+      position: [
+        Number(data.pos_x),
+        Number(data.pos_y),
+        Number(data.pos_z),
+      ],
+      scale: Number(data.escala_base) * Number(data.percentual_escala),
     };
 
     setItems((prev) => [...prev, newItem]);
@@ -644,11 +692,26 @@ export default function GardenScene() {
 
   function handleSelectGardenItem(id: string) {
     if (pendingItemType) return;
+
     setSelectedGardenItemId((current) => (current === id ? null : id));
   }
 
-  function handleDeleteSelectedItem() {
+  async function handleDeleteSelectedItem() {
     if (!selectedGardenItemId) return;
+
+    const { error } = await supabase
+      .from("next_jardim_itens_usuario")
+      .update({
+        ativo: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", selectedGardenItemId);
+
+    if (error) {
+      console.error("Erro ao remover item do jardim:", error);
+      alert("Não foi possível remover este item agora.");
+      return;
+    }
 
     setItems((prev) =>
       prev.filter((item) => item.id !== selectedGardenItemId)
@@ -660,6 +723,10 @@ export default function GardenScene() {
   function handleOpenOracao() {
     if (document.pointerLockElement === containerRef.current) {
       document.exitPointerLock?.();
+    }
+
+    if (navigator.vibrate) {
+      navigator.vibrate(35);
     }
 
     moveRef.current.forward = 0;
@@ -676,11 +743,11 @@ export default function GardenScene() {
   ) {
     const target = event?.target as HTMLElement | null;
 
-    if (target?.closest("nav, button, a")) return;
+    if (target?.closest("nav, button, a, .botao-oracao-controle")) return;
     if (itemsPanelOpen) return;
 
     if (pendingItemType) {
-      plantPendingItemAtAim();
+      await plantPendingItemAtAim();
       return;
     }
 
@@ -793,7 +860,11 @@ export default function GardenScene() {
     safePreventDefault(event);
 
     const touch = event.touches[0];
-    lookTouchRef.current = { x: touch.clientX, y: touch.clientY };
+
+    lookTouchRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
   }
 
   function handleLookMove(event: React.TouchEvent<HTMLDivElement>) {
@@ -804,14 +875,21 @@ export default function GardenScene() {
     const touch = event.touches[0];
 
     if (!lookTouchRef.current) {
-      lookTouchRef.current = { x: touch.clientX, y: touch.clientY };
+      lookTouchRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+      };
+
       return;
     }
 
     const dx = touch.clientX - lookTouchRef.current.x;
     const dy = touch.clientY - lookTouchRef.current.y;
 
-    lookTouchRef.current = { x: touch.clientX, y: touch.clientY };
+    lookTouchRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
 
     const sensitivity = 0.01;
 
@@ -819,6 +897,7 @@ export default function GardenScene() {
     lookRef.current.pitch -= dy * sensitivity;
 
     const maxPitch = Math.PI / 2.4;
+
     lookRef.current.pitch = Math.max(
       -maxPitch,
       Math.min(maxPitch, lookRef.current.pitch)
@@ -834,6 +913,7 @@ export default function GardenScene() {
     safePreventDefault(event);
 
     if (!flyMode) return;
+
     moveRef.current.vertical = 1;
   }
 
@@ -841,6 +921,7 @@ export default function GardenScene() {
     safePreventDefault(event);
 
     if (!flyMode) return;
+
     moveRef.current.vertical = -1;
   }
 
@@ -862,6 +943,53 @@ export default function GardenScene() {
       onClick={lockPointer}
       onContextMenu={(event) => safePreventDefault(event)}
     >
+      <style jsx global>{`
+        .botao-oracao-controle > * {
+          position: static !important;
+          width: 48px !important;
+          height: 48px !important;
+          min-width: 48px !important;
+          min-height: 48px !important;
+          max-width: 48px !important;
+          max-height: 48px !important;
+        }
+
+        .botao-oracao-controle button,
+        .botao-oracao-controle a,
+        .botao-oracao-controle div {
+          width: 48px !important;
+          height: 48px !important;
+          min-width: 48px !important;
+          min-height: 48px !important;
+          max-width: 48px !important;
+          max-height: 48px !important;
+        }
+
+        .oracao-pulse {
+          animation: oracaoPulse 2.4s ease-in-out infinite;
+        }
+
+        @keyframes oracaoPulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.55),
+              0 0 18px rgba(93, 198, 161, 0.35);
+            transform: scale(1);
+          }
+
+          50% {
+            box-shadow: 0 0 0 8px rgba(93, 198, 161, 0),
+              0 0 24px rgba(93, 198, 161, 0.55);
+            transform: scale(1.04);
+          }
+
+          100% {
+            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0),
+              0 0 18px rgba(93, 198, 161, 0.35);
+            transform: scale(1);
+          }
+        }
+      `}</style>
+
       {instructionText && (
         <div className="absolute left-4 top-4 z-20 max-w-[360px] select-none rounded-lg bg-black/45 px-4 py-2 text-sm text-white">
           {instructionText}
@@ -873,7 +1001,7 @@ export default function GardenScene() {
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            handleDeleteSelectedItem();
+            void handleDeleteSelectedItem();
           }}
           onContextMenu={(event) => safePreventDefault(event)}
           className="absolute right-5 top-24 z-30 select-none rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
@@ -888,7 +1016,10 @@ export default function GardenScene() {
       )}
 
       <Canvas
-        camera={{ position: ENTRY_CAMERA_POSITION, fov: 60 }}
+        camera={{
+          position: ENTRY_CAMERA_POSITION,
+          fov: 60,
+        }}
         shadows={false}
         dpr={isMobile ? 1 : [1, 2]}
       >
@@ -911,7 +1042,15 @@ export default function GardenScene() {
         />
       )}
 
-      <BotaoOracao onClick={handleOpenOracao} />
+      {!isMobile && (
+        <div
+          className="absolute bottom-[92px] right-8 z-40 select-none"
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => safePreventDefault(event)}
+        >
+          <BotaoOracao onClick={handleOpenOracao} />
+        </div>
+      )}
 
       <BottomNavJardim
         flyMode={flyMode}
@@ -984,7 +1123,7 @@ export default function GardenScene() {
           />
 
           <div
-            className="absolute bottom-[72px] right-5 z-30 flex select-none flex-col gap-3 touch-none"
+            className="absolute bottom-[72px] right-5 z-40 flex select-none flex-col items-center gap-3 touch-none"
             style={{
               WebkitUserSelect: "none",
               userSelect: "none",
@@ -992,6 +1131,25 @@ export default function GardenScene() {
             }}
             onContextMenu={(event) => safePreventDefault(event)}
           >
+            <div
+              className="botao-oracao-controle oracao-pulse flex h-12 w-12 select-none items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-black/40 touch-none"
+              style={{
+                touchAction: "none",
+                WebkitUserSelect: "none",
+                userSelect: "none",
+                WebkitTouchCallout: "none",
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleOpenOracao();
+              }}
+              onTouchStart={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              <BotaoOracao onClick={handleOpenOracao} />
+            </div>
+
             <button
               type="button"
               className="flex h-12 w-12 select-none items-center justify-center rounded-full border border-white/20 bg-black/40 text-2xl font-bold text-white touch-none"
@@ -1041,6 +1199,3 @@ Object.values(ITEM_MODEL_PATHS).forEach((path) => {
 useGLTF.preload(PORTAL_ENTRADA_PATH);
 
 useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_Color.jpg");
-useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_NormalGL.jpg");
-useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_Roughness.jpg");
-useTexture.preload("/textures/jardim/grama/Grass004_1K-JPG_AmbientOcclusion.jpg");
