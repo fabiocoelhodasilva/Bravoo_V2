@@ -8,6 +8,7 @@ import BottomNavJardim from "./BottomNavJardim";
 import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
 import BotaoOracao from "./BotaoOracao";
 import { supabase } from "@/lib/supabase/client";
+import { registrarResgateItemJardim } from "@/lib/gamificacao/oracao/oracao-actions";
 
 type MoveState = {
   forward: number;
@@ -670,6 +671,27 @@ export default function GardenScene() {
     if (error || !data) {
       console.error("Erro ao plantar item no jardim:", error);
       alert("Não foi possível plantar este item agora.");
+      return;
+    }
+
+    try {
+      await registrarResgateItemJardim(pendingItemType);
+    } catch (resgateError) {
+      console.error("Erro ao consumir crédito do jardim:", resgateError);
+
+      await supabase
+        .from("next_jardim_itens_usuario")
+        .update({
+          ativo: false,
+          status: "cancelado",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+
+      alert(
+        "Não foi possível confirmar seu crédito de jardim. O item não foi plantado."
+      );
+
       return;
     }
 

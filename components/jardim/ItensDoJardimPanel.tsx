@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   buscarMinutosOracaoHoje,
+  buscarSaldoItensJardimHoje,
   registrarMomentoOracao,
 } from "@/lib/gamificacao/oracao/oracao-actions";
 
@@ -78,6 +79,7 @@ export default function ItensDoJardimPanel({
 }: ItensDoJardimPanelProps) {
   const [modalOracaoAberto, setModalOracaoAberto] = useState(false);
   const [minutosHoje, setMinutosHoje] = useState(0);
+  const [saldoItensJardim, setSaldoItensJardim] = useState(0);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [salvandoOracao, setSalvandoOracao] = useState(false);
   const [carregandoOracoes, setCarregandoOracoes] = useState(true);
@@ -90,15 +92,20 @@ export default function ItensDoJardimPanel({
   );
 
   const metaConcluida = minutosHoje >= metaMinutosDia;
+  const podeEscolherItem = saldoItensJardim > 0;
 
   useEffect(() => {
-    async function carregarMinutosHoje() {
+    async function carregarDadosOracaoHoje() {
       try {
         setCarregandoOracoes(true);
 
-        const totalMinutos = await buscarMinutosOracaoHoje();
+        const [totalMinutos, saldoAtual] = await Promise.all([
+          buscarMinutosOracaoHoje(),
+          buscarSaldoItensJardimHoje(),
+        ]);
 
         setMinutosHoje(totalMinutos);
+        setSaldoItensJardim(saldoAtual);
       } catch (error) {
         console.error("Erro ao carregar orações do dia:", error);
       } finally {
@@ -106,11 +113,17 @@ export default function ItensDoJardimPanel({
       }
     }
 
-    carregarMinutosHoje();
+    carregarDadosOracaoHoje();
   }, []);
 
   function handleResgatarItem(item: ConquistaItem) {
     if (plantedItemTypes.includes(item.type)) return;
+
+    if (!podeEscolherItem) {
+      alert("Ore hoje para ganhar itens do jardim 🌱");
+      return;
+    }
+
     onSelectItem(item.type);
   }
 
@@ -121,15 +134,34 @@ export default function ItensDoJardimPanel({
       setSalvandoOracao(true);
       setMensagemSucesso("");
 
-      await registrarMomentoOracao(minutos);
+      const saldoAnterior = saldoItensJardim;
 
-      const novoTotal = minutosHoje + minutos;
+      const resultado = await registrarMomentoOracao(minutos);
 
-      setMinutosHoje(novoTotal);
+      const novoTotalMinutos =
+        resultado?.resumoJardim?.minutosHoje ?? minutosHoje + minutos;
+
+      const novoSaldo =
+        resultado?.resumoJardim?.saldoAtual ??
+        (await buscarSaldoItensJardimHoje());
+
+      const creditosNovos =
+        resultado?.resumoJardim?.creditosNovos ??
+        Math.max(0, novoSaldo - saldoAnterior);
+
+      setMinutosHoje(novoTotalMinutos);
+      setSaldoItensJardim(novoSaldo);
       setModalOracaoAberto(false);
-      setMensagemSucesso(`Oração registrada! +${minutos} minuto(s).`);
 
-      setTimeout(() => setMensagemSucesso(""), 2500);
+      if (creditosNovos > 0) {
+        setMensagemSucesso(
+          `Oração registrada! Você ganhou ${creditosNovos} item(ns) do jardim hoje 🌱`
+        );
+      } else {
+        setMensagemSucesso(`Oração registrada! +${minutos} minuto(s).`);
+      }
+
+      setTimeout(() => setMensagemSucesso(""), 3500);
     } catch (error) {
       console.error("Erro ao registrar oração:", error);
       alert("Não foi possível registrar a oração. Tente novamente.");
@@ -202,13 +234,27 @@ export default function ItensDoJardimPanel({
                 {carregandoOracoes
                   ? "Buscando suas orações de hoje..."
                   : metaConcluida
-                    ? "Meta concluída! Você passou da meta hoje 🙌"
+                    ? "Meta concluída! Você pode ganhar até 3 itens hoje 🙌"
                     : "Continue até completar sua meta"}
               </div>
             </div>
 
+            {!carregandoOracoes && (
+              <div
+                className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                  podeEscolherItem
+                    ? "border-[#5dc6a1]/40 bg-[#5dc6a1]/10 text-[#bfffe8]"
+                    : "border-white/10 bg-black/20 text-white/55"
+                }`}
+              >
+                {podeEscolherItem
+                  ? `Você ganhou ${saldoItensJardim} item(ns) do jardim hoje. Clique para selecionar dentre as opções.`
+                  : "Você ainda não tem itens disponíveis para escolher hoje."}
+              </div>
+            )}
+
             {mensagemSucesso && (
-              <div className="mt-3 text-sm font-semibold text-[#5dc6a1]">
+              <div className="mt-3 animate-pulse text-sm font-semibold text-[#5dc6a1]">
                 {mensagemSucesso}
               </div>
             )}
@@ -223,13 +269,27 @@ export default function ItensDoJardimPanel({
                   key={item.type}
                   type="button"
                   onClick={() => handleResgatarItem(item)}
-                  disabled={jaPlantado}
-                  className={`rounded-xl border p-3 ${
+                  disabled={jaPlantado || carregandoOracoes}
+                  className={`relative rounded-xl border p-3 transition ${
                     jaPlantado
                       ? "opacity-40 grayscale"
-                      : "border-[#5dc6a1]/40 hover:bg-[#5dc6a1]/10"
+                      : podeEscolherItem
+                        ? "border-[#5dc6a1]/40 hover:bg-[#5dc6a1]/10"
+                        : "cursor-not-allowed border-white/10 opacity-45 grayscale"
                   }`}
                 >
+                  {!podeEscolherItem && !jaPlantado && !carregandoOracoes && (
+                    <div className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] text-white/70">
+                      🔒
+                    </div>
+                  )}
+
+                  {podeEscolherItem && !jaPlantado && (
+                    <div className="absolute right-2 top-2 rounded-full bg-[#5dc6a1] px-2 py-1 text-[10px] font-bold text-[#101514]">
+                      escolher
+                    </div>
+                  )}
+
                   <img
                     src={item.imagem}
                     alt={item.nome}
@@ -237,6 +297,14 @@ export default function ItensDoJardimPanel({
                   />
 
                   <div className="mt-2 text-sm">{item.nome}</div>
+
+                  <div className="mt-1 text-[11px] text-white/45">
+                    {jaPlantado
+                      ? "Já plantado"
+                      : podeEscolherItem
+                        ? "Disponível"
+                        : "Bloqueado"}
+                  </div>
                 </button>
               );
             })}
