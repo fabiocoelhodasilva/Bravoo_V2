@@ -8,7 +8,10 @@ import BottomNavJardim from "./BottomNavJardim";
 import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
 import BotaoOracao from "./BotaoOracao";
 import { supabase } from "@/lib/supabase/client";
-import { registrarResgateItemJardim } from "@/lib/gamificacao/oracao/oracao-actions";
+import {
+  garantirSincronizacaoJardim,
+  registrarResgateItemJardim,
+} from "@/lib/gamificacao/oracao/oracao-actions";
 
 type MoveState = {
   forward: number;
@@ -474,6 +477,12 @@ export default function GardenScene() {
 
   useEffect(() => {
     async function carregarItensDoJardim() {
+      try {
+        await garantirSincronizacaoJardim();
+      } catch (syncError) {
+        console.error("Erro ao sincronizar créditos do jardim:", syncError);
+      }
+
       const {
         data: { user },
         error: userError,
@@ -742,13 +751,9 @@ export default function GardenScene() {
     setSelectedGardenItemId(null);
   }
 
-  function handleOpenOracao() {
+  async function abrirPainelItensDoJardim() {
     if (document.pointerLockElement === containerRef.current) {
       document.exitPointerLock?.();
-    }
-
-    if (navigator.vibrate) {
-      navigator.vibrate(35);
     }
 
     moveRef.current.forward = 0;
@@ -757,7 +762,22 @@ export default function GardenScene() {
 
     setPendingItemType(null);
     setSelectedGardenItemId(null);
+
+    try {
+      await garantirSincronizacaoJardim();
+    } catch (syncError) {
+      console.error("Erro ao sincronizar créditos do jardim:", syncError);
+    }
+
     setItemsPanelOpen(true);
+  }
+
+  async function handleOpenOracao() {
+    if (navigator.vibrate) {
+      navigator.vibrate(35);
+    }
+
+    await abrirPainelItensDoJardim();
   }
 
   async function lockPointer(
@@ -1070,7 +1090,7 @@ export default function GardenScene() {
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => safePreventDefault(event)}
         >
-          <BotaoOracao onClick={handleOpenOracao} />
+          <BotaoOracao onClick={() => void handleOpenOracao()} />
         </div>
       )}
 
@@ -1083,17 +1103,7 @@ export default function GardenScene() {
           void activateFlyMode();
         }}
         onItems={() => {
-          if (document.pointerLockElement === containerRef.current) {
-            document.exitPointerLock?.();
-          }
-
-          moveRef.current.forward = 0;
-          moveRef.current.strafe = 0;
-          moveRef.current.vertical = 0;
-
-          setPendingItemType(null);
-          setSelectedGardenItemId(null);
-          setItemsPanelOpen(true);
+          void abrirPainelItensDoJardim();
         }}
       />
 
@@ -1163,13 +1173,13 @@ export default function GardenScene() {
               }}
               onClick={(event) => {
                 event.stopPropagation();
-                handleOpenOracao();
+                void handleOpenOracao();
               }}
               onTouchStart={(event) => {
                 event.stopPropagation();
               }}
             >
-              <BotaoOracao onClick={handleOpenOracao} />
+              <BotaoOracao onClick={() => void handleOpenOracao()} />
             </div>
 
             <button

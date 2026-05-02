@@ -2,14 +2,29 @@
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
+/**
+ * ================================
+ * IDS FIXOS DA ATIVIDADE
+ * ================================
+ */
 const ATIVIDADE_ORACAO_ID = "22222222-2222-2222-2222-222222222100";
 const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
 const ASSUNTO_ORACAO_ID = "44444444-4444-4444-4444-444444444001";
 const DETALHE_ORACAO_ID = "55555555-5555-5555-5555-555555555101";
 
+/**
+ * ================================
+ * CONSTANTES DE OBSERVAÇÃO
+ * ================================
+ */
 const OBS_CREDITO_JARDIM_ORACAO = "credito_jardim_oracao";
 const OBS_RESGATE_ITEM_JARDIM = "resgate_item_jardim";
 
+/**
+ * ================================
+ * INTERVALO DO DIA ATUAL
+ * ================================
+ */
 function getIntervaloHoje() {
   const agora = new Date();
 
@@ -22,6 +37,11 @@ function getIntervaloHoje() {
   return { inicioDoDia, fimDoDia };
 }
 
+/**
+ * ================================
+ * REGRA DE CRÉDITOS POR MINUTOS
+ * ================================
+ */
 function calcularCreditosPorMinutos(minutos: number) {
   if (minutos >= 10) return 3;
   if (minutos >= 5) return 2;
@@ -29,6 +49,11 @@ function calcularCreditosPorMinutos(minutos: number) {
   return 0;
 }
 
+/**
+ * ================================
+ * USUÁRIO LOGADO
+ * ================================
+ */
 async function getUsuarioLogado() {
   const supabase = await getSupabaseServerClient();
 
@@ -44,6 +69,11 @@ async function getUsuarioLogado() {
   return { supabase, user };
 }
 
+/**
+ * ================================
+ * MINUTOS DE ORAÇÃO HOJE
+ * ================================
+ */
 export async function buscarMinutosOracaoHoje() {
   try {
     const { supabase, user } = await getUsuarioLogado();
@@ -73,6 +103,11 @@ export async function buscarMinutosOracaoHoje() {
   }
 }
 
+/**
+ * ================================
+ * SALDO DE ITENS DISPONÍVEIS HOJE
+ * ================================
+ */
 export async function buscarSaldoItensJardimHoje() {
   try {
     const { supabase, user } = await getUsuarioLogado();
@@ -80,11 +115,14 @@ export async function buscarSaldoItensJardimHoje() {
 
     const { data, error } = await supabase
       .from("next_movimentacoes_moeda")
-      .select("quantidade, tipo_movimento, observacao")
+      .select("quantidade, tipo_movimento")
       .eq("usuario_id", user.id)
       .eq("atividade_id", ATIVIDADE_ORACAO_ID)
       .eq("origem", "jogo")
-      .in("observacao", [OBS_CREDITO_JARDIM_ORACAO, OBS_RESGATE_ITEM_JARDIM])
+      .in("observacao", [
+        OBS_CREDITO_JARDIM_ORACAO,
+        OBS_RESGATE_ITEM_JARDIM,
+      ])
       .gte("data_movimentacao", inicioDoDia.toISOString())
       .lte("data_movimentacao", fimDoDia.toISOString());
 
@@ -109,6 +147,11 @@ export async function buscarSaldoItensJardimHoje() {
   }
 }
 
+/**
+ * ================================
+ * SINCRONIZAÇÃO DE CRÉDITOS DO DIA
+ * ================================
+ */
 async function sincronizarCreditosJardimHoje() {
   const { supabase, user } = await getUsuarioLogado();
 
@@ -175,6 +218,20 @@ async function sincronizarCreditosJardimHoje() {
   };
 }
 
+/**
+ * ================================
+ * 🔥 EXPORT PRINCIPAL PARA O FRONT
+ * ================================
+ */
+export async function garantirSincronizacaoJardim() {
+  return await sincronizarCreditosJardimHoje();
+}
+
+/**
+ * ================================
+ * REGISTRAR ORAÇÃO
+ * ================================
+ */
 export async function registrarMomentoOracao(minutos: number) {
   if (!Number.isFinite(minutos) || minutos <= 0 || minutos > 120) {
     throw new Error("Tempo de oração inválido.");
@@ -220,6 +277,11 @@ export async function registrarMomentoOracao(minutos: number) {
   }
 }
 
+/**
+ * ================================
+ * RESGATAR ITEM (CONSUME CRÉDITO)
+ * ================================
+ */
 export async function registrarResgateItemJardim(itemTipo: string) {
   const { supabase, user } = await getUsuarioLogado();
 

@@ -30,52 +30,19 @@ type ConquistaItem = {
 };
 
 const minhasConquistas: ConquistaItem[] = [
-  {
-    type: "flor_roxa",
-    nome: "Flor roxa",
-    imagem: "/imagens/jardim/itens/flor_roxa.png",
-  },
-  {
-    type: "flor_geranio_roxo",
-    nome: "Gerânio roxo",
-    imagem: "/imagens/jardim/itens/geranio_roxo.png",
-  },
-  {
-    type: "flor_margarida_branca",
-    nome: "Margarida branca",
-    imagem: "/imagens/jardim/itens/margarida_branca.png",
-  },
-  {
-    type: "arvore_cerrado",
-    nome: "Árvore do cerrado",
-    imagem: "/imagens/jardim/itens/arvore_cerrado.png",
-  },
-  {
-    type: "arvore_selva",
-    nome: "Árvore da selva",
-    imagem: "/imagens/jardim/itens/arvore_selva.png",
-  },
-  {
-    type: "arvore_carvalho",
-    nome: "Árvore carvalho",
-    imagem: "/imagens/jardim/itens/arvore_carvalho.png",
-  },
-  {
-    type: "arvore_japonesa",
-    nome: "Árvore japonesa",
-    imagem: "/imagens/jardim/itens/arvore_japonesa.png",
-  },
-  {
-    type: "arvore_vermelha",
-    nome: "Árvore vermelha",
-    imagem: "/imagens/jardim/itens/arvore_vermelha.png",
-  },
+  { type: "flor_roxa", nome: "Flor roxa", imagem: "/imagens/jardim/itens/flor_roxa.png" },
+  { type: "flor_geranio_roxo", nome: "Gerânio roxo", imagem: "/imagens/jardim/itens/geranio_roxo.png" },
+  { type: "flor_margarida_branca", nome: "Margarida branca", imagem: "/imagens/jardim/itens/margarida_branca.png" },
+  { type: "arvore_cerrado", nome: "Árvore do cerrado", imagem: "/imagens/jardim/itens/arvore_cerrado.png" },
+  { type: "arvore_selva", nome: "Árvore da selva", imagem: "/imagens/jardim/itens/arvore_selva.png" },
+  { type: "arvore_carvalho", nome: "Árvore carvalho", imagem: "/imagens/jardim/itens/arvore_carvalho.png" },
+  { type: "arvore_japonesa", nome: "Árvore japonesa", imagem: "/imagens/jardim/itens/arvore_japonesa.png" },
+  { type: "arvore_vermelha", nome: "Árvore vermelha", imagem: "/imagens/jardim/itens/arvore_vermelha.png" },
 ];
 
 export default function ItensDoJardimPanel({
   onClose,
   onSelectItem,
-  plantedItemTypes = [],
 }: ItensDoJardimPanelProps) {
   const [modalOracaoAberto, setModalOracaoAberto] = useState(false);
   const [minutosHoje, setMinutosHoje] = useState(0);
@@ -91,6 +58,7 @@ export default function ItensDoJardimPanel({
     Math.round((minutosHoje / metaMinutosDia) * 100)
   );
 
+  const posicaoMarcador = Math.min(96, Math.max(4, progressoOracao));
   const metaConcluida = minutosHoje >= metaMinutosDia;
   const podeEscolherItem = saldoItensJardim > 0;
 
@@ -117,8 +85,6 @@ export default function ItensDoJardimPanel({
   }, []);
 
   function handleResgatarItem(item: ConquistaItem) {
-    if (plantedItemTypes.includes(item.type)) return;
-
     if (!podeEscolherItem) {
       alert("Ore hoje para ganhar itens do jardim 🌱");
       return;
@@ -135,7 +101,6 @@ export default function ItensDoJardimPanel({
       setMensagemSucesso("");
 
       const saldoAnterior = saldoItensJardim;
-
       const resultado = await registrarMomentoOracao(minutos);
 
       const novoTotalMinutos =
@@ -155,7 +120,7 @@ export default function ItensDoJardimPanel({
 
       if (creditosNovos > 0) {
         setMensagemSucesso(
-          `Oração registrada! Você ganhou ${creditosNovos} item(ns) do jardim hoje 🌱`
+          `Oração registrada! Você ganhou ${creditosNovos} item(ns) do jardim 🌱`
         );
       } else {
         setMensagemSucesso(`Oração registrada! +${minutos} minuto(s).`);
@@ -172,6 +137,27 @@ export default function ItensDoJardimPanel({
 
   return (
     <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[24px] backdrop-blur-[2px]">
+      <style jsx>{`
+        .pulse-local {
+          animation: pulseLocal 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseLocal {
+          0% {
+            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.6);
+            transform: scale(1);
+          }
+          50% {
+            box-shadow: 0 0 0 10px rgba(93, 198, 161, 0);
+            transform: scale(1.05);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0);
+            transform: scale(1);
+          }
+        }
+      `}</style>
+
       <div className="relative max-h-[calc(100dvh-110px)] w-full max-w-[720px] overflow-y-auto rounded-[28px] border border-white/10 bg-[#101514] text-white shadow-2xl">
         <button
           type="button"
@@ -198,16 +184,23 @@ export default function ItensDoJardimPanel({
 
               <div className="flex-1">
                 <h3 className="font-bold">Minhas orações do dia</h3>
+
                 <p className="text-xs text-white/65">
-                  Registre o tempo de cada oração.
+                  Registre suas orações e ganhe itens do jardim.
                 </p>
+
+                <div className="mt-1 min-h-[18px] text-xs font-semibold text-[#5dc6a1]">
+                  {mensagemSucesso}
+                </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setModalOracaoAberto(true)}
                 disabled={carregandoOracoes}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-[#5dc6a1] text-3xl font-bold text-[#101514] disabled:opacity-50"
+                className={`flex h-14 w-14 items-center justify-center rounded-full bg-[#5dc6a1] text-3xl font-bold text-[#101514] disabled:opacity-50 ${
+                  !metaConcluida && !carregandoOracoes ? "pulse-local" : ""
+                }`}
               >
                 +
               </button>
@@ -215,7 +208,7 @@ export default function ItensDoJardimPanel({
 
             <div className="mt-4">
               <div className="flex justify-between text-xs text-white/60">
-                <span>Meta diária</span>
+                <span>Meta diária = {metaMinutosDia} minutos</span>
                 <span>
                   {carregandoOracoes
                     ? "Carregando..."
@@ -223,68 +216,47 @@ export default function ItensDoJardimPanel({
                 </span>
               </div>
 
-              <div className="mt-1 h-2 rounded-full bg-black/30">
+              <div className="relative mt-4 h-2 rounded-full bg-black/30">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-[#5dc6a1] to-[#f1e6a7]"
                   style={{ width: `${progressoOracao}%` }}
                 />
-              </div>
 
-              <div className="mt-1 text-xs text-white/60">
-                {carregandoOracoes
-                  ? "Buscando suas orações de hoje..."
-                  : metaConcluida
-                    ? "Meta concluída! Você pode ganhar até 3 itens hoje 🙌"
-                    : "Continue até completar sua meta"}
+                {!carregandoOracoes && minutosHoje > 0 && (
+                  <div
+                    className="absolute -top-5 -translate-x-1/2 text-[11px] font-bold text-[#f1e6a7]"
+                    style={{ left: `${posicaoMarcador}%` }}
+                  >
+                    {Math.min(minutosHoje, metaMinutosDia)} min
+                  </div>
+                )}
               </div>
             </div>
-
-            {!carregandoOracoes && (
-              <div
-                className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-                  podeEscolherItem
-                    ? "border-[#5dc6a1]/40 bg-[#5dc6a1]/10 text-[#bfffe8]"
-                    : "border-white/10 bg-black/20 text-white/55"
-                }`}
-              >
-                {podeEscolherItem
-                  ? `Você ganhou ${saldoItensJardim} item(ns) do jardim hoje. Clique para selecionar dentre as opções.`
-                  : "Você ainda não tem itens disponíveis para escolher hoje."}
-              </div>
-            )}
-
-            {mensagemSucesso && (
-              <div className="mt-3 animate-pulse text-sm font-semibold text-[#5dc6a1]">
-                {mensagemSucesso}
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {minhasConquistas.map((item) => {
-              const jaPlantado = plantedItemTypes.includes(item.type);
+              const itemDisponivel = podeEscolherItem;
 
               return (
                 <button
                   key={item.type}
                   type="button"
                   onClick={() => handleResgatarItem(item)}
-                  disabled={jaPlantado || carregandoOracoes}
+                  disabled={!itemDisponivel || carregandoOracoes}
                   className={`relative rounded-xl border p-3 transition ${
-                    jaPlantado
-                      ? "opacity-40 grayscale"
-                      : podeEscolherItem
-                        ? "border-[#5dc6a1]/40 hover:bg-[#5dc6a1]/10"
-                        : "cursor-not-allowed border-white/10 opacity-45 grayscale"
+                    itemDisponivel
+                      ? "border-[#5dc6a1]/40 hover:bg-[#5dc6a1]/10"
+                      : "cursor-not-allowed border-white/10 opacity-45 grayscale"
                   }`}
                 >
-                  {!podeEscolherItem && !jaPlantado && !carregandoOracoes && (
+                  {!itemDisponivel && !carregandoOracoes && (
                     <div className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] text-white/70">
                       🔒
                     </div>
                   )}
 
-                  {podeEscolherItem && !jaPlantado && (
+                  {itemDisponivel && (
                     <div className="absolute right-2 top-2 rounded-full bg-[#5dc6a1] px-2 py-1 text-[10px] font-bold text-[#101514]">
                       escolher
                     </div>
@@ -299,11 +271,7 @@ export default function ItensDoJardimPanel({
                   <div className="mt-2 text-sm">{item.nome}</div>
 
                   <div className="mt-1 text-[11px] text-white/45">
-                    {jaPlantado
-                      ? "Já plantado"
-                      : podeEscolherItem
-                        ? "Disponível"
-                        : "Bloqueado"}
+                    {itemDisponivel ? "Disponível" : "Indisponível"}
                   </div>
                 </button>
               );
