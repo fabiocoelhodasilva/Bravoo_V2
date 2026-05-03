@@ -93,6 +93,7 @@ function safePreventDefault(
   event:
     | React.TouchEvent<HTMLElement>
     | React.MouseEvent<HTMLElement>
+    | React.PointerEvent<HTMLElement>
     | React.SyntheticEvent<HTMLElement>
     | undefined
 ) {
@@ -466,6 +467,7 @@ export default function GardenScene() {
     string | null
   >(null);
 
+  const isPlantingRef = useRef(false);
   const joystickThumbRef = useRef<HTMLDivElement>(null);
   const joystickCenterRef = useRef<{ x: number; y: number } | null>(null);
   const lookTouchRef = useRef<{ x: number; y: number } | null>(null);
@@ -640,7 +642,9 @@ export default function GardenScene() {
 
   async function plantPendingItemAtAim() {
     if (!pendingItemType) return;
+    if (isPlantingRef.current) return;
 
+    const itemTypeToPlant = pendingItemType;
     const position = aimedPlantPositionRef.current;
 
     if (!position) {
@@ -648,77 +652,100 @@ export default function GardenScene() {
       return;
     }
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    isPlantingRef.current = true;
 
-    if (userError || !user) {
-      console.error("Erro ao buscar usuário:", userError);
-      alert("Você precisa estar logado para plantar no jardim.");
-      return;
-    }
+    const tempId = `temp-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
 
-    const escalaBase = ITEM_DEFAULT_SCALES[pendingItemType];
+    const escalaBase = ITEM_DEFAULT_SCALES[itemTypeToPlant];
 
-    const { data, error } = await supabase
-      .from("next_jardim_itens_usuario")
-      .insert({
-        usuario_id: user.id,
-        tipo: pendingItemType,
-        pos_x: position[0],
-        pos_y: position[1],
-        pos_z: position[2],
-        escala_base: escalaBase,
-        percentual_escala: 1,
-        ativo: true,
-        status: "plantado",
-      })
-      .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
-      .single();
-
-    if (error || !data) {
-      console.error("Erro ao plantar item no jardim:", error);
-      alert("Não foi possível plantar este item agora.");
-      return;
-    }
-
-    try {
-      await registrarResgateItemJardim(pendingItemType);
-    } catch (resgateError) {
-      console.error("Erro ao consumir crédito do jardim:", resgateError);
-
-      await supabase
-        .from("next_jardim_itens_usuario")
-        .update({
-          ativo: false,
-          status: "cancelado",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", data.id);
-
-      alert(
-        "Não foi possível confirmar seu crédito de jardim. O item não foi plantado."
-      );
-
-      return;
-    }
-
-    const newItem: GardenItem = {
-      id: data.id,
-      type: data.tipo as JardimItemTipo,
-      position: [
-        Number(data.pos_x),
-        Number(data.pos_y),
-        Number(data.pos_z),
-      ],
-      scale: Number(data.escala_base) * Number(data.percentual_escala),
+    const optimisticItem: GardenItem = {
+      id: tempId,
+      type: itemTypeToPlant,
+      position,
+      scale: escalaBase,
     };
 
-    setItems((prev) => [...prev, newItem]);
+    setItems((prev) => [...prev, optimisticItem]);
     setPendingItemType(null);
     setSelectedGardenItemId(null);
     aimedPlantPositionRef.current = null;
+
+    if (navigator.vibrate) {
+      navigator.vibrate(35);
+    }
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw userError ?? new Error("Usuário não logado.");
+      }
+
+      const { data, error } = await supabase
+        .from("next_jardim_itens_usuario")
+        .insert({
+          usuario_id: user.id,
+          tipo: itemTypeToPlant,
+          pos_x: position[0],
+          pos_y: position[1],
+          pos_z: position[2],
+          escala_base: escalaBase,
+          percentual_escala: 1,
+          ativo: true,
+          status: "plantado",
+        })
+        .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
+        .single();
+
+      if (error || !data) {
+        throw error ?? new Error("Erro ao inserir item no jardim.");
+      }
+
+      try {
+        await registrarResgateItemJardim(itemTypeToPlant);
+      } catch (resgateError) {
+        console.error("Erro ao consumir crédito do jardim:", resgateError);
+
+        await supabase
+          .from("next_jardim_itens_usuario")
+          .update({
+            ativo: false,
+            status: "cancelado",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id);
+
+        throw resgateError;
+      }
+
+      const savedItem: GardenItem = {
+        id: data.id,
+        type: data.tipo as JardimItemTipo,
+        position: [
+          Number(data.pos_x),
+          Number(data.pos_y),
+          Number(data.pos_z),
+        ],
+        scale: Number(data.escala_base) * Number(data.percentual_escala),
+      };
+
+      setItems((prev) =>
+        prev.map((item) => (item.id === tempId ? savedItem : item))
+      );
+    } catch (error) {
+      console.error("Erro ao plantar item no jardim:", error);
+
+      setItems((prev) => prev.filter((item) => item.id !== tempId));
+
+      alert("Não foi possível plantar este item agora.");
+    } finally {
+      isPlantingRef.current = false;
+    }
   }
 
   function handleSelectGardenItem(id: string) {
@@ -729,6 +756,7 @@ export default function GardenScene() {
 
   async function handleDeleteSelectedItem() {
     if (!selectedGardenItemId) return;
+    if (selectedGardenItemId.startsWith("temp-")) return;
 
     const { error } = await supabase
       .from("next_jardim_itens_usuario")
@@ -781,7 +809,7 @@ export default function GardenScene() {
   }
 
   async function lockPointer(
-    event?: React.MouseEvent<HTMLDivElement, MouseEvent>
+    event?: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>
   ) {
     const target = event?.target as HTMLElement | null;
 
@@ -789,6 +817,7 @@ export default function GardenScene() {
     if (itemsPanelOpen) return;
 
     if (pendingItemType) {
+      safePreventDefault(event);
       await plantPendingItemAtAim();
       return;
     }
@@ -982,7 +1011,7 @@ export default function GardenScene() {
         WebkitTouchCallout: "none",
         touchAction: "none",
       }}
-      onClick={lockPointer}
+      onPointerDown={lockPointer}
       onContextMenu={(event) => safePreventDefault(event)}
     >
       <style jsx global>{`

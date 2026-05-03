@@ -6,6 +6,7 @@ import {
   buscarSaldoItensJardimHoje,
   registrarMomentoOracao,
 } from "@/lib/gamificacao/oracao/oracao-actions";
+import RegrasJardimModal from "./RegrasJardimModal";
 
 export type JardimItemTipo =
   | "arvore_cerrado"
@@ -45,6 +46,7 @@ export default function ItensDoJardimPanel({
   onSelectItem,
 }: ItensDoJardimPanelProps) {
   const [modalOracaoAberto, setModalOracaoAberto] = useState(false);
+  const [modalRegrasAberto, setModalRegrasAberto] = useState(false);
   const [minutosHoje, setMinutosHoje] = useState(0);
   const [saldoItensJardim, setSaldoItensJardim] = useState(0);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
@@ -141,7 +143,6 @@ export default function ItensDoJardimPanel({
         .pulse-local {
           animation: pulseLocal 2s ease-in-out infinite;
         }
-
         @keyframes pulseLocal {
           0% {
             box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.6);
@@ -183,11 +184,18 @@ export default function ItensDoJardimPanel({
               </div>
 
               <div className="flex-1">
-                <h3 className="font-bold">Minhas orações do dia</h3>
+                <h3 className="font-bold">Minhas orações</h3>
 
-                <p className="text-xs text-white/65">
-                  Registre suas orações e ganhe itens do jardim.
-                </p>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setModalRegrasAberto(true);
+                  }}
+                  className="mt-0.5 text-xs font-semibold text-[#5dc6a1] underline underline-offset-4 hover:text-[#f1e6a7]"
+                >
+                  Regras
+                </button>
 
                 <div className="mt-1 min-h-[18px] text-xs font-semibold text-[#5dc6a1]">
                   {mensagemSucesso}
@@ -218,13 +226,13 @@ export default function ItensDoJardimPanel({
 
               <div className="relative mt-4 h-2 rounded-full bg-black/30">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#5dc6a1] to-[#f1e6a7]"
+                  className="h-full rounded-full bg-gradient-to-r from-[#5dc6a1] to-[#f1e6a7] transition-all duration-700 ease-out"
                   style={{ width: `${progressoOracao}%` }}
                 />
 
                 {!carregandoOracoes && minutosHoje > 0 && (
                   <div
-                    className="absolute -top-5 -translate-x-1/2 text-[11px] font-bold text-[#f1e6a7]"
+                    className="absolute -top-5 -translate-x-1/2 text-[11px] font-bold text-[#f1e6a7] transition-all duration-700 ease-out"
                     style={{ left: `${posicaoMarcador}%` }}
                   >
                     {Math.min(minutosHoje, metaMinutosDia)} min
@@ -319,6 +327,10 @@ export default function ItensDoJardimPanel({
               </button>
             </div>
           </div>
+        )}
+
+        {modalRegrasAberto && (
+          <RegrasJardimModal onClose={() => setModalRegrasAberto(false)} />
         )}
       </div>
     </div>
