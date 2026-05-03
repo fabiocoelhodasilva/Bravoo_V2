@@ -8,6 +8,10 @@ type TabelaFaixasProps = {
 };
 
 function formatarMetaDias(diasMinimos: number): string {
+  if (diasMinimos === 0) {
+    return "–";
+  }
+
   if (diasMinimos === 1) {
     return "1 dia";
   }
@@ -25,6 +29,7 @@ export default function TabelaFaixas({
         <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/72">
           Galeria da Fama da Persistência
         </div>
+
         <div className="mt-1 text-[10px] text-white/50">
           Persistência necessária para atingir cada classificação
         </div>
@@ -37,6 +42,7 @@ export default function TabelaFaixas({
               <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/55">
                 Classificação
               </th>
+
               <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-white/55">
                 Meta
               </th>

@@ -333,12 +333,12 @@ export default function GeografiaPaisesPage({ config }: Props) {
 
   const textoInstrucao =
     config.modoGlobo === "brasil-capitais"
-      ? "Descubra no globo de qual estado é esta capital"
+      ? "Navegue no globo e clique na capital"
       : config.modoGlobo === "brasil-estados"
-      ? "Descubra no globo onde fica este estado"
+      ? "Navegue no globo e clique no estado"
       : config.modoGlobo === "brasil-regioes"
-      ? "Descubra no globo onde fica esta região"
-      : "Descubra no globo onde fica este país";
+      ? "Navegue no globo e clique na região"
+      : "Navegue no globo e clique no país";
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -399,7 +399,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
               {!finalizado && mostrarInstrucao && (
                 <InstrucaoTemporaria
                   texto={textoInstrucao}
-                  duracaoMs={4000}
+                  duracaoMs={2000}
                   visivel={mostrarInstrucao}
                   mostrarGesto={true}
                   onFinalizar={() => setMostrarInstrucao(false)}

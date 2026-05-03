@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
@@ -20,52 +20,88 @@ import type {
 } from "@/lib/gamificacao/gamificacao-types";
 
 const GEOGRAFIA_MATERIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
+const CACHE_GAMIFICACAO_GEOGRAFIA_KEY = "cache_gamificacao_geografia_menu";
+const CACHE_MAX_IDADE_MS = 1000 * 60 * 3;
+
+type CacheGamificacaoGeografia = {
+  classificacaoAtual: ClassificacaoAtualMateriaView | null;
+  faixas: FaixaGamificacao[];
+  moedas: number;
+  atualizadoEm: number;
+};
+
+function salvarCacheGamificacaoGeografia(
+  classificacaoAtual: ClassificacaoAtualMateriaView | null,
+  faixas: FaixaGamificacao[],
+  moedas: number
+) {
+  try {
+    const cache: CacheGamificacaoGeografia = {
+      classificacaoAtual,
+      faixas,
+      moedas,
+      atualizadoEm: Date.now(),
+    };
+
+    sessionStorage.setItem(
+      CACHE_GAMIFICACAO_GEOGRAFIA_KEY,
+      JSON.stringify(cache)
+    );
+  } catch {}
+}
+
+function lerCacheGamificacaoGeografia(): CacheGamificacaoGeografia | null {
+  try {
+    const bruto = sessionStorage.getItem(CACHE_GAMIFICACAO_GEOGRAFIA_KEY);
+
+    if (!bruto) return null;
+
+    const cache = JSON.parse(bruto) as CacheGamificacaoGeografia;
+
+    if (!Array.isArray(cache.faixas)) return null;
+    if (!Number.isFinite(cache.moedas)) return null;
+    if (!Number.isFinite(cache.atualizadoEm)) return null;
+
+    const cacheAindaUtil = Date.now() - cache.atualizadoEm <= CACHE_MAX_IDADE_MS;
+
+    if (!cacheAindaUtil) return null;
+
+    return cache;
+  } catch {
+    return null;
+  }
+}
 
 export default function GeografiaMenu() {
   const router = useRouter();
+  const carregamentoEmAndamentoRef = useRef<Promise<void> | null>(null);
+  const ultimoCarregamentoRef = useRef(0);
 
   const [classificacaoAtual, setClassificacaoAtual] =
     useState<ClassificacaoAtualMateriaView | null>(null);
   const [faixas, setFaixas] = useState<FaixaGamificacao[]>([]);
   const [moedas, setMoedas] = useState(0);
   const [carregandoGamificacao, setCarregandoGamificacao] = useState(true);
+  const [temDadosIniciais, setTemDadosIniciais] = useState(false);
 
-  const carregarGamificacao = useCallback(async () => {
-    try {
-      setCarregandoGamificacao(true);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.user) {
-        setClassificacaoAtual(null);
-        setFaixas([]);
-        setMoedas(0);
-        return;
-      }
-
-      const [classificacao, listaFaixas, saldoMoedas] = await Promise.all([
-        buscarClassificacaoAtualPorMateria(supabase, {
-          usuarioId: session.user.id,
-          materiaId: GEOGRAFIA_MATERIA_ID,
-        }),
-        buscarFaixasClassificacao(supabase),
-        buscarSaldoMoedas(supabase, session.user.id),
-      ]);
-
+  const aplicarDadosGamificacao = useCallback(
+    (
+      classificacao: ClassificacaoAtualMateriaView | null,
+      listaFaixas: FaixaGamificacao[],
+      saldoMoedas: number,
+      usuarioId: string
+    ) => {
       const listaFaixasOrdenada = [...listaFaixas].sort(
         (a, b) => a.ordem - b.ordem
       );
 
-      setFaixas(listaFaixasOrdenada);
-      setMoedas(saldoMoedas);
+      let classificacaoFinal = classificacao;
 
-      if (!classificacao && listaFaixasOrdenada.length > 0) {
+      if (!classificacaoFinal && listaFaixasOrdenada.length > 0) {
         const faixaInicial = listaFaixasOrdenada[0];
 
-        const classificacaoInicial: ClassificacaoAtualMateriaView = {
-          usuario_id: session.user.id,
+        classificacaoFinal = {
+          usuario_id: usuarioId,
           materia_id: GEOGRAFIA_MATERIA_ID,
 
           dias_seguidos: 0,
@@ -89,61 +125,126 @@ export default function GeografiaMenu() {
 
           percentual_progresso_classificacao: 0,
         };
-
-        setClassificacaoAtual(classificacaoInicial);
-      } else {
-        setClassificacaoAtual(classificacao);
       }
-    } catch (error) {
-      console.error("Erro ao carregar gamificação do menu de Geografia:", error);
-      setClassificacaoAtual(null);
-      setFaixas([]);
-      setMoedas(0);
-    } finally {
-      setCarregandoGamificacao(false);
-    }
-  }, []);
+
+      setFaixas(listaFaixasOrdenada);
+      setMoedas(saldoMoedas);
+      setClassificacaoAtual(classificacaoFinal);
+      setTemDadosIniciais(true);
+      salvarCacheGamificacaoGeografia(
+        classificacaoFinal,
+        listaFaixasOrdenada,
+        saldoMoedas
+      );
+    },
+    []
+  );
+
+  const carregarGamificacao = useCallback(
+    async (options?: { silencioso?: boolean; forcar?: boolean }) => {
+      const silencioso = options?.silencioso ?? false;
+      const forcar = options?.forcar ?? false;
+      const agora = Date.now();
+
+      if (!forcar && agora - ultimoCarregamentoRef.current < 2500) {
+        return carregamentoEmAndamentoRef.current ?? Promise.resolve();
+      }
+
+      if (carregamentoEmAndamentoRef.current) {
+        return carregamentoEmAndamentoRef.current;
+      }
+
+      const carregamento = (async () => {
+        try {
+          ultimoCarregamentoRef.current = Date.now();
+
+          if (!silencioso && !temDadosIniciais) {
+            setCarregandoGamificacao(true);
+          }
+
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (!session?.user) {
+            setClassificacaoAtual(null);
+            setFaixas([]);
+            setMoedas(0);
+            setTemDadosIniciais(true);
+            return;
+          }
+
+          const [classificacao, listaFaixas, saldoMoedas] = await Promise.all([
+            buscarClassificacaoAtualPorMateria(supabase, {
+              usuarioId: session.user.id,
+              materiaId: GEOGRAFIA_MATERIA_ID,
+            }),
+            buscarFaixasClassificacao(supabase),
+            buscarSaldoMoedas(supabase, session.user.id),
+          ]);
+
+          aplicarDadosGamificacao(
+            classificacao,
+            listaFaixas,
+            saldoMoedas,
+            session.user.id
+          );
+        } catch (error) {
+          console.error("Erro ao carregar gamificação do menu de Geografia:", error);
+
+          if (!temDadosIniciais) {
+            setClassificacaoAtual(null);
+            setFaixas([]);
+            setMoedas(0);
+            setTemDadosIniciais(true);
+          }
+        } finally {
+          setCarregandoGamificacao(false);
+          carregamentoEmAndamentoRef.current = null;
+        }
+      })();
+
+      carregamentoEmAndamentoRef.current = carregamento;
+      return carregamento;
+    },
+    [aplicarDadosGamificacao, temDadosIniciais]
+  );
 
   useEffect(() => {
-    void carregarGamificacao();
+    const cache = lerCacheGamificacaoGeografia();
+
+    if (cache) {
+      setClassificacaoAtual(cache.classificacaoAtual);
+      setFaixas(cache.faixas);
+      setMoedas(cache.moedas);
+      setTemDadosIniciais(true);
+      setCarregandoGamificacao(false);
+      void carregarGamificacao({ silencioso: true });
+      return;
+    }
+
+    void carregarGamificacao({ forcar: true });
   }, [carregarGamificacao]);
 
   useEffect(() => {
-    let timeoutId1: ReturnType<typeof setTimeout> | null = null;
-    let timeoutId2: ReturnType<typeof setTimeout> | null = null;
-
-    const recarregarComRefresco = () => {
-      void carregarGamificacao();
-
-      if (timeoutId1) clearTimeout(timeoutId1);
-      if (timeoutId2) clearTimeout(timeoutId2);
-
-      timeoutId1 = setTimeout(() => {
-        void carregarGamificacao();
-      }, 600);
-
-      timeoutId2 = setTimeout(() => {
-        void carregarGamificacao();
-      }, 1500);
+    const recarregarSilenciosamente = () => {
+      void carregarGamificacao({ silencioso: true });
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        recarregarComRefresco();
+        recarregarSilenciosamente();
       }
     };
 
-    window.addEventListener("focus", recarregarComRefresco);
-    window.addEventListener("pageshow", recarregarComRefresco);
+    window.addEventListener("focus", recarregarSilenciosamente);
+    window.addEventListener("pageshow", recarregarSilenciosamente);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", recarregarComRefresco);
-      window.removeEventListener("pageshow", recarregarComRefresco);
+      window.removeEventListener("focus", recarregarSilenciosamente);
+      window.removeEventListener("pageshow", recarregarSilenciosamente);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-
-      if (timeoutId1) clearTimeout(timeoutId1);
-      if (timeoutId2) clearTimeout(timeoutId2);
     };
   }, [carregarGamificacao]);
 
@@ -173,7 +274,7 @@ export default function GeografiaMenu() {
           Geografia
         </h1>
 
-        {carregandoGamificacao ? (
+        {carregandoGamificacao && !temDadosIniciais ? (
           <GamificationBarSkeleton />
         ) : (
           <GamificationBar
