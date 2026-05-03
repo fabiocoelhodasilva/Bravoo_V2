@@ -93,7 +93,6 @@ function safePreventDefault(
   event:
     | React.TouchEvent<HTMLElement>
     | React.MouseEvent<HTMLElement>
-    | React.PointerEvent<HTMLElement>
     | React.SyntheticEvent<HTMLElement>
     | undefined
 ) {
@@ -445,6 +444,16 @@ function Scene({
 export default function GardenScene() {
   const containerRef = useRef<HTMLDivElement>(null);
   const aimedPlantPositionRef = useRef<[number, number, number] | null>(null);
+  const isPlantingRef = useRef(false);
+  const lastMobileTouchPlantRef = useRef(0);
+
+  const touchStartRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+  } | null>(null);
+
+  const touchMovedRef = useRef(false);
 
   const moveRef = useRef<MoveState>({
     forward: 0,
@@ -467,7 +476,6 @@ export default function GardenScene() {
     string | null
   >(null);
 
-  const isPlantingRef = useRef(false);
   const joystickThumbRef = useRef<HTMLDivElement>(null);
   const joystickCenterRef = useRef<{ x: number; y: number } | null>(null);
   const lookTouchRef = useRef<{ x: number; y: number } | null>(null);
@@ -809,15 +817,18 @@ export default function GardenScene() {
   }
 
   async function lockPointer(
-    event?: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>
+    event?: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) {
     const target = event?.target as HTMLElement | null;
 
     if (target?.closest("nav, button, a, .botao-oracao-controle")) return;
     if (itemsPanelOpen) return;
 
+    if (isMobile && Date.now() - lastMobileTouchPlantRef.current < 450) {
+      return;
+    }
+
     if (pendingItemType) {
-      safePreventDefault(event);
       await plantPendingItemAtAim();
       return;
     }
@@ -833,6 +844,80 @@ export default function GardenScene() {
     try {
       await containerRef.current.requestPointerLock();
     } catch {}
+  }
+
+  function handleSceneTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (!isMobile) return;
+    if (!pendingItemType) return;
+    if (itemsPanelOpen) return;
+
+    const target = event.target as HTMLElement | null;
+
+    if (
+      target?.closest(
+        "nav, button, a, .botao-oracao-controle, .jardim-joystick-controle"
+      )
+    ) {
+      return;
+    }
+
+    const touch = event.touches[0];
+
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+
+    touchMovedRef.current = false;
+  }
+
+  function handleSceneTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    if (!isMobile) return;
+    if (!pendingItemType) return;
+    if (!touchStartRef.current) return;
+
+    const touch = event.touches[0];
+
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 12) {
+      touchMovedRef.current = true;
+    }
+  }
+
+  async function handleSceneTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    if (!isMobile) return;
+    if (!pendingItemType) return;
+    if (!touchStartRef.current) return;
+
+    const target = event.target as HTMLElement | null;
+
+    if (
+      target?.closest(
+        "nav, button, a, .botao-oracao-controle, .jardim-joystick-controle"
+      )
+    ) {
+      touchStartRef.current = null;
+      touchMovedRef.current = false;
+      return;
+    }
+
+    const elapsed = Date.now() - touchStartRef.current.time;
+    const isTap = !touchMovedRef.current && elapsed < 320;
+
+    touchStartRef.current = null;
+    touchMovedRef.current = false;
+
+    if (!isTap) return;
+
+    event.stopPropagation();
+    lastMobileTouchPlantRef.current = Date.now();
+
+    await plantPendingItemAtAim();
   }
 
   async function activateFlyMode() {
@@ -1011,7 +1096,14 @@ export default function GardenScene() {
         WebkitTouchCallout: "none",
         touchAction: "none",
       }}
-      onPointerDown={lockPointer}
+      onClick={lockPointer}
+      onTouchStart={handleSceneTouchStart}
+      onTouchMove={handleSceneTouchMove}
+      onTouchEnd={handleSceneTouchEnd}
+      onTouchCancel={() => {
+        touchStartRef.current = null;
+        touchMovedRef.current = false;
+      }}
       onContextMenu={(event) => safePreventDefault(event)}
     >
       <style jsx global>{`
@@ -1139,7 +1231,7 @@ export default function GardenScene() {
       {isMobile && flyMode && (
         <>
           <div
-            className="absolute bottom-[72px] left-5 z-30 select-none rounded-full border border-white/30 bg-black/25 touch-none"
+            className="jardim-joystick-controle absolute bottom-[72px] left-5 z-30 select-none rounded-full border border-white/30 bg-black/25 touch-none"
             style={{
               width: joystickSize,
               height: joystickSize,
