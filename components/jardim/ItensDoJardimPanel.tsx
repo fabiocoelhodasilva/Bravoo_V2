@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   buscarMinutosOracaoHoje,
   buscarSaldoItensJardimHoje,
@@ -30,16 +30,91 @@ type ConquistaItem = {
   imagem: string;
 };
 
+type CacheOracaoJardim = {
+  minutosHoje: number;
+  saldoItensJardim: number;
+  atualizadoEm: number;
+};
+
+const CACHE_ORACAO_JARDIM_KEY = "cache_oracao_jardim_hoje";
+const CACHE_MAX_IDADE_MS = 1000 * 60 * 3;
+
 const minhasConquistas: ConquistaItem[] = [
-  { type: "flor_roxa", nome: "Flor roxa", imagem: "/imagens/jardim/itens/flor_roxa.png" },
-  { type: "flor_geranio_roxo", nome: "Gerânio roxo", imagem: "/imagens/jardim/itens/geranio_roxo.png" },
-  { type: "flor_margarida_branca", nome: "Margarida branca", imagem: "/imagens/jardim/itens/margarida_branca.png" },
-  { type: "arvore_cerrado", nome: "Árvore do cerrado", imagem: "/imagens/jardim/itens/arvore_cerrado.png" },
-  { type: "arvore_selva", nome: "Árvore da selva", imagem: "/imagens/jardim/itens/arvore_selva.png" },
-  { type: "arvore_carvalho", nome: "Árvore carvalho", imagem: "/imagens/jardim/itens/arvore_carvalho.png" },
-  { type: "arvore_japonesa", nome: "Árvore japonesa", imagem: "/imagens/jardim/itens/arvore_japonesa.png" },
-  { type: "arvore_vermelha", nome: "Árvore vermelha", imagem: "/imagens/jardim/itens/arvore_vermelha.png" },
+  {
+    type: "flor_roxa",
+    nome: "Flor roxa",
+    imagem: "/imagens/jardim/itens/flor_roxa.png",
+  },
+  {
+    type: "flor_geranio_roxo",
+    nome: "Gerânio roxo",
+    imagem: "/imagens/jardim/itens/geranio_roxo.png",
+  },
+  {
+    type: "flor_margarida_branca",
+    nome: "Margarida branca",
+    imagem: "/imagens/jardim/itens/margarida_branca.png",
+  },
+  {
+    type: "arvore_cerrado",
+    nome: "Árvore do cerrado",
+    imagem: "/imagens/jardim/itens/arvore_cerrado.png",
+  },
+  {
+    type: "arvore_selva",
+    nome: "Árvore da selva",
+    imagem: "/imagens/jardim/itens/arvore_selva.png",
+  },
+  {
+    type: "arvore_carvalho",
+    nome: "Árvore carvalho",
+    imagem: "/imagens/jardim/itens/arvore_carvalho.png",
+  },
+  {
+    type: "arvore_japonesa",
+    nome: "Árvore japonesa",
+    imagem: "/imagens/jardim/itens/arvore_japonesa.png",
+  },
+  {
+    type: "arvore_vermelha",
+    nome: "Árvore vermelha",
+    imagem: "/imagens/jardim/itens/arvore_vermelha.png",
+  },
 ];
+
+function salvarCacheOracaoJardim(minutosHoje: number, saldoItensJardim: number) {
+  try {
+    const cache: CacheOracaoJardim = {
+      minutosHoje,
+      saldoItensJardim,
+      atualizadoEm: Date.now(),
+    };
+
+    sessionStorage.setItem(CACHE_ORACAO_JARDIM_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+function lerCacheOracaoJardim(): CacheOracaoJardim | null {
+  try {
+    const bruto = sessionStorage.getItem(CACHE_ORACAO_JARDIM_KEY);
+
+    if (!bruto) return null;
+
+    const cache = JSON.parse(bruto) as CacheOracaoJardim;
+
+    if (!Number.isFinite(cache.minutosHoje)) return null;
+    if (!Number.isFinite(cache.saldoItensJardim)) return null;
+    if (!Number.isFinite(cache.atualizadoEm)) return null;
+
+    const cacheAindaUtil = Date.now() - cache.atualizadoEm <= CACHE_MAX_IDADE_MS;
+
+    if (!cacheAindaUtil) return null;
+
+    return cache;
+  } catch {
+    return null;
+  }
+}
 
 export default function ItensDoJardimPanel({
   onClose,
@@ -53,6 +128,8 @@ export default function ItensDoJardimPanel({
   const [salvandoOracao, setSalvandoOracao] = useState(false);
   const [carregandoOracoes, setCarregandoOracoes] = useState(true);
 
+  const carregamentoInicialRef = useRef(false);
+
   const metaMinutosDia = 10;
 
   const progressoOracao = Math.min(
@@ -65,10 +142,32 @@ export default function ItensDoJardimPanel({
   const podeEscolherItem = saldoItensJardim > 0;
 
   useEffect(() => {
-    async function carregarDadosOracaoHoje() {
-      try {
-        setCarregandoOracoes(true);
+    minhasConquistas.forEach((item) => {
+      const imagem = new Image();
+      imagem.src = item.imagem;
+    });
 
+    const imagemOracao = new Image();
+    imagemOracao.src = "/imagens/jardim/itens/botao_oracao.png";
+  }, []);
+
+  useEffect(() => {
+    if (carregamentoInicialRef.current) return;
+
+    carregamentoInicialRef.current = true;
+
+    async function carregarDadosOracaoHoje() {
+      const cache = lerCacheOracaoJardim();
+
+      if (cache) {
+        setMinutosHoje(cache.minutosHoje);
+        setSaldoItensJardim(cache.saldoItensJardim);
+        setCarregandoOracoes(false);
+      } else {
+        setCarregandoOracoes(true);
+      }
+
+      try {
         const [totalMinutos, saldoAtual] = await Promise.all([
           buscarMinutosOracaoHoje(),
           buscarSaldoItensJardimHoje(),
@@ -76,6 +175,7 @@ export default function ItensDoJardimPanel({
 
         setMinutosHoje(totalMinutos);
         setSaldoItensJardim(saldoAtual);
+        salvarCacheOracaoJardim(totalMinutos, saldoAtual);
       } catch (error) {
         console.error("Erro ao carregar orações do dia:", error);
       } finally {
@@ -98,15 +198,21 @@ export default function ItensDoJardimPanel({
   async function registrarOracao(minutos: number) {
     if (salvandoOracao) return;
 
+    const minutosAntes = minutosHoje;
+    const saldoAntes = saldoItensJardim;
+
+    const minutosOtimista = minutosAntes + minutos;
+
     try {
       setSalvandoOracao(true);
       setMensagemSucesso("");
+      setModalOracaoAberto(false);
+      setMinutosHoje(minutosOtimista);
 
-      const saldoAnterior = saldoItensJardim;
       const resultado = await registrarMomentoOracao(minutos);
 
       const novoTotalMinutos =
-        resultado?.resumoJardim?.minutosHoje ?? minutosHoje + minutos;
+        resultado?.resumoJardim?.minutosHoje ?? minutosOtimista;
 
       const novoSaldo =
         resultado?.resumoJardim?.saldoAtual ??
@@ -114,11 +220,11 @@ export default function ItensDoJardimPanel({
 
       const creditosNovos =
         resultado?.resumoJardim?.creditosNovos ??
-        Math.max(0, novoSaldo - saldoAnterior);
+        Math.max(0, novoSaldo - saldoAntes);
 
       setMinutosHoje(novoTotalMinutos);
       setSaldoItensJardim(novoSaldo);
-      setModalOracaoAberto(false);
+      salvarCacheOracaoJardim(novoTotalMinutos, novoSaldo);
 
       if (creditosNovos > 0) {
         setMensagemSucesso(
@@ -131,6 +237,11 @@ export default function ItensDoJardimPanel({
       setTimeout(() => setMensagemSucesso(""), 3500);
     } catch (error) {
       console.error("Erro ao registrar oração:", error);
+
+      setMinutosHoje(minutosAntes);
+      setSaldoItensJardim(saldoAntes);
+      salvarCacheOracaoJardim(minutosAntes, saldoAntes);
+
       alert("Não foi possível registrar a oração. Tente novamente.");
     } finally {
       setSalvandoOracao(false);
@@ -143,15 +254,18 @@ export default function ItensDoJardimPanel({
         .pulse-local {
           animation: pulseLocal 2s ease-in-out infinite;
         }
+
         @keyframes pulseLocal {
           0% {
             box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.6);
             transform: scale(1);
           }
+
           50% {
             box-shadow: 0 0 0 10px rgba(93, 198, 161, 0);
             transform: scale(1.05);
           }
+
           100% {
             box-shadow: 0 0 0 0 rgba(93, 198, 161, 0);
             transform: scale(1);
@@ -205,7 +319,7 @@ export default function ItensDoJardimPanel({
               <button
                 type="button"
                 onClick={() => setModalOracaoAberto(true)}
-                disabled={carregandoOracoes}
+                disabled={carregandoOracoes || salvandoOracao}
                 className={`flex h-14 w-14 items-center justify-center rounded-full bg-[#5dc6a1] text-3xl font-bold text-[#101514] disabled:opacity-50 ${
                   !metaConcluida && !carregandoOracoes ? "pulse-local" : ""
                 }`}
@@ -219,7 +333,7 @@ export default function ItensDoJardimPanel({
                 <span>Meta diária = {metaMinutosDia} minutos</span>
                 <span>
                   {carregandoOracoes
-                    ? "Carregando..."
+                    ? "Atualizando..."
                     : `${minutosHoje}/${metaMinutosDia} min`}
                 </span>
               </div>
@@ -238,6 +352,12 @@ export default function ItensDoJardimPanel({
                     {Math.min(minutosHoje, metaMinutosDia)} min
                   </div>
                 )}
+              </div>
+
+              <div className="mt-3 text-xs font-semibold text-[#5dc6a1]">
+                {saldoItensJardim > 0
+                  ? `${saldoItensJardim} item(ns) disponível(is) para plantar`
+                  : "Nenhum item disponível para plantar agora"}
               </div>
             </div>
           </div>

@@ -89,6 +89,14 @@ const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
   arvore_selva: 3.2,
 };
 
+const CACHE_ORACAO_JARDIM_KEY = "cache_oracao_jardim_hoje";
+
+function limparCacheOracaoJardim() {
+  try {
+    sessionStorage.removeItem(CACHE_ORACAO_JARDIM_KEY);
+  } catch {}
+}
+
 function safePreventDefault(
   event:
     | React.TouchEvent<HTMLElement>
@@ -743,6 +751,8 @@ export default function GardenScene() {
       setItems((prev) =>
         prev.map((item) => (item.id === tempId ? savedItem : item))
       );
+
+      limparCacheOracaoJardim();
     } catch (error) {
       console.error("Erro ao plantar item no jardim:", error);
 
@@ -779,6 +789,8 @@ export default function GardenScene() {
     );
 
     setSelectedGardenItemId(null);
+
+    limparCacheOracaoJardim();
 
     garantirSincronizacaoJardim().catch((syncError) => {
       console.error("Erro ao sincronizar créditos do jardim:", syncError);
