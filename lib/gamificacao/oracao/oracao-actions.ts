@@ -19,6 +19,7 @@ const DETALHE_ORACAO_ID = "55555555-5555-5555-5555-555555555101";
  */
 const OBS_CREDITO_JARDIM_ORACAO = "credito_jardim_oracao";
 const OBS_RESGATE_ITEM_JARDIM = "resgate_item_jardim";
+const OBS_DEVOLUCAO_ITEM_JARDIM = "devolucao_item_jardim";
 
 /**
  * ================================
@@ -122,6 +123,7 @@ export async function buscarSaldoItensJardimHoje() {
       .in("observacao", [
         OBS_CREDITO_JARDIM_ORACAO,
         OBS_RESGATE_ITEM_JARDIM,
+        OBS_DEVOLUCAO_ITEM_JARDIM,
       ])
       .gte("data_movimentacao", inicioDoDia.toISOString())
       .lte("data_movimentacao", fimDoDia.toISOString());
@@ -153,11 +155,20 @@ export async function buscarSaldoItensJardimHoje() {
  * ================================
  */
 async function sincronizarCreditosJardimHoje() {
-  const { supabase, user } = await getUsuarioLogado();
+  const { supabase } = await getUsuarioLogado();
 
   const minutosHoje = await buscarMinutosOracaoHoje();
   const creditosPermitidosHoje = calcularCreditosPorMinutos(minutosHoje);
   const { inicioDoDia, fimDoDia } = getIntervaloHoje();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Usuário não identificado.");
+  }
 
   const { data, error } = await supabase
     .from("next_movimentacoes_moeda")
@@ -220,7 +231,7 @@ async function sincronizarCreditosJardimHoje() {
 
 /**
  * ================================
- * 🔥 EXPORT PRINCIPAL PARA O FRONT
+ * EXPORT PRINCIPAL PARA O FRONT
  * ================================
  */
 export async function garantirSincronizacaoJardim() {

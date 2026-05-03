@@ -705,7 +705,6 @@ export default function GardenScene() {
           escala_base: escalaBase,
           percentual_escala: 1,
           ativo: true,
-          status: "plantado",
         })
         .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
         .single();
@@ -723,7 +722,6 @@ export default function GardenScene() {
           .from("next_jardim_itens_usuario")
           .update({
             ativo: false,
-            status: "cancelado",
             updated_at: new Date().toISOString(),
           })
           .eq("id", data.id);
@@ -766,13 +764,9 @@ export default function GardenScene() {
     if (!selectedGardenItemId) return;
     if (selectedGardenItemId.startsWith("temp-")) return;
 
-    const { error } = await supabase
-      .from("next_jardim_itens_usuario")
-      .update({
-        ativo: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", selectedGardenItemId);
+    const { error } = await supabase.rpc("remover_item_jardim_com_devolucao", {
+      p_item_id: selectedGardenItemId,
+    });
 
     if (error) {
       console.error("Erro ao remover item do jardim:", error);
@@ -785,6 +779,10 @@ export default function GardenScene() {
     );
 
     setSelectedGardenItemId(null);
+
+    garantirSincronizacaoJardim().catch((syncError) => {
+      console.error("Erro ao sincronizar créditos do jardim:", syncError);
+    });
   }
 
   async function abrirPainelItensDoJardim() {
