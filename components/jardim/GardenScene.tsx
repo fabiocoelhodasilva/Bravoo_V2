@@ -799,13 +799,11 @@ export default function GardenScene() {
     setPendingItemType(null);
     setSelectedGardenItemId(null);
 
-    try {
-      await garantirSincronizacaoJardim();
-    } catch (syncError) {
-      console.error("Erro ao sincronizar créditos do jardim:", syncError);
-    }
-
     setItemsPanelOpen(true);
+
+    garantirSincronizacaoJardim().catch((syncError) => {
+      console.error("Erro ao sincronizar créditos do jardim:", syncError);
+    });
   }
 
   async function handleOpenOracao() {
