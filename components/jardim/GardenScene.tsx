@@ -326,8 +326,8 @@ function PlayerRig({
   }, [camera]);
 
   useFrame((_, delta) => {
-    const horizontalSpeed = 6.6;
-    const verticalSpeed = 5.5;
+    const horizontalSpeed = 8.6;
+    const verticalSpeed = 6.5;
 
     camera.rotation.y = lookRef.current.yaw;
     camera.rotation.x = lookRef.current.pitch;
@@ -1043,16 +1043,21 @@ export default function GardenScene() {
       y: touch.clientY,
     };
 
-    const sensitivity = 0.01;
+    const limitedDx = Math.max(-40, Math.min(40, dx));
+    const limitedDy = Math.max(-30, Math.min(30, dy));
 
-    lookRef.current.yaw -= dx * sensitivity;
-    lookRef.current.pitch -= dy * sensitivity;
+    const horizontalSensitivity = 0.006;
+    const verticalSensitivity = 0.0035;
 
-    const maxPitch = Math.PI / 2.4;
+    lookRef.current.yaw -= limitedDx * horizontalSensitivity;
+    lookRef.current.pitch -= limitedDy * verticalSensitivity;
+
+    const maxPitchUp = Math.PI / 5;
+    const maxPitchDown = Math.PI / 3.2;
 
     lookRef.current.pitch = Math.max(
-      -maxPitch,
-      Math.min(maxPitch, lookRef.current.pitch)
+      -maxPitchUp,
+      Math.min(maxPitchDown, lookRef.current.pitch)
     );
   }
 
