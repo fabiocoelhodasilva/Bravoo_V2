@@ -9,6 +9,8 @@ import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
 import BotaoOracao from "./BotaoOracao";
 import { supabase } from "@/lib/supabase/client";
 import {
+  buscarMinutosOracaoHoje,
+  buscarSaldoItensJardimHoje,
   garantirSincronizacaoJardim,
   registrarResgateItemJardim,
 } from "@/lib/gamificacao/oracao/oracao-actions";
@@ -39,6 +41,18 @@ type JardimItemBanco = {
   pos_z: string | number;
   escala_base: string | number;
   percentual_escala: string | number;
+};
+
+type DadosOracaoJardim = {
+  minutosHoje: number;
+  saldoItensJardim: number;
+  carregando: boolean;
+};
+
+type CacheOracaoJardim = {
+  minutosHoje: number;
+  saldoItensJardim: number;
+  atualizadoEm: number;
 };
 
 const MIN_CAMERA_HEIGHT = 4.07;
@@ -94,6 +108,18 @@ const CACHE_ORACAO_JARDIM_KEY = "cache_oracao_jardim_hoje";
 function limparCacheOracaoJardim() {
   try {
     sessionStorage.removeItem(CACHE_ORACAO_JARDIM_KEY);
+  } catch {}
+}
+
+function salvarCacheOracaoJardim(minutosHoje: number, saldoItensJardim: number) {
+  try {
+    const cache: CacheOracaoJardim = {
+      minutosHoje,
+      saldoItensJardim,
+      atualizadoEm: Date.now(),
+    };
+
+    sessionStorage.setItem(CACHE_ORACAO_JARDIM_KEY, JSON.stringify(cache));
   } catch {}
 }
 
@@ -454,6 +480,14 @@ export default function GardenScene() {
   const aimedPlantPositionRef = useRef<[number, number, number] | null>(null);
   const isPlantingRef = useRef(false);
   const lastMobileTouchPlantRef = useRef(0);
+  const jardimSyncPromiseRef = useRef<Promise<void> | null>(null);
+  const [jardimSincronizado, setJardimSincronizado] = useState(false);
+  const [dadosOracaoJardim, setDadosOracaoJardim] =
+    useState<DadosOracaoJardim>({
+      minutosHoje: 0,
+      saldoItensJardim: 0,
+      carregando: true,
+    });
 
   const touchStartRef = useRef<{
     x: number;
@@ -493,65 +527,128 @@ export default function GardenScene() {
   const thumbSize = 44;
   const maxThumbDistance = joystickRadius - thumbSize / 2;
 
-  useEffect(() => {
-    async function carregarItensDoJardim() {
-      try {
-        await garantirSincronizacaoJardim();
-      } catch (syncError) {
-        console.error("Erro ao sincronizar créditos do jardim:", syncError);
-      }
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error("Erro ao buscar usuário:", userError);
-        return;
-      }
-
-      if (!user) {
-        console.warn("Usuário não logado. Jardim não carregado.");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("next_jardim_itens_usuario")
-        .select(
-          "id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala"
-        )
-        .eq("usuario_id", user.id)
-        .eq("ativo", true)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Erro ao carregar itens do jardim:", error);
-        return;
-      }
-
-      const itensConvertidos: GardenItem[] = (data ?? []).map(
-        (item: JardimItemBanco) => {
-          const escalaBase = Number(item.escala_base);
-          const percentualEscala = Number(item.percentual_escala);
-
-          return {
-            id: item.id,
-            type: item.tipo,
-            position: [
-              Number(item.pos_x),
-              Number(item.pos_y),
-              Number(item.pos_z),
-            ],
-            scale: escalaBase * percentualEscala,
-          };
-        }
-      );
-
-      setItems(itensConvertidos);
+  function sincronizarJardimUmaVez() {
+    if (!jardimSyncPromiseRef.current) {
+      jardimSyncPromiseRef.current = garantirSincronizacaoJardim()
+        .then(() => {
+          setJardimSincronizado(true);
+        })
+        .catch((syncError) => {
+          console.error("Erro ao sincronizar créditos do jardim:", syncError);
+          jardimSyncPromiseRef.current = null;
+          setJardimSincronizado(false);
+        });
     }
 
-    carregarItensDoJardim();
+    return jardimSyncPromiseRef.current;
+  }
+
+  async function carregarItensDoJardim() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("Erro ao buscar usuário:", userError);
+      return;
+    }
+
+    if (!user) {
+      console.warn("Usuário não logado. Jardim não carregado.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("next_jardim_itens_usuario")
+      .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
+      .eq("usuario_id", user.id)
+      .eq("ativo", true)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao carregar itens do jardim:", error);
+      return;
+    }
+
+    const itensConvertidos: GardenItem[] = (data ?? []).map(
+      (item: JardimItemBanco) => {
+        const escalaBase = Number(item.escala_base);
+        const percentualEscala = Number(item.percentual_escala);
+
+        return {
+          id: item.id,
+          type: item.tipo,
+          position: [
+            Number(item.pos_x),
+            Number(item.pos_y),
+            Number(item.pos_z),
+          ],
+          scale: escalaBase * percentualEscala,
+        };
+      }
+    );
+
+    setItems(itensConvertidos);
+  }
+
+  function atualizarDadosOracaoJardim(dados: {
+    minutosHoje: number;
+    saldoItensJardim: number;
+  }) {
+    setDadosOracaoJardim({
+      minutosHoje: dados.minutosHoje,
+      saldoItensJardim: dados.saldoItensJardim,
+      carregando: false,
+    });
+
+    salvarCacheOracaoJardim(dados.minutosHoje, dados.saldoItensJardim);
+  }
+
+  function atualizarSaldoItensJardimLocalmente(delta: number) {
+    setDadosOracaoJardim((atual) => {
+      const novoSaldo = Math.max(0, atual.saldoItensJardim + delta);
+
+      salvarCacheOracaoJardim(atual.minutosHoje, novoSaldo);
+
+      return {
+        ...atual,
+        saldoItensJardim: novoSaldo,
+        carregando: false,
+      };
+    });
+  }
+
+  async function carregarDadosOracaoJardim() {
+    setDadosOracaoJardim((atual) => ({
+      ...atual,
+      carregando: true,
+    }));
+
+    try {
+      await sincronizarJardimUmaVez();
+
+      const [minutosHoje, saldoItensJardim] = await Promise.all([
+        buscarMinutosOracaoHoje(),
+        buscarSaldoItensJardimHoje(),
+      ]);
+
+      atualizarDadosOracaoJardim({
+        minutosHoje,
+        saldoItensJardim,
+      });
+    } catch (error) {
+      console.error("Erro ao pré-carregar dados de oração do jardim:", error);
+
+      setDadosOracaoJardim((atual) => ({
+        ...atual,
+        carregando: false,
+      }));
+    }
+  }
+
+  useEffect(() => {
+    void Promise.all([carregarItensDoJardim(), carregarDadosOracaoJardim()]);
   }, []);
 
   useEffect(() => {
@@ -737,6 +834,8 @@ export default function GardenScene() {
         throw resgateError;
       }
 
+      atualizarSaldoItensJardimLocalmente(-1);
+
       const savedItem: GardenItem = {
         id: data.id,
         type: data.tipo as JardimItemTipo,
@@ -791,6 +890,7 @@ export default function GardenScene() {
     setSelectedGardenItemId(null);
 
     limparCacheOracaoJardim();
+    atualizarSaldoItensJardimLocalmente(1);
 
     garantirSincronizacaoJardim().catch((syncError) => {
       console.error("Erro ao sincronizar créditos do jardim:", syncError);
@@ -809,11 +909,13 @@ export default function GardenScene() {
     setPendingItemType(null);
     setSelectedGardenItemId(null);
 
-    setItemsPanelOpen(true);
+    if (dadosOracaoJardim.carregando) {
+      void carregarDadosOracaoJardim();
+    }
 
-    garantirSincronizacaoJardim().catch((syncError) => {
-      console.error("Erro ao sincronizar créditos do jardim:", syncError);
-    });
+    void sincronizarJardimUmaVez();
+
+    setItemsPanelOpen(true);
   }
 
   async function handleOpenOracao() {
@@ -1215,6 +1317,12 @@ export default function GardenScene() {
           onClose={() => setItemsPanelOpen(false)}
           onSelectItem={handleSelectNewGardenItem}
           plantedItemTypes={items.map((item) => item.type)}
+          minutosHojeInicial={dadosOracaoJardim.minutosHoje}
+          saldoItensJardimInicial={dadosOracaoJardim.saldoItensJardim}
+          dadosOracaoPreCarregados={
+            jardimSincronizado && !dadosOracaoJardim.carregando
+          }
+          onDadosOracaoAtualizados={atualizarDadosOracaoJardim}
         />
       )}
 

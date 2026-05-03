@@ -82,6 +82,21 @@ export default function ObjetivosPage() {
     async (objetivoId: string, progresso: number) => {
       const safeProgress = clampProgress(progresso);
 
+      let progressoAnterior = 0;
+
+      setObjetivos((prev) =>
+        prev.map((item) => {
+          if (item.id !== objetivoId) return item;
+
+          progressoAnterior = clampProgress(item.progresso_percentual ?? 0);
+
+          return {
+            ...item,
+            progresso_percentual: safeProgress,
+          };
+        })
+      );
+
       setSavingIds((prev) =>
         prev.includes(objetivoId) ? prev : [...prev, objetivoId]
       );
@@ -96,18 +111,22 @@ export default function ObjetivosPage() {
           throw new Error(result.message);
         }
 
-        setObjetivos((prev) =>
-          prev.map((item) =>
-            item.id === objetivoId
-              ? { ...item, progresso_percentual: safeProgress }
-              : item
-          )
-        );
-
         setFeedbackType("success");
         setFeedbackMessage("Progresso salvo com sucesso.");
       } catch (error) {
         console.error("Erro ao salvar progresso:", error);
+
+        setObjetivos((prev) =>
+          prev.map((item) =>
+            item.id === objetivoId
+              ? {
+                  ...item,
+                  progresso_percentual: progressoAnterior,
+                }
+              : item
+          )
+        );
+
         setFeedbackType("error");
         setFeedbackMessage("Não foi possível salvar o progresso.");
       } finally {

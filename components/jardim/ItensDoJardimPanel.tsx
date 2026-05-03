@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buscarMinutosOracaoHoje,
   buscarSaldoItensJardimHoje,
@@ -22,6 +22,19 @@ type ItensDoJardimPanelProps = {
   onClose: () => void;
   onSelectItem: (type: JardimItemTipo) => void;
   plantedItemTypes: JardimItemTipo[];
+
+  /**
+   * Dados opcionais para permitir que o GardenScene pré-carregue as informações
+   * antes do painel abrir. Se não forem enviados, este painel continua buscando
+   * sozinho, preservando o comportamento atual.
+   */
+  minutosHojeInicial?: number;
+  saldoItensJardimInicial?: number;
+  dadosOracaoPreCarregados?: boolean;
+  onDadosOracaoAtualizados?: (dados: {
+    minutosHoje: number;
+    saldoItensJardim: number;
+  }) => void;
 };
 
 type ConquistaItem = {
@@ -116,19 +129,48 @@ function lerCacheOracaoJardim(): CacheOracaoJardim | null {
   }
 }
 
+function preloadImagem(src: string) {
+  const imagem = new Image();
+  imagem.src = src;
+}
+
 export default function ItensDoJardimPanel({
   onClose,
   onSelectItem,
+  plantedItemTypes,
+  minutosHojeInicial,
+  saldoItensJardimInicial,
+  dadosOracaoPreCarregados = false,
+  onDadosOracaoAtualizados,
 }: ItensDoJardimPanelProps) {
+  const cacheInicial = useMemo(() => {
+    if (dadosOracaoPreCarregados) return null;
+
+    return lerCacheOracaoJardim();
+  }, [dadosOracaoPreCarregados]);
+
+  const minutosIniciais =
+    minutosHojeInicial ?? cacheInicial?.minutosHoje ?? 0;
+
+  const saldoInicial =
+    saldoItensJardimInicial ?? cacheInicial?.saldoItensJardim ?? 0;
+
+  const jaTemDadosIniciais =
+    dadosOracaoPreCarregados ||
+    typeof minutosHojeInicial === "number" ||
+    typeof saldoItensJardimInicial === "number" ||
+    Boolean(cacheInicial);
+
   const [modalOracaoAberto, setModalOracaoAberto] = useState(false);
   const [modalRegrasAberto, setModalRegrasAberto] = useState(false);
-  const [minutosHoje, setMinutosHoje] = useState(0);
-  const [saldoItensJardim, setSaldoItensJardim] = useState(0);
+  const [minutosHoje, setMinutosHoje] = useState(minutosIniciais);
+  const [saldoItensJardim, setSaldoItensJardim] = useState(saldoInicial);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [salvandoOracao, setSalvandoOracao] = useState(false);
-  const [carregandoOracoes, setCarregandoOracoes] = useState(true);
+  const [carregandoOracoes, setCarregandoOracoes] = useState(!jaTemDadosIniciais);
 
   const carregamentoInicialRef = useRef(false);
+  const painelMontadoRef = useRef(true);
 
   const metaMinutosDia = 10;
 
@@ -142,14 +184,31 @@ export default function ItensDoJardimPanel({
   const podeEscolherItem = saldoItensJardim > 0;
 
   useEffect(() => {
-    minhasConquistas.forEach((item) => {
-      const imagem = new Image();
-      imagem.src = item.imagem;
-    });
+    painelMontadoRef.current = true;
 
-    const imagemOracao = new Image();
-    imagemOracao.src = "/imagens/jardim/itens/botao_oracao.png";
+    return () => {
+      painelMontadoRef.current = false;
+    };
   }, []);
+
+  useEffect(() => {
+    minhasConquistas.forEach((item) => preloadImagem(item.imagem));
+    preloadImagem("/imagens/jardim/itens/botao_oracao.png");
+  }, []);
+
+  useEffect(() => {
+    if (!dadosOracaoPreCarregados) return;
+    if (typeof minutosHojeInicial === "number") setMinutosHoje(minutosHojeInicial);
+    if (typeof saldoItensJardimInicial === "number") {
+      setSaldoItensJardim(saldoItensJardimInicial);
+    }
+
+    setCarregandoOracoes(false);
+  }, [
+    dadosOracaoPreCarregados,
+    minutosHojeInicial,
+    saldoItensJardimInicial,
+  ]);
 
   useEffect(() => {
     if (carregamentoInicialRef.current) return;
@@ -157,13 +216,12 @@ export default function ItensDoJardimPanel({
     carregamentoInicialRef.current = true;
 
     async function carregarDadosOracaoHoje() {
-      const cache = lerCacheOracaoJardim();
-
-      if (cache) {
-        setMinutosHoje(cache.minutosHoje);
-        setSaldoItensJardim(cache.saldoItensJardim);
+      if (dadosOracaoPreCarregados) {
         setCarregandoOracoes(false);
-      } else {
+        return;
+      }
+
+      if (!cacheInicial) {
         setCarregandoOracoes(true);
       }
 
@@ -173,18 +231,26 @@ export default function ItensDoJardimPanel({
           buscarSaldoItensJardimHoje(),
         ]);
 
+        if (!painelMontadoRef.current) return;
+
         setMinutosHoje(totalMinutos);
         setSaldoItensJardim(saldoAtual);
         salvarCacheOracaoJardim(totalMinutos, saldoAtual);
+        onDadosOracaoAtualizados?.({
+          minutosHoje: totalMinutos,
+          saldoItensJardim: saldoAtual,
+        });
       } catch (error) {
         console.error("Erro ao carregar orações do dia:", error);
       } finally {
-        setCarregandoOracoes(false);
+        if (painelMontadoRef.current) {
+          setCarregandoOracoes(false);
+        }
       }
     }
 
     carregarDadosOracaoHoje();
-  }, []);
+  }, [cacheInicial, dadosOracaoPreCarregados, onDadosOracaoAtualizados]);
 
   function handleResgatarItem(item: ConquistaItem) {
     if (!podeEscolherItem) {
@@ -200,7 +266,6 @@ export default function ItensDoJardimPanel({
 
     const minutosAntes = minutosHoje;
     const saldoAntes = saldoItensJardim;
-
     const minutosOtimista = minutosAntes + minutos;
 
     try {
@@ -225,6 +290,10 @@ export default function ItensDoJardimPanel({
       setMinutosHoje(novoTotalMinutos);
       setSaldoItensJardim(novoSaldo);
       salvarCacheOracaoJardim(novoTotalMinutos, novoSaldo);
+      onDadosOracaoAtualizados?.({
+        minutosHoje: novoTotalMinutos,
+        saldoItensJardim: novoSaldo,
+      });
 
       if (creditosNovos > 0) {
         setMensagemSucesso(
@@ -234,13 +303,19 @@ export default function ItensDoJardimPanel({
         setMensagemSucesso(`Oração registrada! +${minutos} minuto(s).`);
       }
 
-      setTimeout(() => setMensagemSucesso(""), 3500);
+      setTimeout(() => {
+        if (painelMontadoRef.current) setMensagemSucesso("");
+      }, 3500);
     } catch (error) {
       console.error("Erro ao registrar oração:", error);
 
       setMinutosHoje(minutosAntes);
       setSaldoItensJardim(saldoAntes);
       salvarCacheOracaoJardim(minutosAntes, saldoAntes);
+      onDadosOracaoAtualizados?.({
+        minutosHoje: minutosAntes,
+        saldoItensJardim: saldoAntes,
+      });
 
       alert("Não foi possível registrar a oração. Tente novamente.");
     } finally {
@@ -355,7 +430,9 @@ export default function ItensDoJardimPanel({
               </div>
 
               <div className="mt-3 text-xs font-semibold text-[#5dc6a1]">
-                {saldoItensJardim > 0
+                {carregandoOracoes
+                  ? "Verificando itens disponíveis..."
+                  : saldoItensJardim > 0
                   ? `${saldoItensJardim} item(ns) disponível(is) para plantar`
                   : "Nenhum item disponível para plantar agora"}
               </div>
@@ -365,6 +442,7 @@ export default function ItensDoJardimPanel({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {minhasConquistas.map((item) => {
               const itemDisponivel = podeEscolherItem;
+              const jaPlantadoNoJardim = plantedItemTypes.includes(item.type);
 
               return (
                 <button
@@ -399,7 +477,11 @@ export default function ItensDoJardimPanel({
                   <div className="mt-2 text-sm">{item.nome}</div>
 
                   <div className="mt-1 text-[11px] text-white/45">
-                    {itemDisponivel ? "Disponível" : "Indisponível"}
+                    {itemDisponivel
+                      ? jaPlantadoNoJardim
+                        ? "Já existe no jardim"
+                        : "Disponível"
+                      : "Indisponível"}
                   </div>
                 </button>
               );

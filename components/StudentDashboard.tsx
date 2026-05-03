@@ -1,10 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from "./Header";
 import GradientTitle from "./GradientTitle";
 import HomeFeatureCard from "./ui/HomeFeatureCard";
 
 export default function StudentDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch("/objetivos");
+    router.prefetch("/jardim");
+    router.prefetch("/geografia");
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center font-sans">
       <Header />
