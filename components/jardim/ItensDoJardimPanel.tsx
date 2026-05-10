@@ -16,7 +16,15 @@ export type JardimItemTipo =
   | "arvore_vermelha"
   | "flor_roxa"
   | "flor_geranio_roxo"
-  | "flor_margarida_branca";
+  | "flor_margarida_branca"
+  | "jabami_sakura"
+  | "japanese_maple"
+  | "chinese_jungle_geranium"
+  | "banana_tree"
+  | "beaked_yucca_1730"
+  | "beech_fern_plant"
+  | "hibiscus"
+  | "lavanda_roxa";
 
 type ItensDoJardimPanelProps = {
   onClose: () => void;
@@ -40,7 +48,8 @@ type ItensDoJardimPanelProps = {
 type ConquistaItem = {
   type: JardimItemTipo;
   nome: string;
-  imagem: string;
+  imagem?: string;
+  emoji?: string;
 };
 
 type CacheOracaoJardim = {
@@ -92,6 +101,47 @@ const minhasConquistas: ConquistaItem[] = [
     type: "arvore_vermelha",
     nome: "Árvore vermelha",
     imagem: "/imagens/jardim/itens/arvore_vermelha.png",
+  },
+
+  {
+    type: "jabami_sakura",
+    nome: "Sakura japonesa",
+    imagem: "/imagens/jardim/itens/jabami_sakura.png",
+  },
+  {
+    type: "japanese_maple",
+    nome: "Maple japonês",
+    imagem: "/imagens/jardim/itens/maple_japones.png",
+  },
+  {
+    type: "chinese_jungle_geranium",
+    nome: "Gerânio selvagem",
+    imagem: "/imagens/jardim/itens/geranio_vermelho.png",
+  },
+  {
+    type: "banana_tree",
+    nome: "Bananeira",
+    imagem: "/imagens/jardim/itens/bananeira.png",
+  },
+  {
+    type: "beaked_yucca_1730",
+    nome: "Yucca",
+    imagem: "/imagens/jardim/itens/yucca.png",
+  },
+  {
+    type: "beech_fern_plant",
+    nome: "Samambaia beech",
+    imagem: "/imagens/jardim/itens/samambaia_vermelha.png",
+  },
+  {
+    type: "hibiscus",
+    nome: "Hibisco",
+    imagem: "/imagens/jardim/itens/hibisco.png",
+  },
+  {
+    type: "lavanda_roxa",
+    nome: "Lavanda roxa",
+    imagem: "/imagens/jardim/itens/lavanda.png",
   },
 ];
 
@@ -167,7 +217,8 @@ export default function ItensDoJardimPanel({
   const [saldoItensJardim, setSaldoItensJardim] = useState(saldoInicial);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [salvandoOracao, setSalvandoOracao] = useState(false);
-  const [carregandoOracoes, setCarregandoOracoes] = useState(!jaTemDadosIniciais);
+  const [carregandoOracoes, setCarregandoOracoes] =
+    useState(!jaTemDadosIniciais);
 
   const carregamentoInicialRef = useRef(false);
   const painelMontadoRef = useRef(true);
@@ -192,13 +243,18 @@ export default function ItensDoJardimPanel({
   }, []);
 
   useEffect(() => {
-    minhasConquistas.forEach((item) => preloadImagem(item.imagem));
+    minhasConquistas.forEach((item) => {
+      if (item.imagem) preloadImagem(item.imagem);
+    });
+
     preloadImagem("/imagens/jardim/itens/botao_oracao.png");
   }, []);
 
   useEffect(() => {
     if (!dadosOracaoPreCarregados) return;
-    if (typeof minutosHojeInicial === "number") setMinutosHoje(minutosHojeInicial);
+    if (typeof minutosHojeInicial === "number") {
+      setMinutosHoje(minutosHojeInicial);
+    }
     if (typeof saldoItensJardimInicial === "number") {
       setSaldoItensJardim(saldoItensJardimInicial);
     }
@@ -249,7 +305,7 @@ export default function ItensDoJardimPanel({
       }
     }
 
-    carregarDadosOracaoHoje();
+    void carregarDadosOracaoHoje();
   }, [cacheInicial, dadosOracaoPreCarregados, onDadosOracaoAtualizados]);
 
   function handleResgatarItem(item: ConquistaItem) {
@@ -468,11 +524,17 @@ export default function ItensDoJardimPanel({
                     </div>
                   )}
 
-                  <img
-                    src={item.imagem}
-                    alt={item.nome}
-                    className="mx-auto h-20"
-                  />
+                  {item.imagem ? (
+                    <img
+                      src={item.imagem}
+                      alt={item.nome}
+                      className="mx-auto h-20"
+                    />
+                  ) : (
+                    <div className="flex h-20 items-center justify-center text-5xl">
+                      {item.emoji ?? "🌱"}
+                    </div>
+                  )}
 
                   <div className="mt-2 text-sm">{item.nome}</div>
 

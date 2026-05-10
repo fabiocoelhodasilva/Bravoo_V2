@@ -83,6 +83,15 @@ const ITEM_MODEL_PATHS: Record<JardimItemTipo, string> = {
   flor_roxa: "/models/jardim/flor_roxa_c_planta.glb",
   flor_geranio_roxo: "/models/jardim/flor_geranio_roxo.glb",
   flor_margarida_branca: "/models/jardim/flor_margarida_branca.glb",
+
+  jabami_sakura: "/models/jardim/jabami_sakura.glb",
+  japanese_maple: "/models/jardim/japanese_maple.glb",
+  chinese_jungle_geranium: "/models/jardim/chinese_jungle_geranium.glb",
+  banana_tree: "/models/jardim/banana_tree.glb",
+  beaked_yucca_1730: "/models/jardim/beaked_yucca_1730.glb",
+  beech_fern_plant: "/models/jardim/beech_fern_plant.glb",
+  hibiscus: "/models/jardim/hibiscus.glb",
+  lavanda_roxa: "/models/jardim/lavanda_roxa.glb",
 };
 
 const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
@@ -95,13 +104,40 @@ const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   flor_roxa: 0.04,
   flor_geranio_roxo: 0.1,
   flor_margarida_branca: 3.8,
+
+  jabami_sakura: 1.3,
+  japanese_maple: 2.3,
+  chinese_jungle_geranium: 2.3,
+  banana_tree: 1.5,
+  beaked_yucca_1730: 2.5,
+  beech_fern_plant: 4.1,
+  hibiscus: 7.2,
+  lavanda_roxa: 1.9,
 };
 
 const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
   flor_geranio_roxo: 0.7,
   arvore_japonesa: -0.5,
   arvore_selva: 3.2,
+  japanese_maple: 0,
+  jabami_sakura: 0,
+  banana_tree: 0,
 };
+
+const TREE_ITEM_TYPES = new Set<JardimItemTipo>([
+  "arvore_cerrado",
+  "arvore_selva",
+  "arvore_carvalho",
+  "arvore_japonesa",
+  "arvore_vermelha",
+  "jabami_sakura",
+  "japanese_maple",
+  "banana_tree",
+]);
+
+function isTreeItem(type: JardimItemTipo) {
+  return TREE_ITEM_TYPES.has(type);
+}
 
 const CACHE_ORACAO_JARDIM_KEY = "cache_oracao_jardim_hoje";
 
@@ -274,14 +310,15 @@ function GardenModel({
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
 
   const isSelected = selectedGardenItemId === item.id;
-  const markerRadius = item.type.startsWith("arvore") ? 1.35 : 0.75;
+  const treeItem = isTreeItem(item.type);
+  const markerRadius = treeItem ? 1.35 : 0.75;
   const yOffset = ITEM_Y_OFFSETS[item.type] ?? 0;
 
-  const hitboxSize: [number, number, number] = item.type.startsWith("arvore")
+  const hitboxSize: [number, number, number] = treeItem
     ? [3.4, 7.2, 3.4]
     : [1.8, 1.8, 1.8];
 
-  const hitboxCenterY = item.type.startsWith("arvore")
+  const hitboxCenterY = treeItem
     ? item.position[1] + 3.6
     : item.position[1] + 0.9;
 
@@ -571,8 +608,11 @@ export default function GardenScene() {
       return;
     }
 
-    const itensConvertidos: GardenItem[] = (data ?? []).map(
-      (item: JardimItemBanco) => {
+    const itensConvertidos: GardenItem[] = (data ?? [])
+      .filter((item: JardimItemBanco) => {
+        return item.tipo in ITEM_MODEL_PATHS;
+      })
+      .map((item: JardimItemBanco) => {
         const escalaBase = Number(item.escala_base);
         const percentualEscala = Number(item.percentual_escala);
 
@@ -586,8 +626,7 @@ export default function GardenScene() {
           ],
           scale: escalaBase * percentualEscala,
         };
-      }
-    );
+      });
 
     setItems(itensConvertidos);
   }

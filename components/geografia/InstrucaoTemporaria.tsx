@@ -14,7 +14,7 @@ type Props = {
 
 export default function InstrucaoTemporaria({
   texto,
-  duracaoMs = 1000,
+  duracaoMs = 5000,
   visivel = true,
   mostrarGesto = true,
   className = "",
