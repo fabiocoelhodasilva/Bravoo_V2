@@ -6,6 +6,7 @@ import BottomNav from "../ui/BottomNav";
 import HeaderInterno from "../ui/HeaderInterno";
 import BotaoVoltar from "../ui/BotaoVoltar";
 import DeleteButton from "../ui/DeleteButton";
+import MeuDiaResumoDashboard from "../gamification/MeuDiaResumoDashboard";
 
 type Tarefa = {
   id: string;
@@ -22,6 +23,8 @@ type Props = {
   deletingIds?: string[];
   dataSelecionada: string;
   onSelecionarData: (data: string) => void;
+  totalTopazios?: number;
+  diasSeguidos?: number;
 };
 
 function parseIsoDateLocal(iso: string) {
@@ -60,7 +63,7 @@ function obterHojeLocalIso() {
   return `${ano}-${mes}-${dia}`;
 }
 
-const LABELS_DIAS_CURTOS = ["D", "S", "T", "Q", "Q", "S", "S"];
+const LABELS_DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function MeuDiaPageView({
   onLogout,
@@ -71,6 +74,8 @@ export function MeuDiaPageView({
   deletingIds = [],
   dataSelecionada,
   onSelecionarData,
+  totalTopazios = 0,
+  diasSeguidos = 0,
 }: Props) {
   const [tarefas, setTarefas] = useState<Tarefa[]>(tarefasIniciais);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
@@ -180,32 +185,32 @@ export function MeuDiaPageView({
     onSelecionarData(formatIsoDateLocal(novaData));
   }
 
-  const pendentes = tarefas.filter((t) => !t.concluida).length;
-  const feitas = tarefas.filter((t) => t.concluida).length;
+  const pendentes = tarefas.filter((tarefa) => !tarefa.concluida).length;
+  const feitas = tarefas.filter((tarefa) => tarefa.concluida).length;
 
   return (
     <>
       <main className="min-h-screen bg-black text-white flex flex-col">
         <HeaderInterno onLogout={onLogout} />
 
-        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[90px]">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[1.2rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
-              Meu dia
-            </h2>
+        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[120px]">
+          <div className="mb-5 flex flex-col items-center gap-5">
+            <div className="relative w-full">
+              <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
+                Meu Dia
+              </h1>
+            </div>
 
-            <Link
-              href="/meu-dia/novo"
-              aria-label="Adicionar tarefa"
-              title="Adicionar tarefa"
-              className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
-            >
-              +
-            </Link>
+            <div className="w-full">
+              <MeuDiaResumoDashboard
+                diasSeguidos={diasSeguidos}
+                totalJoias={totalTopazios}
+              />
+            </div>
           </div>
 
           <section
-            className="mb-4 rounded-[22px] px-3 py-3"
+            className="mb-3 rounded-[22px] px-3 py-3"
             style={{
               background:
                 "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
@@ -219,13 +224,17 @@ export function MeuDiaPageView({
                 type="button"
                 onClick={() => navegarSemana(-1)}
                 aria-label="Semana anterior"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
+                className="flex h-9 w-9 items-center justify-center rounded-full border bg-[#103a30]/65 text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
+                style={{
+                  borderColor: "#7df2c299",
+                  boxShadow: "0 0 18px #7df2c255",
+                }}
               >
                 ‹
               </button>
 
               <div className="min-w-0 text-center">
-                <div className="text-[1rem] font-semibold text-white">
+                <div className="text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
                   {tituloMesAno}
                 </div>
                 <div className="mt-0.5 text-[0.78rem] text-white/45">
@@ -237,7 +246,11 @@ export function MeuDiaPageView({
                 type="button"
                 onClick={() => navegarSemana(1)}
                 aria-label="Próxima semana"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
+                className="flex h-9 w-9 items-center justify-center rounded-full border bg-[#103a30]/65 text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
+                style={{
+                  borderColor: "#7df2c299",
+                  boxShadow: "0 0 18px #7df2c255",
+                }}
               >
                 ›
               </button>
@@ -263,16 +276,13 @@ export function MeuDiaPageView({
                     </span>
 
                     <span
-                      className={`flex h-9 w-9 items-center justify-center rounded-full text-[0.95rem] font-bold transition ${
-                        selecionado ? "text-black" : "text-white/88"
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border text-[0.95rem] font-bold transition ${
+                        selecionado ? "scale-[1.08] text-[#7df2c2]" : "text-white/88"
                       }`}
                       style={{
-                        background: selecionado
-                          ? "var(--color-4)"
-                          : "transparent",
-                        boxShadow: selecionado
-                          ? "0 8px 20px rgba(93,198,161,0.28)"
-                          : "none",
+                        background: selecionado ? "#103a30a6" : "transparent",
+                        borderColor: selecionado ? "#7df2c299" : "transparent",
+                        boxShadow: selecionado ? "0 0 18px #7df2c255" : "none",
                       }}
                     >
                       {dia.diaNumero}
@@ -293,7 +303,28 @@ export function MeuDiaPageView({
                 "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
             }}
           >
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <p className="mb-3 text-center text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+              Atividades
+            </p>
+
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
+              <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
+                <Link
+                  href="/meu-dia/novo"
+                  aria-label="Adicionar tarefa"
+                  title="Adicionar tarefa"
+                  className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.5rem] font-black text-black shadow-[0_0_18px_rgba(233,137,29,0.35)] transition active:scale-[0.95]"
+                >
+                  +
+                </Link>
+
+                <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
+                  Adicionar
+                </div>
+              </div>
+
+              <div className="w-px h-12 bg-white/10" />
+
               <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
                 <div className="text-[2rem] leading-none font-black text-[var(--color-2)]">
                   {pendentes}
@@ -385,7 +416,7 @@ export function MeuDiaPageView({
             </div>
           )}
 
-          <BotaoVoltar />
+          
         </div>
 
         <BottomNav active="meu-dia" />

@@ -34,8 +34,6 @@ export function ObjetivosPageView({
 }: Props) {
   const [expandirTudo, setExpandirTudo] = useState(false);
 
-  const anoAtual = useMemo(() => new Date().getFullYear(), []);
-
   const metricas = useMemo(() => calcularMetricas(objetivos), [objetivos]);
 
   const ranking = useMemo(
@@ -70,20 +68,22 @@ export function ObjetivosPageView({
         </button>
       </header>
 
-      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[90px]">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[1.2rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
-            Objetivos em {anoAtual}
-          </h2>
+      <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[120px]">
+        <div className="mb-5 flex flex-col items-center gap-5">
+          <div className="relative w-full">
+            <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
+              Meus Objetivos
+            </h1>
 
-          <Link
-            href="/objetivos/novo"
-            aria-label="Criar novo objetivo"
-            title="Criar novo objetivo"
-            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
-          >
-            +
-          </Link>
+            <Link
+              href="/objetivos/novo"
+              aria-label="Criar novo objetivo"
+              title="Criar novo objetivo"
+              className="absolute right-0 top-1/2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
+            >
+              +
+            </Link>
+          </div>
         </div>
 
         {loadingMessage && (
@@ -151,13 +151,6 @@ export function ObjetivosPageView({
             )}
           </>
         )}
-
-        <Link
-          href="/aluno"
-          className="mx-auto mt-8 block text-center text-[0.9rem] font-semibold text-[var(--color-2)]"
-        >
-          ← Voltar
-        </Link>
       </div>
 
       <BottomNav active="objetivos" />

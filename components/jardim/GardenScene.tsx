@@ -2,18 +2,20 @@
 
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { Sky, useGLTF, useTexture } from "@react-three/drei";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import BottomNavJardim from "./BottomNavJardim";
 import ItensDoJardimPanel, { JardimItemTipo } from "./ItensDoJardimPanel";
-import BotaoOracao from "./BotaoOracao";
+import OracaoDashboardPanel from "./OracaoDashboardPanel";
 import { supabase } from "@/lib/supabase/client";
 import {
   buscarMinutosOracaoHoje,
   buscarSaldoItensJardimHoje,
+  buscarStatusSaudeJardim,
   garantirSincronizacaoJardim,
   registrarResgateItemJardim,
 } from "@/lib/gamificacao/oracao/oracao-actions";
+import { buscarResumoDashboardOracao } from "@/lib/gamificacao/oracao/oracao-dashboard-client";
 
 type MoveState = {
   forward: number;
@@ -31,6 +33,8 @@ type GardenItem = {
   type: JardimItemTipo;
   position: [number, number, number];
   scale: number;
+  percentualEscala: number;
+  rotationY: number;
 };
 
 type JardimItemBanco = {
@@ -41,18 +45,28 @@ type JardimItemBanco = {
   pos_z: string | number;
   escala_base: string | number;
   percentual_escala: string | number;
+  rotation_y: string | number | null;
 };
 
 type DadosOracaoJardim = {
   minutosHoje: number;
   saldoItensJardim: number;
+  saudeJardimPercentual: number;
   carregando: boolean;
 };
 
 type CacheOracaoJardim = {
   minutosHoje: number;
   saldoItensJardim: number;
+  saudeJardimPercentual?: number;
   atualizadoEm: number;
+};
+
+type ResumoDashboardOracao = {
+  minutosHoje: number;
+  minutosAno: number;
+  metaDiaria: number;
+  persistenciaDias: number;
 };
 
 const MIN_CAMERA_HEIGHT = 4.07;
@@ -115,6 +129,39 @@ const ITEM_DEFAULT_SCALES: Record<JardimItemTipo, number> = {
   lavanda_roxa: 1.9,
 };
 
+
+const ITEM_DISPLAY_NAMES: Record<JardimItemTipo, string> = {
+  arvore_cerrado: "árvore do cerrado",
+  arvore_selva: "árvore da selva",
+  arvore_carvalho: "árvore carvalho",
+  arvore_japonesa: "árvore japonesa",
+  arvore_vermelha: "árvore vermelha",
+
+  flor_roxa: "flor roxa",
+  flor_geranio_roxo: "gerânio roxo",
+  flor_margarida_branca: "margarida branca",
+
+  jabami_sakura: "sakura japonesa",
+  japanese_maple: "maple japonês",
+  chinese_jungle_geranium: "gerânio selvagem",
+  banana_tree: "bananeira",
+  beaked_yucca_1730: "yucca",
+  beech_fern_plant: "samambaia beech",
+  hibiscus: "hibisco",
+  lavanda_roxa: "lavanda roxa",
+};
+
+function getGardenItemDisplayName(type: JardimItemTipo) {
+  return ITEM_DISPLAY_NAMES[type] ?? "planta";
+}
+
+function normalizarPercentualCrescimento(percentualEscala: number) {
+  if (!Number.isFinite(percentualEscala)) return 0;
+
+  // No banco, o crescimento é salvo como decimal: 0.2 = 20%, 1 = 100%.
+  return Math.min(100, Math.max(0, Math.round(percentualEscala * 100)));
+}
+
 const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
   flor_geranio_roxo: 0.7,
   arvore_japonesa: -0.5,
@@ -147,11 +194,16 @@ function limparCacheOracaoJardim() {
   } catch {}
 }
 
-function salvarCacheOracaoJardim(minutosHoje: number, saldoItensJardim: number) {
+function salvarCacheOracaoJardim(
+  minutosHoje: number,
+  saldoItensJardim: number,
+  saudeJardimPercentual?: number
+) {
   try {
     const cache: CacheOracaoJardim = {
       minutosHoje,
       saldoItensJardim,
+      saudeJardimPercentual,
       atualizadoEm: Date.now(),
     };
 
@@ -201,7 +253,7 @@ function PortalEntrada() {
   return (
     <primitive
       object={clonedScene}
-      position={[0, 0, 91]}
+      position={[0, 0, 78]}
       scale={0.5}
       rotation={[0, Math.PI, 0]}
     />
@@ -355,7 +407,7 @@ function GardenModel({
           item.position[2],
         ]}
         scale={item.scale}
-        rotation={[0, 0, 0]}
+        rotation={[0, item.rotationY, 0]}
         onPointerDown={handlePointerDown}
       />
     </group>
@@ -445,12 +497,13 @@ function GardenItems({
   return (
     <>
       {items.map((item) => (
-        <GardenModel
-          key={item.id}
-          item={item}
-          selectedGardenItemId={selectedGardenItemId}
-          onSelectItem={onSelectItem}
-        />
+        <Suspense key={item.id} fallback={null}>
+          <GardenModel
+            item={item}
+            selectedGardenItemId={selectedGardenItemId}
+            onSelectItem={onSelectItem}
+          />
+        </Suspense>
       ))}
     </>
   );
@@ -475,22 +528,22 @@ function Scene({
 }) {
   return (
     <>
-      <color attach="background" args={["#bcd3ff"]} />
-      <fog attach="fog" args={["#bcd3ff", 50, 180]} />
+      <color attach="background" args={["#8fc9ff"]} />
+      <fog attach="fog" args={["#b7dcff", 90, 260]} />
 
       <Sky
         distance={450000}
-        sunPosition={[5, 8, 2]}
-        inclination={0.49}
-        azimuth={0.23}
-        turbidity={3}
-        rayleigh={2}
-        mieCoefficient={0.005}
-        mieDirectionalG={0.8}
+        sunPosition={[20, 15, 10]}
+        inclination={0.48}
+        azimuth={0.25}
+        turbidity={1.4}
+        rayleigh={3}
+        mieCoefficient={0.002}
+        mieDirectionalG={0.78}
       />
 
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[5, 10, 2]} intensity={1.7} />
+      <ambientLight intensity={0.72} />
+      <directionalLight position={[20, 15, 10]} intensity={1.45} />
 
       <Ground />
 
@@ -518,13 +571,20 @@ export default function GardenScene() {
   const isPlantingRef = useRef(false);
   const lastMobileTouchPlantRef = useRef(0);
   const jardimSyncPromiseRef = useRef<Promise<void> | null>(null);
+
   const [jardimSincronizado, setJardimSincronizado] = useState(false);
   const [dadosOracaoJardim, setDadosOracaoJardim] =
     useState<DadosOracaoJardim>({
       minutosHoje: 0,
       saldoItensJardim: 0,
+      saudeJardimPercentual: 30,
       carregando: true,
     });
+
+  const [resumoDashboardOracao, setResumoDashboardOracao] =
+    useState<ResumoDashboardOracao | null>(null);
+  const [resumoDashboardOracaoCarregando, setResumoDashboardOracaoCarregando] =
+    useState(true);
 
   const touchStartRef = useRef<{
     x: number;
@@ -550,10 +610,24 @@ export default function GardenScene() {
   const [pendingItemType, setPendingItemType] =
     useState<JardimItemTipo | null>(null);
   const [itemsPanelOpen, setItemsPanelOpen] = useState(false);
+  const [oracaoDashboardOpen, setOracaoDashboardOpen] = useState(false);
   const [items, setItems] = useState<GardenItem[]>([]);
   const [selectedGardenItemId, setSelectedGardenItemId] = useState<
     string | null
   >(null);
+  const [plantingFeedbackMessage, setPlantingFeedbackMessage] = useState("");
+
+  const selectedGardenItem = useMemo(() => {
+    return items.find((item) => item.id === selectedGardenItemId) ?? null;
+  }, [items, selectedGardenItemId]);
+
+  const selectedGardenItemGrowthPercent = normalizarPercentualCrescimento(
+    selectedGardenItem?.percentualEscala ?? 0
+  );
+  const selectedGardenItemGrowthRemaining = Math.max(
+    0,
+    100 - selectedGardenItemGrowthPercent
+  );
 
   const joystickThumbRef = useRef<HTMLDivElement>(null);
   const joystickCenterRef = useRef<{ x: number; y: number } | null>(null);
@@ -598,7 +672,7 @@ export default function GardenScene() {
 
     const { data, error } = await supabase
       .from("next_jardim_itens_usuario")
-      .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
+      .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala, rotation_y")
       .eq("usuario_id", user.id)
       .eq("ativo", true)
       .order("created_at", { ascending: true });
@@ -625,6 +699,8 @@ export default function GardenScene() {
             Number(item.pos_z),
           ],
           scale: escalaBase * percentualEscala,
+          percentualEscala,
+          rotationY: Number(item.rotation_y ?? 0),
         };
       });
 
@@ -634,21 +710,36 @@ export default function GardenScene() {
   function atualizarDadosOracaoJardim(dados: {
     minutosHoje: number;
     saldoItensJardim: number;
+    saudeJardimPercentual?: number;
   }) {
-    setDadosOracaoJardim({
-      minutosHoje: dados.minutosHoje,
-      saldoItensJardim: dados.saldoItensJardim,
-      carregando: false,
-    });
+    setDadosOracaoJardim((atual) => {
+      const saudeJardimPercentual =
+        dados.saudeJardimPercentual ?? atual.saudeJardimPercentual;
 
-    salvarCacheOracaoJardim(dados.minutosHoje, dados.saldoItensJardim);
+      salvarCacheOracaoJardim(
+        dados.minutosHoje,
+        dados.saldoItensJardim,
+        saudeJardimPercentual
+      );
+
+      return {
+        minutosHoje: dados.minutosHoje,
+        saldoItensJardim: dados.saldoItensJardim,
+        saudeJardimPercentual,
+        carregando: false,
+      };
+    });
   }
 
   function atualizarSaldoItensJardimLocalmente(delta: number) {
     setDadosOracaoJardim((atual) => {
       const novoSaldo = Math.max(0, atual.saldoItensJardim + delta);
 
-      salvarCacheOracaoJardim(atual.minutosHoje, novoSaldo);
+      salvarCacheOracaoJardim(
+        atual.minutosHoje,
+        novoSaldo,
+        atual.saudeJardimPercentual
+      );
 
       return {
         ...atual,
@@ -667,14 +758,17 @@ export default function GardenScene() {
     try {
       await sincronizarJardimUmaVez();
 
-      const [minutosHoje, saldoItensJardim] = await Promise.all([
-        buscarMinutosOracaoHoje(),
-        buscarSaldoItensJardimHoje(),
-      ]);
+      const [minutosHoje, saldoItensJardim, statusSaudeJardim] =
+        await Promise.all([
+          buscarMinutosOracaoHoje(),
+          buscarSaldoItensJardimHoje(),
+          buscarStatusSaudeJardim(),
+        ]);
 
       atualizarDadosOracaoJardim({
         minutosHoje,
         saldoItensJardim,
+        saudeJardimPercentual: statusSaudeJardim.percentual,
       });
     } catch (error) {
       console.error("Erro ao pré-carregar dados de oração do jardim:", error);
@@ -686,8 +780,42 @@ export default function GardenScene() {
     }
   }
 
+  async function carregarResumoDashboardOracaoEmBackground() {
+    setResumoDashboardOracaoCarregando(true);
+
+    try {
+      const resumo = await buscarResumoDashboardOracao();
+
+      setResumoDashboardOracao(resumo);
+    } catch (error) {
+      console.error(
+        "Erro ao pré-carregar resumo do dashboard de oração:",
+        error
+      );
+
+      setResumoDashboardOracao(null);
+    } finally {
+      setResumoDashboardOracaoCarregando(false);
+    }
+  }
+
+  function atualizarJardimAposOracaoRegistrada() {
+    limparCacheOracaoJardim();
+
+    // Força uma nova sincronização, porque a oração acabou de alterar os créditos do dia.
+    jardimSyncPromiseRef.current = null;
+    setJardimSincronizado(false);
+
+    void carregarDadosOracaoJardim();
+    void carregarResumoDashboardOracaoEmBackground();
+  }
+
   useEffect(() => {
-    void Promise.all([carregarItensDoJardim(), carregarDadosOracaoJardim()]);
+    void Promise.all([
+      carregarItensDoJardim(),
+      carregarDadosOracaoJardim(),
+      carregarResumoDashboardOracaoEmBackground(),
+    ]);
   }, []);
 
   useEffect(() => {
@@ -811,18 +939,30 @@ export default function GardenScene() {
       .slice(2)}`;
 
     const escalaBase = ITEM_DEFAULT_SCALES[itemTypeToPlant];
+    const percentualInicial = 0.2;
 
     const optimisticItem: GardenItem = {
       id: tempId,
       type: itemTypeToPlant,
       position,
-      scale: escalaBase,
+      scale: escalaBase * percentualInicial,
+      percentualEscala: percentualInicial,
+      rotationY: lookRef.current.yaw,
     };
 
     setItems((prev) => [...prev, optimisticItem]);
     setPendingItemType(null);
     setSelectedGardenItemId(null);
+    setPlantingFeedbackMessage(
+      `Sua ${getGardenItemDisplayName(
+        itemTypeToPlant
+      )} acabou de nascer no jardim. Com oração diária, ela vai crescer pouco a pouco.`
+    );
     aimedPlantPositionRef.current = null;
+
+    window.setTimeout(() => {
+      setPlantingFeedbackMessage("");
+    }, 5200);
 
     if (navigator.vibrate) {
       navigator.vibrate(35);
@@ -847,10 +987,11 @@ export default function GardenScene() {
           pos_y: position[1],
           pos_z: position[2],
           escala_base: escalaBase,
-          percentual_escala: 1,
+          percentual_escala: percentualInicial,
+          rotation_y: lookRef.current.yaw,
           ativo: true,
         })
-        .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala")
+        .select("id, tipo, pos_x, pos_y, pos_z, escala_base, percentual_escala, rotation_y")
         .single();
 
       if (error || !data) {
@@ -884,6 +1025,8 @@ export default function GardenScene() {
           Number(data.pos_z),
         ],
         scale: Number(data.escala_base) * Number(data.percentual_escala),
+        percentualEscala: Number(data.percentual_escala),
+        rotationY: Number(data.rotation_y ?? 0),
       };
 
       setItems((prev) =>
@@ -922,9 +1065,7 @@ export default function GardenScene() {
       return;
     }
 
-    setItems((prev) =>
-      prev.filter((item) => item.id !== selectedGardenItemId)
-    );
+    setItems((prev) => prev.filter((item) => item.id !== selectedGardenItemId));
 
     setSelectedGardenItemId(null);
 
@@ -947,6 +1088,7 @@ export default function GardenScene() {
 
     setPendingItemType(null);
     setSelectedGardenItemId(null);
+    setOracaoDashboardOpen(false);
 
     if (dadosOracaoJardim.carregando) {
       void carregarDadosOracaoJardim();
@@ -957,12 +1099,32 @@ export default function GardenScene() {
     setItemsPanelOpen(true);
   }
 
-  async function handleOpenOracao() {
+  async function abrirMeuJardimAposOracao() {
+    await abrirPainelItensDoJardim();
+  }
+
+  function abrirDashboardOracao() {
     if (navigator.vibrate) {
       navigator.vibrate(35);
     }
 
-    await abrirPainelItensDoJardim();
+    if (document.pointerLockElement === containerRef.current) {
+      document.exitPointerLock?.();
+    }
+
+    moveRef.current.forward = 0;
+    moveRef.current.strafe = 0;
+    moveRef.current.vertical = 0;
+
+    setPendingItemType(null);
+    setSelectedGardenItemId(null);
+    setItemsPanelOpen(false);
+
+    if (!resumoDashboardOracao && !resumoDashboardOracaoCarregando) {
+      void carregarResumoDashboardOracaoEmBackground();
+    }
+
+    setOracaoDashboardOpen(true);
   }
 
   async function lockPointer(
@@ -970,8 +1132,8 @@ export default function GardenScene() {
   ) {
     const target = event?.target as HTMLElement | null;
 
-    if (target?.closest("nav, button, a, .botao-oracao-controle")) return;
-    if (itemsPanelOpen) return;
+    if (target?.closest("nav, button, a, .jardim-joystick-controle")) return;
+    if (itemsPanelOpen || oracaoDashboardOpen) return;
 
     if (isMobile && Date.now() - lastMobileTouchPlantRef.current < 450) {
       return;
@@ -998,15 +1160,11 @@ export default function GardenScene() {
   function handleSceneTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     if (!isMobile) return;
     if (!pendingItemType) return;
-    if (itemsPanelOpen) return;
+    if (itemsPanelOpen || oracaoDashboardOpen) return;
 
     const target = event.target as HTMLElement | null;
 
-    if (
-      target?.closest(
-        "nav, button, a, .botao-oracao-controle, .jardim-joystick-controle"
-      )
-    ) {
+    if (target?.closest("nav, button, a, .jardim-joystick-controle")) {
       return;
     }
 
@@ -1045,11 +1203,7 @@ export default function GardenScene() {
 
     const target = event.target as HTMLElement | null;
 
-    if (
-      target?.closest(
-        "nav, button, a, .botao-oracao-controle, .jardim-joystick-controle"
-      )
-    ) {
+    if (target?.closest("nav, button, a, .jardim-joystick-controle")) {
       touchStartRef.current = null;
       touchMovedRef.current = false;
       return;
@@ -1072,6 +1226,7 @@ export default function GardenScene() {
   async function activateFlyMode() {
     setFlyMode(true);
     setItemsPanelOpen(false);
+    setOracaoDashboardOpen(false);
     setSelectedGardenItemId(null);
 
     if (isMobile || !containerRef.current) return;
@@ -1086,7 +1241,10 @@ export default function GardenScene() {
     moveRef.current.strafe = 0;
     moveRef.current.vertical = 0;
 
+    useGLTF.preload(ITEM_MODEL_PATHS[type]);
+
     setItemsPanelOpen(false);
+    setOracaoDashboardOpen(false);
     setFlyMode(true);
     setSelectedGardenItemId(null);
     setPendingItemType(type);
@@ -1260,53 +1418,6 @@ export default function GardenScene() {
       }}
       onContextMenu={(event) => safePreventDefault(event)}
     >
-      <style jsx global>{`
-        .botao-oracao-controle > * {
-          position: static !important;
-          width: 48px !important;
-          height: 48px !important;
-          min-width: 48px !important;
-          min-height: 48px !important;
-          max-width: 48px !important;
-          max-height: 48px !important;
-        }
-
-        .botao-oracao-controle button,
-        .botao-oracao-controle a,
-        .botao-oracao-controle div {
-          width: 48px !important;
-          height: 48px !important;
-          min-width: 48px !important;
-          min-height: 48px !important;
-          max-width: 48px !important;
-          max-height: 48px !important;
-        }
-
-        .oracao-pulse {
-          animation: oracaoPulse 2.4s ease-in-out infinite;
-        }
-
-        @keyframes oracaoPulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.55),
-              0 0 18px rgba(93, 198, 161, 0.35);
-            transform: scale(1);
-          }
-
-          50% {
-            box-shadow: 0 0 0 8px rgba(93, 198, 161, 0),
-              0 0 24px rgba(93, 198, 161, 0.55);
-            transform: scale(1.04);
-          }
-
-          100% {
-            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0),
-              0 0 18px rgba(93, 198, 161, 0.35);
-            transform: scale(1);
-          }
-        }
-      `}</style>
-
       {instructionText && (
         <div className="absolute left-4 top-4 z-20 max-w-[360px] select-none rounded-lg bg-black/45 px-4 py-2 text-sm text-white">
           {instructionText}
@@ -1314,22 +1425,69 @@ export default function GardenScene() {
       )}
 
       {selectedGardenItemId && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            void handleDeleteSelectedItem();
-          }}
-          onContextMenu={(event) => safePreventDefault(event)}
-          className="absolute right-5 top-24 z-30 select-none rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
-          style={{
-            WebkitUserSelect: "none",
-            userSelect: "none",
-            WebkitTouchCallout: "none",
-          }}
-        >
-          Deletar
-        </button>
+        <div className="absolute right-5 top-24 z-30 flex w-[min(330px,calc(100vw-40px))] select-none flex-col gap-3">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleDeleteSelectedItem();
+            }}
+            onContextMenu={(event) => safePreventDefault(event)}
+            className="self-end rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
+            style={{
+              WebkitUserSelect: "none",
+              userSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
+          >
+            Deletar
+          </button>
+
+          {selectedGardenItem && (
+            <div className="rounded-2xl border border-[#5dc6a1]/25 bg-[#101514]/95 p-4 text-white shadow-2xl backdrop-blur-md">
+              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#5dc6a1]">
+                Crescimento da planta
+              </div>
+
+              <div className="mt-1 text-base font-black capitalize">
+                {getGardenItemDisplayName(selectedGardenItem.type)}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs font-bold text-white/70">
+                <span>Tamanho atual</span>
+                <span className="text-[#5dc6a1]">
+                  {selectedGardenItemGrowthPercent}%
+                </span>
+              </div>
+
+              <div className="mt-2 h-3 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#5dc6a1] transition-all"
+                  style={{ width: `${selectedGardenItemGrowthPercent}%` }}
+                />
+              </div>
+
+              <div className="mt-2 text-xs font-semibold text-white/60">
+                {selectedGardenItemGrowthPercent >= 100
+                  ? "🌿 Esta planta está totalmente desenvolvida."
+                  : `Faltam ${Math.ceil(selectedGardenItemGrowthRemaining / 10)} ${
+                      Math.ceil(selectedGardenItemGrowthRemaining / 10) === 1
+                        ? "dia"
+                        : "dias"
+                    } de oração para atingir o tamanho máximo.`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {plantingFeedbackMessage && (
+        <div className="pointer-events-none absolute inset-x-4 top-24 z-[80] flex justify-center sm:top-6">
+          <div className="max-w-[430px] rounded-2xl border border-[#5dc6a1]/30 bg-[#101514]/95 px-5 py-4 text-center text-sm font-bold leading-relaxed text-white shadow-2xl backdrop-blur-md">
+            <span className="text-[#5dc6a1]">🌱 </span>
+            {plantingFeedbackMessage}
+          </div>
+        </div>
       )}
 
       <Canvas
@@ -1358,6 +1516,7 @@ export default function GardenScene() {
           plantedItemTypes={items.map((item) => item.type)}
           minutosHojeInicial={dadosOracaoJardim.minutosHoje}
           saldoItensJardimInicial={dadosOracaoJardim.saldoItensJardim}
+          saudeJardimPercentualInicial={dadosOracaoJardim.saudeJardimPercentual}
           dadosOracaoPreCarregados={
             jardimSincronizado && !dadosOracaoJardim.carregando
           }
@@ -1365,18 +1524,21 @@ export default function GardenScene() {
         />
       )}
 
-      {!isMobile && (
-        <div
-          className="absolute bottom-[92px] right-8 z-40 select-none"
-          onClick={(event) => event.stopPropagation()}
-          onContextMenu={(event) => safePreventDefault(event)}
-        >
-          <BotaoOracao onClick={() => void handleOpenOracao()} />
-        </div>
+      {oracaoDashboardOpen && (
+        <OracaoDashboardPanel
+          onClose={() => setOracaoDashboardOpen(false)}
+          dadosIniciais={resumoDashboardOracao ?? undefined}
+          dadosIniciaisCarregando={resumoDashboardOracaoCarregando}
+          onResumoAtualizado={setResumoDashboardOracao}
+          onOracaoRegistrada={atualizarJardimAposOracaoRegistrada}
+          onAbrirMeuJardim={abrirMeuJardimAposOracao}
+        />
       )}
 
       <BottomNavJardim
         flyMode={flyMode}
+        saudeJardimPercentual={dadosOracaoJardim.saudeJardimPercentual}
+        saudeJardimCarregando={dadosOracaoJardim.carregando}
         onMenu={() => {
           console.log("abrir menu");
         }}
@@ -1386,6 +1548,7 @@ export default function GardenScene() {
         onItems={() => {
           void abrirPainelItensDoJardim();
         }}
+        onOracao={abrirDashboardOracao}
       />
 
       {isMobile && flyMode && (
@@ -1444,25 +1607,6 @@ export default function GardenScene() {
             }}
             onContextMenu={(event) => safePreventDefault(event)}
           >
-            <div
-              className="botao-oracao-controle oracao-pulse flex h-12 w-12 select-none items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-black/40 touch-none"
-              style={{
-                touchAction: "none",
-                WebkitUserSelect: "none",
-                userSelect: "none",
-                WebkitTouchCallout: "none",
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                void handleOpenOracao();
-              }}
-              onTouchStart={(event) => {
-                event.stopPropagation();
-              }}
-            >
-              <BotaoOracao onClick={() => void handleOpenOracao()} />
-            </div>
-
             <button
               type="button"
               className="flex h-12 w-12 select-none items-center justify-center rounded-full border border-white/20 bg-black/40 text-2xl font-bold text-white touch-none"
@@ -1504,10 +1648,6 @@ export default function GardenScene() {
     </div>
   );
 }
-
-Object.values(ITEM_MODEL_PATHS).forEach((path) => {
-  useGLTF.preload(path);
-});
 
 useGLTF.preload(PORTAL_ENTRADA_PATH);
 

@@ -1,3 +1,7 @@
+/* =========================================================
+   Tipos
+========================================================= */
+
 type SalvarSessaoParams = {
   atividade_id: string;
   materia_id: string;
@@ -41,22 +45,31 @@ type SalvarSessaoResponse = {
   ok: boolean;
   data?: {
     sessao: SessaoAtividadeSalva;
-    gamificacao: ResultadoGamificacao;
+    gamificacao?: ResultadoGamificacao;
+    joiaConquistada?: boolean;
   };
   error?: string;
   details?: string;
 };
 
+/* =========================================================
+   Constantes
+========================================================= */
+
+const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
+
+/* =========================================================
+   Funções auxiliares
+========================================================= */
+
 /**
- * Resolve a URL corretamente para client e server
+ * Resolve a URL corretamente para client e server.
  */
 function getSessoesUrl() {
-  // 👉 quando rodando no navegador (seus jogos)
   if (typeof window !== "undefined") {
     return "/api/sessoes";
   }
 
-  // 👉 quando rodando no servidor (oração)
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return `${process.env.NEXT_PUBLIC_SITE_URL}/api/sessoes`;
   }
@@ -67,6 +80,31 @@ function getSessoesUrl() {
 
   return "http://localhost:3000/api/sessoes";
 }
+
+/**
+ * Registra erros técnicos somente em desenvolvimento.
+ */
+function registrarErroDev(mensagem: string, error: unknown) {
+  if (process.env.NODE_ENV === "development") {
+    console.error(mensagem, error);
+  }
+}
+
+/**
+ * Notifica o dashboard de que uma joia foi conquistada.
+ *
+ * O dashboard escuta esse evento e recarrega a RPC de resumo,
+ * evitando ficar com status antigo da mandala.
+ */
+function notificarDashboardSobreJoia() {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(new Event(EVENTO_JOIA_CONQUISTADA));
+}
+
+/* =========================================================
+   Serviço principal
+========================================================= */
 
 export async function salvarSessaoAtividade(
   params: SalvarSessaoParams
@@ -83,11 +121,15 @@ export async function salvarSessaoAtividade(
   const result = (await response.json()) as SalvarSessaoResponse;
 
   if (!response.ok) {
-    console.error("Erro retornado por /api/sessoes:", result);
+    registrarErroDev("Erro retornado por /api/sessoes:", result);
 
     throw new Error(
       result?.details || result?.error || "Não foi possível salvar a sessão."
     );
+  }
+
+  if (result.data?.joiaConquistada) {
+    notificarDashboardSobreJoia();
   }
 
   return result;

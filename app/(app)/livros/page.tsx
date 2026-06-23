@@ -1,12 +1,22 @@
 "use client";
 
+/* =========================================================
+   Imports
+========================================================= */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase/client";
+
 import BottomNav from "@/components/ui/BottomNav";
 import DeleteButton from "@/components/ui/DeleteButton";
+
+/* =========================================================
+   Tipos
+========================================================= */
 
 type LivroLido = {
   id: string;
@@ -22,6 +32,12 @@ type GrupoAno = {
   livros: LivroLido[];
 };
 
+/* =========================================================
+   Constantes
+========================================================= */
+
+const CACHE_PREFIX = "bravoo_livros_usuario_";
+
 const CARD_BORDER_COLORS = [
   "var(--color-1, #c94a4a)",
   "var(--color-2, #e9891d)",
@@ -32,6 +48,43 @@ const CARD_BORDER_COLORS = [
   "var(--color-7, #ff8c42)",
 ];
 
+const CSS_VARS = {
+  ["--color-1" as string]: "#c94a4a",
+  ["--color-2" as string]: "#e9891d",
+  ["--color-3" as string]: "#f1e6a7",
+  ["--color-4" as string]: "#5dc6a1",
+  ["--color-5" as string]: "#3d7a99",
+  ["--color-6" as string]: "#a35bdc",
+  ["--color-7" as string]: "#ff8c42",
+} as React.CSSProperties;
+
+/* =========================================================
+   Funções auxiliares
+========================================================= */
+
+function getCacheKey(userId: string) {
+  return `${CACHE_PREFIX}${userId}`;
+}
+
+function carregarLivrosDoCache(userId: string): LivroLido[] | null {
+  try {
+    const cache = sessionStorage.getItem(getCacheKey(userId));
+    if (!cache) return null;
+
+    return JSON.parse(cache) as LivroLido[];
+  } catch {
+    return null;
+  }
+}
+
+function salvarLivrosNoCache(userId: string, livros: LivroLido[]) {
+  try {
+    sessionStorage.setItem(getCacheKey(userId), JSON.stringify(livros));
+  } catch {
+    // Evita quebrar a página se o navegador bloquear sessionStorage.
+  }
+}
+
 function formatarData(dataIso: string | null) {
   if (!dataIso) return "";
 
@@ -39,17 +92,9 @@ function formatarData(dataIso: string | null) {
   return new Intl.DateTimeFormat("pt-BR").format(data);
 }
 
-function getCssVars() {
-  return {
-    ["--color-1" as string]: "#c94a4a",
-    ["--color-2" as string]: "#e9891d",
-    ["--color-3" as string]: "#f1e6a7",
-    ["--color-4" as string]: "#5dc6a1",
-    ["--color-5" as string]: "#3d7a99",
-    ["--color-6" as string]: "#a35bdc",
-    ["--color-7" as string]: "#ff8c42",
-  } as React.CSSProperties;
-}
+/* =========================================================
+   Componente principal
+========================================================= */
 
 export default function LivrosPage() {
   const router = useRouter();
@@ -65,14 +110,30 @@ export default function LivrosPage() {
   const [livroParaExcluir, setLivroParaExcluir] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  /* =========================================================
+     Carrega livros com cache rápido + atualização real
+  ========================================================= */
+
   const carregarLivros = useCallback(async () => {
-    if (!user?.id) return;
+    const userId = user?.id;
+    if (!userId) return;
+
+    const livrosCache = carregarLivrosDoCache(userId);
+
+    if (livrosCache) {
+      setLivros(livrosCache);
+      setLoadingMessage(
+        livrosCache.length === 0
+          ? "Você ainda não registrou nenhum livro."
+          : ""
+      );
+    }
 
     try {
       const { data, error } = await supabase
         .from("next_livros_lidos")
         .select("id, titulo, autor, dt_inicio, dt_fim, criado_em")
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", userId)
         .order("dt_fim", { ascending: false })
         .order("criado_em", { ascending: false });
 
@@ -83,20 +144,30 @@ export default function LivrosPage() {
       const livrosData = (data ?? []) as LivroLido[];
 
       setLivros(livrosData);
+      salvarLivrosNoCache(userId, livrosData);
+
       setLoadingMessage(
         livrosData.length === 0 ? "Você ainda não registrou nenhum livro." : ""
       );
     } catch (error) {
       console.error("Erro ao carregar livros:", error);
-      setLivros([]);
-      setLoadingMessage("Não foi possível carregar seus livros.");
+
+      if (!livrosCache) {
+        setLivros([]);
+        setLoadingMessage("Não foi possível carregar seus livros.");
+      }
     }
   }, [user?.id]);
 
   useEffect(() => {
     if (loading || !user?.id) return;
+
     void carregarLivros();
   }, [loading, user?.id, carregarLivros]);
+
+  /* =========================================================
+     Limpa mensagens temporárias
+  ========================================================= */
 
   useEffect(() => {
     if (!feedbackMessage) return;
@@ -108,6 +179,10 @@ export default function LivrosPage() {
     return () => window.clearTimeout(timer);
   }, [feedbackMessage]);
 
+  /* =========================================================
+     Logout
+  ========================================================= */
+
   const handleLogout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
@@ -118,6 +193,10 @@ export default function LivrosPage() {
       router.refresh();
     }
   }, [router]);
+
+  /* =========================================================
+     Exclusão de livro
+  ========================================================= */
 
   const handleDelete = useCallback((livroId: string) => {
     setLivroParaExcluir(livroId);
@@ -131,16 +210,20 @@ export default function LivrosPage() {
 
   const confirmDelete = useCallback(async () => {
     const livroId = livroParaExcluir;
-    if (!livroId) return;
+    const userId = user?.id;
 
-    setDeletingIds((prev) => (prev.includes(livroId) ? prev : [...prev, livroId]));
+    if (!livroId || !userId) return;
+
+    setDeletingIds((prev) =>
+      prev.includes(livroId) ? prev : [...prev, livroId]
+    );
 
     try {
       const { error } = await supabase
         .from("next_livros_lidos")
         .delete()
         .eq("id", livroId)
-        .eq("usuario_id", user?.id);
+        .eq("usuario_id", userId);
 
       if (error) {
         throw error;
@@ -148,9 +231,15 @@ export default function LivrosPage() {
 
       setLivros((prev) => {
         const nextLivros = prev.filter((item) => item.id !== livroId);
+
+        salvarLivrosNoCache(userId, nextLivros);
+
         setLoadingMessage(
-          nextLivros.length === 0 ? "Você ainda não registrou nenhum livro." : ""
+          nextLivros.length === 0
+            ? "Você ainda não registrou nenhum livro."
+            : ""
         );
+
         return nextLivros;
       });
 
@@ -165,6 +254,10 @@ export default function LivrosPage() {
       closeDeleteModal();
     }
   }, [closeDeleteModal, livroParaExcluir, user?.id]);
+
+  /* =========================================================
+     Agrupamento dos livros por ano
+  ========================================================= */
 
   const gruposPorAno = useMemo<GrupoAno[]>(() => {
     const mapa = new Map<number, LivroLido[]>();
@@ -186,10 +279,15 @@ export default function LivrosPage() {
         livros: livrosDoAno.sort((a, b) => {
           const dataA = new Date(`${a.dt_fim}T00:00:00`).getTime();
           const dataB = new Date(`${b.dt_fim}T00:00:00`).getTime();
+
           return dataB - dataA;
         }),
       }));
   }, [livros]);
+
+  /* =========================================================
+     Estado de carregamento inicial
+  ========================================================= */
 
   if (loading) {
     return (
@@ -203,11 +301,15 @@ export default function LivrosPage() {
     return null;
   }
 
+  /* =========================================================
+     Renderização
+  ========================================================= */
+
   return (
     <>
       <main
         className="min-h-screen bg-black text-white flex flex-col"
-        style={getCssVars()}
+        style={CSS_VARS}
       >
         <header className="fixed top-0 left-0 w-full z-50 px-4 sm:px-5 h-[48px] flex items-center justify-between bg-[#050505]/95 backdrop-blur border-b border-white/5">
           <div className="gradient-text text-[1.15rem] font-semibold tracking-[-0.4px] opacity-90">
@@ -223,17 +325,17 @@ export default function LivrosPage() {
           </button>
         </header>
 
-        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[90px]">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <h2 className="text-[1.2rem] sm:text-[1.5rem] font-semibold tracking-[-0.2px] text-[#f8f8f8]">
-              Meus Livros
-            </h2>
+        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[120px]">
+          <div className="mb-6 relative w-full">
+            <h1 className="text-center text-4xl font-bold gradient-text">
+              Minhas Leituras
+            </h1>
 
             <Link
               href="/livros/novo"
               aria-label="Cadastrar novo livro"
               title="Cadastrar novo livro"
-              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
+              className="absolute right-0 top-1/2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
             >
               +
             </Link>
@@ -315,6 +417,7 @@ export default function LivrosPage() {
                                         Início: {formatarData(livro.dt_inicio)}
                                       </span>
                                     )}
+
                                     <span>
                                       Conclusão: {formatarData(livro.dt_fim)}
                                     </span>

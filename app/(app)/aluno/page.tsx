@@ -1,6 +1,4 @@
-"use client";
-
-import StudentDashboard from "@/components/StudentDashboard";
+import StudentDashboard from "@/components/home/StudentDashboard";
 
 export default function AlunoPage() {
   return <StudentDashboard />;

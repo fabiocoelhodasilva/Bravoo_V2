@@ -1,7 +1,12 @@
 "use client";
 
+/* =========================================================
+   Imports
+========================================================= */
+
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { ObjetivosPageView } from "@/components/objetivos/ObjetivosPageView";
 import { useAuth } from "@/context/AuthContext";
 
@@ -18,12 +23,50 @@ import {
 import { clampProgress } from "@/lib/objetivos/objetivos-utils";
 import type { Objetivo } from "@/types/objetivos";
 
+/* =========================================================
+   Constantes
+========================================================= */
+
+const CACHE_PREFIX = "bravoo_objetivos_usuario_";
+
+/* =========================================================
+   Funções auxiliares de cache
+========================================================= */
+
+function getCacheKey(userId: string) {
+  return `${CACHE_PREFIX}${userId}`;
+}
+
+function carregarObjetivosDoCache(userId: string): Objetivo[] | null {
+  try {
+    const cache = sessionStorage.getItem(getCacheKey(userId));
+    if (!cache) return null;
+
+    return JSON.parse(cache) as Objetivo[];
+  } catch {
+    return null;
+  }
+}
+
+function salvarObjetivosNoCache(userId: string, objetivos: Objetivo[]) {
+  try {
+    sessionStorage.setItem(getCacheKey(userId), JSON.stringify(objetivos));
+  } catch {
+    // Evita quebrar a página caso o navegador bloqueie o sessionStorage.
+  }
+}
+
+/* =========================================================
+   Componente principal
+========================================================= */
+
 export default function ObjetivosPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
   const [loadingMessage, setLoadingMessage] = useState("Carregando objetivos...");
+
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
@@ -35,27 +78,50 @@ export default function ObjetivosPage() {
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  /* =========================================================
+     Carrega objetivos com cache rápido + atualização real
+  ========================================================= */
+
   const reloadObjetivos = useCallback(async () => {
     const userId = user?.id;
     if (!userId) return;
 
+    const objetivosCache = carregarObjetivosDoCache(userId);
+
+    if (objetivosCache) {
+      setObjetivos(objetivosCache);
+      setLoadingMessage(
+        objetivosCache.length === 0 ? "Nenhum objetivo cadastrado." : ""
+      );
+    }
+
     try {
       const objetivosData = await fetchObjetivosByUser(userId);
+
       setObjetivos(objetivosData);
+      salvarObjetivosNoCache(userId, objetivosData);
 
       setLoadingMessage(
         objetivosData.length === 0 ? "Nenhum objetivo cadastrado." : ""
       );
     } catch (error) {
       console.error("Erro ao recarregar objetivos:", error);
-      setLoadingMessage("Erro ao carregar.");
+
+      if (!objetivosCache) {
+        setLoadingMessage("Erro ao carregar.");
+      }
     }
   }, [user?.id]);
 
   useEffect(() => {
     if (loading || !user?.id) return;
+
     void reloadObjetivos();
   }, [loading, user?.id, reloadObjetivos]);
+
+  /* =========================================================
+     Limpa mensagens temporárias
+  ========================================================= */
 
   useEffect(() => {
     if (!feedbackMessage) return;
@@ -66,6 +132,10 @@ export default function ObjetivosPage() {
 
     return () => window.clearTimeout(timer);
   }, [feedbackMessage]);
+
+  /* =========================================================
+     Logout
+  ========================================================= */
 
   const handleLogout = useCallback(async () => {
     try {
@@ -78,14 +148,20 @@ export default function ObjetivosPage() {
     }
   }, [router]);
 
+  /* =========================================================
+     Salva progresso com atualização otimista
+  ========================================================= */
+
   const handleSaveProgress = useCallback(
     async (objetivoId: string, progresso: number) => {
       const safeProgress = clampProgress(progresso);
+      const userId = user?.id;
 
       let progressoAnterior = 0;
+      let objetivosAtualizados: Objetivo[] = [];
 
-      setObjetivos((prev) =>
-        prev.map((item) => {
+      setObjetivos((prev) => {
+        objetivosAtualizados = prev.map((item) => {
           if (item.id !== objetivoId) return item;
 
           progressoAnterior = clampProgress(item.progresso_percentual ?? 0);
@@ -94,8 +170,14 @@ export default function ObjetivosPage() {
             ...item,
             progresso_percentual: safeProgress,
           };
-        })
-      );
+        });
+
+        if (userId) {
+          salvarObjetivosNoCache(userId, objetivosAtualizados);
+        }
+
+        return objetivosAtualizados;
+      });
 
       setSavingIds((prev) =>
         prev.includes(objetivoId) ? prev : [...prev, objetivoId]
@@ -116,16 +198,22 @@ export default function ObjetivosPage() {
       } catch (error) {
         console.error("Erro ao salvar progresso:", error);
 
-        setObjetivos((prev) =>
-          prev.map((item) =>
+        setObjetivos((prev) => {
+          const objetivosRestaurados = prev.map((item) =>
             item.id === objetivoId
               ? {
                   ...item,
                   progresso_percentual: progressoAnterior,
                 }
               : item
-          )
-        );
+          );
+
+          if (userId) {
+            salvarObjetivosNoCache(userId, objetivosRestaurados);
+          }
+
+          return objetivosRestaurados;
+        });
 
         setFeedbackType("error");
         setFeedbackMessage("Não foi possível salvar o progresso.");
@@ -133,8 +221,12 @@ export default function ObjetivosPage() {
         setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
       }
     },
-    []
+    [user?.id]
   );
+
+  /* =========================================================
+     Exclusão de objetivo
+  ========================================================= */
 
   const handleDelete = useCallback(async (objetivoId: string): Promise<void> => {
     setObjetivoParaExcluir(objetivoId);
@@ -148,6 +240,7 @@ export default function ObjetivosPage() {
 
   const confirmDelete = useCallback(async () => {
     const objetivoId = objetivoParaExcluir;
+    const userId = user?.id;
 
     if (!objetivoId) return;
 
@@ -167,6 +260,10 @@ export default function ObjetivosPage() {
       setObjetivos((prev) => {
         const nextObjetivos = prev.filter((item) => item.id !== objetivoId);
 
+        if (userId) {
+          salvarObjetivosNoCache(userId, nextObjetivos);
+        }
+
         setLoadingMessage(
           nextObjetivos.length === 0 ? "Nenhum objetivo cadastrado." : ""
         );
@@ -184,7 +281,11 @@ export default function ObjetivosPage() {
       setDeletingIds((prev) => prev.filter((id) => id !== objetivoId));
       closeDeleteModal();
     }
-  }, [objetivoParaExcluir, closeDeleteModal]);
+  }, [objetivoParaExcluir, user?.id, closeDeleteModal]);
+
+  /* =========================================================
+     Estado de carregamento inicial
+  ========================================================= */
 
   if (loading) {
     return (
@@ -197,6 +298,10 @@ export default function ObjetivosPage() {
   if (!user) {
     return null;
   }
+
+  /* =========================================================
+     Renderização
+  ========================================================= */
 
   return (
     <>

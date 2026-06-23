@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  buscarMinutosOracaoHoje,
   buscarSaldoItensJardimHoje,
-  registrarMomentoOracao,
+  buscarStatusSaudeJardim,
 } from "@/lib/gamificacao/oracao/oracao-actions";
-import RegrasJardimModal from "./RegrasJardimModal";
 
 export type JardimItemTipo =
   | "arvore_cerrado"
@@ -30,18 +28,14 @@ type ItensDoJardimPanelProps = {
   onClose: () => void;
   onSelectItem: (type: JardimItemTipo) => void;
   plantedItemTypes: JardimItemTipo[];
-
-  /**
-   * Dados opcionais para permitir que o GardenScene pré-carregue as informações
-   * antes do painel abrir. Se não forem enviados, este painel continua buscando
-   * sozinho, preservando o comportamento atual.
-   */
   minutosHojeInicial?: number;
   saldoItensJardimInicial?: number;
+  saudeJardimPercentualInicial?: number;
   dadosOracaoPreCarregados?: boolean;
   onDadosOracaoAtualizados?: (dados: {
     minutosHoje: number;
     saldoItensJardim: number;
+    saudeJardimPercentual?: number;
   }) => void;
 };
 
@@ -55,123 +49,113 @@ type ConquistaItem = {
 type CacheOracaoJardim = {
   minutosHoje: number;
   saldoItensJardim: number;
+  saudeJardimPercentual?: number;
   atualizadoEm: number;
+};
+
+type EstagioSaudeJardim = {
+  chave: "critico" | "cuidados" | "crescendo" | "saudavel" | "radiante";
+  titulo: string;
+  subtitulo: string;
+  faixa: string;
+  regra: string;
+  cor: string;
+  imagem: string;
+  min: number;
+  max: number;
 };
 
 const CACHE_ORACAO_JARDIM_KEY = "cache_oracao_jardim_hoje";
 const CACHE_MAX_IDADE_MS = 1000 * 60 * 3;
 
-const minhasConquistas: ConquistaItem[] = [
+const estagiosSaudeJardim: EstagioSaudeJardim[] = [
   {
-    type: "flor_roxa",
-    nome: "Flor roxa",
-    imagem: "/imagens/jardim/itens/flor_roxa.png",
+    chave: "critico",
+    titulo: "Estado Crítico",
+    subtitulo: "Planta muito triste.",
+    faixa: "0% a 19%",
+    regra: "6+ dias sem orar",
+    cor: "#c94a4a",
+    imagem: "/imagens/jardim/estagios/critico.png",
+    min: 0,
+    max: 19,
   },
   {
-    type: "flor_geranio_roxo",
-    nome: "Gerânio roxo",
-    imagem: "/imagens/jardim/itens/geranio_roxo.png",
+    chave: "cuidados",
+    titulo: "Precisa de Cuidados",
+    subtitulo: "Ainda precisa de atenção.",
+    faixa: "20% a 39%",
+    regra: "1 a 5 dias sem orar",
+    cor: "#e9891d",
+    imagem: "/imagens/jardim/estagios/cuidados.png",
+    min: 20,
+    max: 39,
   },
   {
-    type: "flor_margarida_branca",
-    nome: "Margarida branca",
-    imagem: "/imagens/jardim/itens/margarida_branca.png",
+    chave: "crescendo",
+    titulo: "Crescendo",
+    subtitulo: "Estado intermediário.",
+    faixa: "40% a 59%",
+    regra: "1 a 5 dias seguidos",
+    cor: "#f1c232",
+    imagem: "/imagens/jardim/estagios/crescendo.png",
+    min: 40,
+    max: 59,
   },
   {
-    type: "arvore_cerrado",
-    nome: "Árvore do cerrado",
-    imagem: "/imagens/jardim/itens/arvore_cerrado.png",
+    chave: "saudavel",
+    titulo: "Saudável",
+    subtitulo: "Jardim bem cuidado.",
+    faixa: "60% a 79%",
+    regra: "6 a 10 dias seguidos",
+    cor: "#8bd448",
+    imagem: "/imagens/jardim/estagios/saudavel.png",
+    min: 60,
+    max: 79,
   },
   {
-    type: "arvore_selva",
-    nome: "Árvore da selva",
-    imagem: "/imagens/jardim/itens/arvore_selva.png",
-  },
-  {
-    type: "arvore_carvalho",
-    nome: "Árvore carvalho",
-    imagem: "/imagens/jardim/itens/arvore_carvalho.png",
-  },
-  {
-    type: "arvore_japonesa",
-    nome: "Árvore japonesa",
-    imagem: "/imagens/jardim/itens/arvore_japonesa.png",
-  },
-  {
-    type: "arvore_vermelha",
-    nome: "Árvore vermelha",
-    imagem: "/imagens/jardim/itens/arvore_vermelha.png",
-  },
-
-  {
-    type: "jabami_sakura",
-    nome: "Sakura japonesa",
-    imagem: "/imagens/jardim/itens/jabami_sakura.png",
-  },
-  {
-    type: "japanese_maple",
-    nome: "Maple japonês",
-    imagem: "/imagens/jardim/itens/maple_japones.png",
-  },
-  {
-    type: "chinese_jungle_geranium",
-    nome: "Gerânio selvagem",
-    imagem: "/imagens/jardim/itens/geranio_vermelho.png",
-  },
-  {
-    type: "banana_tree",
-    nome: "Bananeira",
-    imagem: "/imagens/jardim/itens/bananeira.png",
-  },
-  {
-    type: "beaked_yucca_1730",
-    nome: "Yucca",
-    imagem: "/imagens/jardim/itens/yucca.png",
-  },
-  {
-    type: "beech_fern_plant",
-    nome: "Samambaia beech",
-    imagem: "/imagens/jardim/itens/samambaia_vermelha.png",
-  },
-  {
-    type: "hibiscus",
-    nome: "Hibisco",
-    imagem: "/imagens/jardim/itens/hibisco.png",
-  },
-  {
-    type: "lavanda_roxa",
-    nome: "Lavanda roxa",
-    imagem: "/imagens/jardim/itens/lavanda.png",
+    chave: "radiante",
+    titulo: "Radiante",
+    subtitulo: "Melhor estágio possível!",
+    faixa: "80% a 100%",
+    regra: "11+ dias seguidos",
+    cor: "#5dc6a1",
+    imagem: "/imagens/jardim/estagios/radiante.png",
+    min: 80,
+    max: 100,
   },
 ];
 
-function salvarCacheOracaoJardim(minutosHoje: number, saldoItensJardim: number) {
-  try {
-    const cache: CacheOracaoJardim = {
-      minutosHoje,
-      saldoItensJardim,
-      atualizadoEm: Date.now(),
-    };
-
-    sessionStorage.setItem(CACHE_ORACAO_JARDIM_KEY, JSON.stringify(cache));
-  } catch {}
-}
+const minhasConquistas: ConquistaItem[] = [
+  { type: "flor_roxa", nome: "Flor roxa", imagem: "/imagens/jardim/itens/flor_roxa.png" },
+  { type: "flor_geranio_roxo", nome: "Gerânio roxo", imagem: "/imagens/jardim/itens/geranio_roxo.png" },
+  { type: "flor_margarida_branca", nome: "Margarida branca", imagem: "/imagens/jardim/itens/margarida_branca.png" },
+  { type: "arvore_cerrado", nome: "Árvore do cerrado", imagem: "/imagens/jardim/itens/arvore_cerrado.png" },
+  { type: "arvore_selva", nome: "Árvore da selva", imagem: "/imagens/jardim/itens/arvore_selva.png" },
+  { type: "arvore_carvalho", nome: "Árvore carvalho", imagem: "/imagens/jardim/itens/arvore_carvalho.png" },
+  { type: "arvore_japonesa", nome: "Árvore japonesa", imagem: "/imagens/jardim/itens/arvore_japonesa.png" },
+  { type: "arvore_vermelha", nome: "Árvore vermelha", imagem: "/imagens/jardim/itens/arvore_vermelha.png" },
+  { type: "jabami_sakura", nome: "Sakura japonesa", imagem: "/imagens/jardim/itens/jabami_sakura.png" },
+  { type: "japanese_maple", nome: "Maple japonês", imagem: "/imagens/jardim/itens/maple_japones.png" },
+  { type: "chinese_jungle_geranium", nome: "Gerânio selvagem", imagem: "/imagens/jardim/itens/geranio_vermelho.png" },
+  { type: "banana_tree", nome: "Bananeira", imagem: "/imagens/jardim/itens/bananeira.png" },
+  { type: "beaked_yucca_1730", nome: "Yucca", imagem: "/imagens/jardim/itens/yucca.png" },
+  { type: "beech_fern_plant", nome: "Samambaia beech", imagem: "/imagens/jardim/itens/samambaia_vermelha.png" },
+  { type: "hibiscus", nome: "Hibisco", imagem: "/imagens/jardim/itens/hibisco.png" },
+  { type: "lavanda_roxa", nome: "Lavanda roxa", imagem: "/imagens/jardim/itens/lavanda.png" },
+];
 
 function lerCacheOracaoJardim(): CacheOracaoJardim | null {
   try {
     const bruto = sessionStorage.getItem(CACHE_ORACAO_JARDIM_KEY);
-
     if (!bruto) return null;
 
     const cache = JSON.parse(bruto) as CacheOracaoJardim;
 
-    if (!Number.isFinite(cache.minutosHoje)) return null;
     if (!Number.isFinite(cache.saldoItensJardim)) return null;
     if (!Number.isFinite(cache.atualizadoEm)) return null;
 
-    const cacheAindaUtil = Date.now() - cache.atualizadoEm <= CACHE_MAX_IDADE_MS;
-
-    if (!cacheAindaUtil) return null;
+    if (Date.now() - cache.atualizadoEm > CACHE_MAX_IDADE_MS) return null;
 
     return cache;
   } catch {
@@ -179,60 +163,107 @@ function lerCacheOracaoJardim(): CacheOracaoJardim | null {
   }
 }
 
+function salvarCacheDadosJardim(
+  saldoItensJardim: number,
+  saudeJardimPercentual?: number
+) {
+  try {
+    const cacheAtual = lerCacheOracaoJardim();
+
+    const cache: CacheOracaoJardim = {
+      minutosHoje: cacheAtual?.minutosHoje ?? 0,
+      saldoItensJardim,
+      saudeJardimPercentual:
+        saudeJardimPercentual ?? cacheAtual?.saudeJardimPercentual,
+      atualizadoEm: Date.now(),
+    };
+
+    sessionStorage.setItem(CACHE_ORACAO_JARDIM_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
 function preloadImagem(src: string) {
   const imagem = new Image();
   imagem.src = src;
+}
+
+function normalizarPercentual(valor: number) {
+  if (!Number.isFinite(valor)) return 0;
+  return Math.min(100, Math.max(0, Math.round(valor)));
+}
+
+function getEstagioAtualPorPercentual(percentual: number) {
+  const percentualNormalizado = normalizarPercentual(percentual);
+
+  return (
+    estagiosSaudeJardim.find(
+      (estagio) =>
+        percentualNormalizado >= estagio.min &&
+        percentualNormalizado <= estagio.max
+    ) ?? estagiosSaudeJardim[0]
+  );
+}
+
+function getStatusVisualPorPercentual(percentual: number) {
+  const estagio = getEstagioAtualPorPercentual(percentual);
+
+  const descricoes: Record<EstagioSaudeJardim["chave"], string> = {
+    critico: "Seu jardim está precisando urgentemente de atenção.",
+    cuidados: "Seu jardim precisa de mais momentos de oração.",
+    crescendo: "Seu jardim está se desenvolvendo a cada dia.",
+    saudavel: "Seu jardim está forte e bem cuidado.",
+    radiante: "Seu jardim está cheio de vida e beleza.",
+  };
+
+  return {
+    titulo: estagio.titulo,
+    descricao: descricoes[estagio.chave],
+    cor: estagio.cor,
+  };
 }
 
 export default function ItensDoJardimPanel({
   onClose,
   onSelectItem,
   plantedItemTypes,
-  minutosHojeInicial,
   saldoItensJardimInicial,
+  saudeJardimPercentualInicial,
   dadosOracaoPreCarregados = false,
   onDadosOracaoAtualizados,
 }: ItensDoJardimPanelProps) {
   const cacheInicial = useMemo(() => {
     if (dadosOracaoPreCarregados) return null;
-
     return lerCacheOracaoJardim();
   }, [dadosOracaoPreCarregados]);
-
-  const minutosIniciais =
-    minutosHojeInicial ?? cacheInicial?.minutosHoje ?? 0;
 
   const saldoInicial =
     saldoItensJardimInicial ?? cacheInicial?.saldoItensJardim ?? 0;
 
+  const saudeInicial =
+    saudeJardimPercentualInicial ?? cacheInicial?.saudeJardimPercentual ?? 30;
+
+  const statusInicial = getStatusVisualPorPercentual(saudeInicial);
+
   const jaTemDadosIniciais =
     dadosOracaoPreCarregados ||
-    typeof minutosHojeInicial === "number" ||
     typeof saldoItensJardimInicial === "number" ||
+    typeof saudeJardimPercentualInicial === "number" ||
     Boolean(cacheInicial);
 
-  const [modalOracaoAberto, setModalOracaoAberto] = useState(false);
-  const [modalRegrasAberto, setModalRegrasAberto] = useState(false);
-  const [minutosHoje, setMinutosHoje] = useState(minutosIniciais);
   const [saldoItensJardim, setSaldoItensJardim] = useState(saldoInicial);
-  const [mensagemSucesso, setMensagemSucesso] = useState("");
-  const [salvandoOracao, setSalvandoOracao] = useState(false);
-  const [carregandoOracoes, setCarregandoOracoes] =
+  const [saudeJardim, setSaudeJardim] = useState(saudeInicial);
+  const [statusJardim, setStatusJardim] = useState(statusInicial);
+
+  const [carregandoJardim, setCarregandoJardim] =
     useState(!jaTemDadosIniciais);
 
   const carregamentoInicialRef = useRef(false);
   const painelMontadoRef = useRef(true);
 
-  const metaMinutosDia = 10;
-
-  const progressoOracao = Math.min(
-    100,
-    Math.round((minutosHoje / metaMinutosDia) * 100)
-  );
-
-  const posicaoMarcador = Math.min(96, Math.max(4, progressoOracao));
-  const metaConcluida = minutosHoje >= metaMinutosDia;
+  const itensPlantados = plantedItemTypes.length;
   const podeEscolherItem = saldoItensJardim > 0;
+  const percentualSaude = normalizarPercentual(saudeJardim);
+  const estagioAtual = getEstagioAtualPorPercentual(percentualSaude);
 
   useEffect(() => {
     painelMontadoRef.current = true;
@@ -247,23 +278,29 @@ export default function ItensDoJardimPanel({
       if (item.imagem) preloadImagem(item.imagem);
     });
 
-    preloadImagem("/imagens/jardim/itens/botao_oracao.png");
+    estagiosSaudeJardim.forEach((estagio) => preloadImagem(estagio.imagem));
+    preloadImagem("/imagens/jardim/itens/icones/meu_jardim.png");
+    preloadImagem("/imagens/jardim/itens/icones/disponiveis.png");
+    preloadImagem("/imagens/jardim/itens/icones/plantados.png");
   }, []);
 
   useEffect(() => {
     if (!dadosOracaoPreCarregados) return;
-    if (typeof minutosHojeInicial === "number") {
-      setMinutosHoje(minutosHojeInicial);
-    }
+
     if (typeof saldoItensJardimInicial === "number") {
       setSaldoItensJardim(saldoItensJardimInicial);
     }
 
-    setCarregandoOracoes(false);
+    if (typeof saudeJardimPercentualInicial === "number") {
+      setSaudeJardim(saudeJardimPercentualInicial);
+      setStatusJardim(getStatusVisualPorPercentual(saudeJardimPercentualInicial));
+    }
+
+    setCarregandoJardim(false);
   }, [
     dadosOracaoPreCarregados,
-    minutosHojeInicial,
     saldoItensJardimInicial,
+    saudeJardimPercentualInicial,
   ]);
 
   useEffect(() => {
@@ -271,140 +308,64 @@ export default function ItensDoJardimPanel({
 
     carregamentoInicialRef.current = true;
 
-    async function carregarDadosOracaoHoje() {
+    async function carregarSaldoJardim() {
       if (dadosOracaoPreCarregados) {
-        setCarregandoOracoes(false);
+        setCarregandoJardim(false);
         return;
       }
 
       if (!cacheInicial) {
-        setCarregandoOracoes(true);
+        setCarregandoJardim(true);
       }
 
       try {
-        const [totalMinutos, saldoAtual] = await Promise.all([
-          buscarMinutosOracaoHoje(),
+        const [saldoAtual, saudeAtual] = await Promise.all([
           buscarSaldoItensJardimHoje(),
+          buscarStatusSaudeJardim(),
         ]);
 
         if (!painelMontadoRef.current) return;
 
-        setMinutosHoje(totalMinutos);
         setSaldoItensJardim(saldoAtual);
-        salvarCacheOracaoJardim(totalMinutos, saldoAtual);
+        setSaudeJardim(saudeAtual.percentual);
+
+        setStatusJardim({
+          titulo: saudeAtual.titulo,
+          descricao: saudeAtual.descricao,
+          cor: saudeAtual.cor,
+        });
+
+        salvarCacheDadosJardim(saldoAtual, saudeAtual.percentual);
+
         onDadosOracaoAtualizados?.({
-          minutosHoje: totalMinutos,
+          minutosHoje: cacheInicial?.minutosHoje ?? 0,
           saldoItensJardim: saldoAtual,
+          saudeJardimPercentual: saudeAtual.percentual,
         });
       } catch (error) {
-        console.error("Erro ao carregar orações do dia:", error);
+        console.error("Erro ao carregar saldo de itens do jardim:", error);
       } finally {
         if (painelMontadoRef.current) {
-          setCarregandoOracoes(false);
+          setCarregandoJardim(false);
         }
       }
     }
 
-    void carregarDadosOracaoHoje();
+    void carregarSaldoJardim();
   }, [cacheInicial, dadosOracaoPreCarregados, onDadosOracaoAtualizados]);
 
   function handleResgatarItem(item: ConquistaItem) {
     if (!podeEscolherItem) {
-      alert("Ore hoje para ganhar itens do jardim 🌱");
+      alert("Você ainda não tem item disponível para plantar 🌱");
       return;
     }
 
     onSelectItem(item.type);
   }
 
-  async function registrarOracao(minutos: number) {
-    if (salvandoOracao) return;
-
-    const minutosAntes = minutosHoje;
-    const saldoAntes = saldoItensJardim;
-    const minutosOtimista = minutosAntes + minutos;
-
-    try {
-      setSalvandoOracao(true);
-      setMensagemSucesso("");
-      setModalOracaoAberto(false);
-      setMinutosHoje(minutosOtimista);
-
-      const resultado = await registrarMomentoOracao(minutos);
-
-      const novoTotalMinutos =
-        resultado?.resumoJardim?.minutosHoje ?? minutosOtimista;
-
-      const novoSaldo =
-        resultado?.resumoJardim?.saldoAtual ??
-        (await buscarSaldoItensJardimHoje());
-
-      const creditosNovos =
-        resultado?.resumoJardim?.creditosNovos ??
-        Math.max(0, novoSaldo - saldoAntes);
-
-      setMinutosHoje(novoTotalMinutos);
-      setSaldoItensJardim(novoSaldo);
-      salvarCacheOracaoJardim(novoTotalMinutos, novoSaldo);
-      onDadosOracaoAtualizados?.({
-        minutosHoje: novoTotalMinutos,
-        saldoItensJardim: novoSaldo,
-      });
-
-      if (creditosNovos > 0) {
-        setMensagemSucesso(
-          `Oração registrada! Você ganhou ${creditosNovos} item(ns) do jardim 🌱`
-        );
-      } else {
-        setMensagemSucesso(`Oração registrada! +${minutos} minuto(s).`);
-      }
-
-      setTimeout(() => {
-        if (painelMontadoRef.current) setMensagemSucesso("");
-      }, 3500);
-    } catch (error) {
-      console.error("Erro ao registrar oração:", error);
-
-      setMinutosHoje(minutosAntes);
-      setSaldoItensJardim(saldoAntes);
-      salvarCacheOracaoJardim(minutosAntes, saldoAntes);
-      onDadosOracaoAtualizados?.({
-        minutosHoje: minutosAntes,
-        saldoItensJardim: saldoAntes,
-      });
-
-      alert("Não foi possível registrar a oração. Tente novamente.");
-    } finally {
-      setSalvandoOracao(false);
-    }
-  }
-
   return (
     <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[24px] backdrop-blur-[2px]">
-      <style jsx>{`
-        .pulse-local {
-          animation: pulseLocal 2s ease-in-out infinite;
-        }
-
-        @keyframes pulseLocal {
-          0% {
-            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0.6);
-            transform: scale(1);
-          }
-
-          50% {
-            box-shadow: 0 0 0 10px rgba(93, 198, 161, 0);
-            transform: scale(1.05);
-          }
-
-          100% {
-            box-shadow: 0 0 0 0 rgba(93, 198, 161, 0);
-            transform: scale(1);
-          }
-        }
-      `}</style>
-
-      <div className="relative max-h-[calc(100dvh-110px)] w-full max-w-[720px] overflow-y-auto rounded-[28px] border border-white/10 bg-[#101514] text-white shadow-2xl">
+      <div className="relative max-h-[calc(100dvh-110px)] w-full max-w-[920px] overflow-y-auto rounded-[28px] border border-white/10 bg-[#101514] text-white shadow-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -418,81 +379,140 @@ export default function ItensDoJardimPanel({
             <h2 className="text-2xl font-bold">Meu Jardim</h2>
           </div>
 
-          <div className="mb-5 rounded-3xl border border-[#5dc6a1]/25 bg-gradient-to-br from-[#f1e6a7]/15 via-[#5dc6a1]/10 to-[#3d7a99]/15 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-b from-[#f1e6a7] to-[#bfe8a8]">
-                <img
-                  src="/imagens/jardim/itens/botao_oracao.png"
-                  alt="Oração"
-                  className="h-[70px]"
-                />
+          <section className="mb-5 overflow-hidden rounded-3xl border border-[#5dc6a1]/25 bg-gradient-to-br from-[#0f2c24] via-[#13201d] to-[#101514] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div>
+                <div
+                  className="text-xs font-bold uppercase tracking-[0.16em]"
+                  style={{ color: estagioAtual.cor }}
+                >
+                  Saúde do Jardim
+                </div>
+
+                <div
+                  className="mt-1 text-xl font-black"
+                  style={{ color: estagioAtual.cor }}
+                >
+                  {carregandoJardim ? "Carregando..." : statusJardim.titulo}
+                </div>
+
+                <p className="mt-1 max-w-[520px] text-sm font-medium leading-relaxed text-white/75">
+                  {carregandoJardim
+                    ? "Buscando a saúde atual do seu jardim..."
+                    : statusJardim.descricao}
+                </p>
               </div>
 
-              <div className="flex-1">
-                <h3 className="font-bold">Minhas orações</h3>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setModalRegrasAberto(true);
-                  }}
-                  className="mt-0.5 text-xs font-semibold text-[#5dc6a1] underline underline-offset-4 hover:text-[#f1e6a7]"
-                >
-                  Regras
-                </button>
+            <div className="relative mt-2 overflow-hidden pb-1">
+              <div className="relative px-1 pt-8 sm:min-w-[760px] sm:px-2">
+                <div className="absolute left-[8%] right-[8%] top-[98px] h-1.5 rounded-full bg-gradient-to-r from-[#c94a4a] via-[#e9891d] via-[#f1c232] to-[#5dc6a1] sm:top-[135px] sm:h-2" />
 
-                <div className="mt-1 min-h-[18px] text-xs font-semibold text-[#5dc6a1]">
-                  {mensagemSucesso}
+                <div className="grid grid-cols-5 gap-3">
+                  {estagiosSaudeJardim.map((estagio) => {
+                    const ativo = estagio.chave === estagioAtual.chave;
+
+                    return (
+                      <div
+                        key={estagio.chave}
+                        className="relative flex min-h-[132px] flex-col items-center text-center sm:min-h-[172px]"
+                      >
+                        {ativo && (
+                          <div className="absolute -top-3 rounded-full bg-[#8bd448] px-2 py-1 text-[9px] font-black text-[#101514] shadow-[0_0_20px_rgba(139,212,72,0.45)] sm:-top-4 sm:px-3 sm:text-[11px]">
+                            Você está aqui
+                          </div>
+                        )}
+
+                        <div
+                          className={`relative mt-5 flex h-[68px] w-[68px] items-end justify-center rounded-full transition sm:mt-7 sm:h-[120px] sm:w-[120px] ${
+                            ativo
+                              ? "scale-110 border-2 shadow-[0_0_32px_rgba(139,212,72,0.35)]"
+                              : "border border-white/0 opacity-80"
+                          }`}
+                          style={{
+                            borderColor: ativo ? estagio.cor : "transparent",
+                          }}
+                        >
+                          {ativo && (
+                            <div
+                              className="absolute inset-2 rounded-full opacity-25 blur-xl"
+                              style={{ backgroundColor: estagio.cor }}
+                            />
+                          )}
+
+                          <img
+                            src={estagio.imagem}
+                            alt={estagio.titulo}
+                            className={`relative z-10 object-contain ${
+                              estagio.chave === "critico" ||
+                              estagio.chave === "cuidados"
+                                ? "h-[52px] sm:h-[94px]"
+                                : estagio.chave === "crescendo"
+                                ? "h-[58px] sm:h-[108px]"
+                                : "h-[64px] sm:h-[120px]"
+                            }`}
+                          />
+                        </div>
+
+                        <div
+                          className="mt-2 text-[10px] font-black leading-tight sm:mt-3 sm:text-sm"
+                          style={{ color: estagio.cor }}
+                        >
+                          {estagio.titulo}
+                        </div>
+
+                        <div className="mt-1 whitespace-nowrap text-[7px] font-semibold leading-tight text-white/55 sm:text-[11px]">
+                          {estagio.regra}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            </div>
+          </section>
 
-              <button
-                type="button"
-                onClick={() => setModalOracaoAberto(true)}
-                disabled={carregandoOracoes || salvandoOracao}
-                className={`flex h-14 w-14 items-center justify-center rounded-full bg-[#5dc6a1] text-3xl font-bold text-[#101514] disabled:opacity-50 ${
-                  !metaConcluida && !carregandoOracoes ? "pulse-local" : ""
-                }`}
-              >
-                +
-              </button>
+          <div className="mb-5 grid grid-cols-2 gap-3">
+            <div className="flex h-[135px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#5dc6a1]/20 bg-gradient-to-b from-[#0f1715] to-[#0a0f0e] p-3 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+              <img
+                src="/imagens/jardim/itens/icones/disponiveis.png"
+                alt="Disponíveis"
+                className="h-[96px] w-[96px] object-contain drop-shadow-[0_0_18px_rgba(93,198,161,0.30)]"
+              />
+
+              <div className="mt-1 text-xl font-black">
+                {carregandoJardim ? "..." : saldoItensJardim}
+              </div>
+
+              <div className="text-xs text-white/55">Disponíveis</div>
             </div>
 
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-white/60">
-                <span>Meta diária = {metaMinutosDia} minutos</span>
-                <span>
-                  {carregandoOracoes
-                    ? "Atualizando..."
-                    : `${minutosHoje}/${metaMinutosDia} min`}
-                </span>
-              </div>
+            <div className="flex h-[135px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#5dc6a1]/20 bg-gradient-to-b from-[#0f1715] to-[#0a0f0e] p-3 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+              <img
+                src="/imagens/jardim/itens/icones/plantados.png"
+                alt="Plantados"
+                className="h-[120px] w-[120px] object-contain drop-shadow-[0_0_18px_rgba(93,198,161,0.30)]"
+              />
 
-              <div className="relative mt-4 h-2 rounded-full bg-black/30">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#5dc6a1] to-[#f1e6a7] transition-all duration-700 ease-out"
-                  style={{ width: `${progressoOracao}%` }}
-                />
+              <div className="mt-1 text-xl font-black">{itensPlantados}</div>
 
-                {!carregandoOracoes && minutosHoje > 0 && (
-                  <div
-                    className="absolute -top-5 -translate-x-1/2 text-[11px] font-bold text-[#f1e6a7] transition-all duration-700 ease-out"
-                    style={{ left: `${posicaoMarcador}%` }}
-                  >
-                    {Math.min(minutosHoje, metaMinutosDia)} min
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 text-xs font-semibold text-[#5dc6a1]">
-                {carregandoOracoes
-                  ? "Verificando itens disponíveis..."
-                  : saldoItensJardim > 0
-                  ? `${saldoItensJardim} item(ns) disponível(is) para plantar`
-                  : "Nenhum item disponível para plantar agora"}
-              </div>
+              <div className="text-xs text-white/55">Plantados</div>
             </div>
+          </div>
+
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white/85">
+              Itens do Jardim
+            </h3>
+
+            <span className="text-xs font-semibold text-[#5dc6a1]">
+              {carregandoJardim
+                ? "Carregando..."
+                : saldoItensJardim > 0
+                ? `${saldoItensJardim} para plantar`
+                : "Nenhum item disponível"}
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -505,14 +525,14 @@ export default function ItensDoJardimPanel({
                   key={item.type}
                   type="button"
                   onClick={() => handleResgatarItem(item)}
-                  disabled={!itemDisponivel || carregandoOracoes}
+                  disabled={!itemDisponivel || carregandoJardim}
                   className={`relative rounded-xl border p-3 transition ${
                     itemDisponivel
                       ? "border-[#5dc6a1]/40 hover:bg-[#5dc6a1]/10"
                       : "cursor-not-allowed border-white/10 opacity-45 grayscale"
                   }`}
                 >
-                  {!itemDisponivel && !carregandoOracoes && (
+                  {!itemDisponivel && !carregandoJardim && (
                     <div className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] text-white/70">
                       🔒
                     </div>
@@ -528,7 +548,7 @@ export default function ItensDoJardimPanel({
                     <img
                       src={item.imagem}
                       alt={item.nome}
-                      className="mx-auto h-20"
+                      className="mx-auto h-20 object-contain"
                     />
                   ) : (
                     <div className="flex h-20 items-center justify-center text-5xl">
@@ -550,52 +570,6 @@ export default function ItensDoJardimPanel({
             })}
           </div>
         </div>
-
-        {modalOracaoAberto && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="w-[320px] rounded-3xl bg-[#111] p-6 text-center">
-              <div className="mb-2 text-4xl">🙏</div>
-
-              <h3 className="text-lg font-bold">Oração realizada</h3>
-
-              <p className="mb-4 text-sm text-white/60">
-                Quanto tempo durou esta oração?
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[1, 3, 5, 10].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => registrarOracao(m)}
-                    disabled={salvandoOracao}
-                    className={`rounded-xl bg-[#5dc6a1]/10 p-4 hover:bg-[#5dc6a1]/20 ${
-                      salvandoOracao ? "cursor-wait opacity-50" : ""
-                    }`}
-                  >
-                    <div className="text-xl font-bold text-[#5dc6a1]">
-                      {m}
-                    </div>
-                    <div className="text-xs text-white/60">min</div>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setModalOracaoAberto(false)}
-                disabled={salvandoOracao}
-                className="mt-4 w-full rounded-xl bg-white/10 py-2"
-              >
-                {salvandoOracao ? "Salvando..." : "Cancelar"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {modalRegrasAberto && (
-          <RegrasJardimModal onClose={() => setModalRegrasAberto(false)} />
-        )}
       </div>
     </div>
   );

@@ -1,12 +1,32 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+
+type CorJoia =
+  | "azul"
+  | "verde"
+  | "verdeclaro"
+  | "vermelha"
+  | "roxa"
+  | "laranja";
 
 type Props = {
   title: string;
   href?: string;
   colorClass: string;
   disabled?: boolean;
+  joiaCor?: CorJoia;
+  prefetch?: boolean;
+};
+
+const imagensJoias: Record<CorJoia, string> = {
+  azul: "/imagens/joias/joia_blue.png",
+  verde: "/imagens/joias/joia_verde.png",
+  verdeclaro: "/imagens/joias/joia_verde.png",
+  vermelha: "/imagens/joias/joia_red.png",
+  roxa: "/imagens/joias/joia_purple.png",
+  laranja: "/imagens/joias/joia_or.png",
 };
 
 export default function HomeFeatureCard({
@@ -14,26 +34,104 @@ export default function HomeFeatureCard({
   href,
   colorClass,
   disabled = false,
+  joiaCor,
+  prefetch,
 }: Props) {
+  const imagemJoia = joiaCor ? imagensJoias[joiaCor] : null;
+
   const baseClasses = `
-    w-full h-[54px]
+    relative
+    overflow-hidden
+    w-full
+    h-[72px]
     rounded-2xl
-    text-white font-semibold text-[1rem]
-    flex items-center justify-center
-    text-center
-    transition-transform duration-200 ease-in-out
-    active:scale-[0.99] hover:scale-[1.02]
-    shadow-lg hover:shadow-xl
+    text-white
+    font-semibold
+    text-[1rem]
+    flex
+    items-center
+    justify-center
+    px-4
+    transition-all
+    duration-200
+    active:scale-[0.99]
+    hover:scale-[1.02]
+    shadow-lg
     ${colorClass}
   `;
 
+  const content = (
+    <>
+      <div
+        className="
+          absolute
+          inset-0
+          bg-[radial-gradient(circle_at_left,rgba(255,255,255,0.20),transparent_35%)]
+        "
+      />
+
+      {imagemJoia && (
+        <div
+          className="
+            absolute
+            left-3
+            top-1/2
+            z-10
+            flex
+            h-[82px]
+            w-[82px]
+            -translate-y-1/2
+            items-center
+            justify-center
+            pointer-events-none
+          "
+        >
+          <div
+            className="
+              absolute
+              h-[58px]
+              w-[58px]
+              rounded-full
+              bg-white/10
+              blur-3xl
+            "
+          />
+
+          <Image
+            src={imagemJoia}
+            alt={`Joia de ${title}`}
+            width={105}
+            height={105}
+            priority
+            className="
+              object-contain
+              bg-transparent
+              drop-shadow-[0_0_22px_rgba(255,255,255,0.35)]
+            "
+          />
+        </div>
+      )}
+
+      <span
+        className="
+          relative
+          z-10
+          w-full
+          text-center
+        "
+      >
+        {title}
+      </span>
+    </>
+  );
+
   if (disabled || !href) {
-    return <div className={`${baseClasses} cursor-default`}>{title}</div>;
+    return <div className={`${baseClasses} cursor-default`}>{content}</div>;
   }
 
   return (
-    <Link href={href} className={baseClasses}>
-      {title}
+    <Link href={href} prefetch={prefetch} className={baseClasses}>
+      {content}
     </Link>
   );
 }

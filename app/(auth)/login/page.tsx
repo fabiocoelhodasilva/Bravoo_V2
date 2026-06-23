@@ -6,8 +6,17 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import BrandLogo from "@/components/ui/BrandLogo";
 
+/* =========================================================
+   Configurações do bloqueio visual de tentativas
+   Observação: a proteção real contra abuso fica no Supabase Auth.
+========================================================= */
+
 const MAX_TENTATIVAS = 3;
 const BLOQUEIO_MS = 3 * 60 * 1000;
+
+/* =========================================================
+   Tradução de erros do Supabase Auth para mensagens amigáveis
+========================================================= */
 
 function traduzirErroLogin(message?: string) {
   const msg = (message || "").toLowerCase();
@@ -39,17 +48,33 @@ function traduzirErroLogin(message?: string) {
   return "Não foi possível fazer login. Tente novamente.";
 }
 
+/* =========================================================
+   Página de Login
+========================================================= */
+
 export default function LoginPage() {
   const router = useRouter();
+
+  /* -----------------------------
+     Estados do formulário
+  ----------------------------- */
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState("");
 
+  /* -----------------------------
+     Estados do bloqueio visual
+  ----------------------------- */
+
   const [tentativas, setTentativas] = useState(0);
   const [bloqueadoAte, setBloqueadoAte] = useState<number | null>(null);
   const [agora, setAgora] = useState(Date.now());
+
+  /* -----------------------------
+     Cálculos derivados
+  ----------------------------- */
 
   const bloqueado = useMemo(() => {
     return bloqueadoAte !== null && agora < bloqueadoAte;
@@ -59,6 +84,10 @@ export default function LoginPage() {
     if (!bloqueadoAte || agora >= bloqueadoAte) return 0;
     return Math.ceil((bloqueadoAte - agora) / 1000);
   }, [bloqueadoAte, agora]);
+
+  /* -----------------------------
+     Atualiza contador durante bloqueio
+  ----------------------------- */
 
   useEffect(() => {
     if (!bloqueado) return;
@@ -70,6 +99,10 @@ export default function LoginPage() {
     return () => window.clearInterval(intervalo);
   }, [bloqueado]);
 
+  /* -----------------------------
+     Libera o formulário após o bloqueio
+  ----------------------------- */
+
   useEffect(() => {
     if (!bloqueadoAte) return;
     if (Date.now() < bloqueadoAte) return;
@@ -79,6 +112,10 @@ export default function LoginPage() {
     setMensagem("");
     setAgora(Date.now());
   }, [agora, bloqueadoAte]);
+
+  /* =========================================================
+     Ações
+  ========================================================= */
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -114,13 +151,16 @@ export default function LoginPage() {
       });
 
       if (error) {
-        console.error("Erro ao logar:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Erro ao logar:", error);
+        }
 
         const novasTentativas = tentativas + 1;
         setTentativas(novasTentativas);
 
         if (novasTentativas >= MAX_TENTATIVAS) {
           const fimBloqueio = Date.now() + BLOQUEIO_MS;
+
           setBloqueadoAte(fimBloqueio);
           setAgora(Date.now());
           setMensagem("Muitas tentativas. Aguarde 3 minutos para tentar novamente.");
@@ -133,21 +173,26 @@ export default function LoginPage() {
 
       setTentativas(0);
       setBloqueadoAte(null);
-
       setMensagem("Login realizado com sucesso! Redirecionando…");
 
       setTimeout(() => {
         router.replace("/aluno");
         router.refresh();
       }, 800);
-
     } catch (e) {
-      console.error("Erro inesperado ao fazer login:", e);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Erro inesperado ao fazer login:", e);
+      }
+
       setMensagem("Não foi possível fazer login. Tente novamente.");
     } finally {
       setLoading(false);
     }
   }
+
+  /* =========================================================
+     Renderização
+  ========================================================= */
 
   return (
     <>
@@ -162,6 +207,7 @@ export default function LoginPage() {
         <label className="label" htmlFor="email">
           E-mail
         </label>
+
         <input
           className="input"
           type="email"
@@ -177,6 +223,7 @@ export default function LoginPage() {
         <label className="label" htmlFor="senha">
           Senha
         </label>
+
         <input
           className="input"
           type="password"
