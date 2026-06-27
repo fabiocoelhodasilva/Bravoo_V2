@@ -16,6 +16,8 @@ const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
 const ASSUNTO_ORACAO_ID = "44444444-4444-4444-4444-444444444001";
 const DETALHE_ORACAO_ID = "55555555-5555-5555-5555-555555555101";
 
+const META_PADRAO_ORACAO_MINUTOS = 5;
+
 const OBS_CREDITO_JARDIM_ORACAO = "credito_jardim_oracao";
 const OBS_RESGATE_ITEM_JARDIM = "resgate_item_jardim";
 const OBS_DEVOLUCAO_ITEM_JARDIM = "devolucao_item_jardim";
@@ -44,6 +46,15 @@ function registrarErroDev(mensagem: string, error: unknown) {
   if (process.env.NODE_ENV === "development") {
     console.error(mensagem, error);
   }
+}
+
+function registrarInfoDev(titulo: string, dados: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "development") return;
+
+  console.log("\n========================================");
+  console.log(titulo);
+  console.table(dados);
+  console.log("========================================\n");
 }
 
 /* =========================================================
@@ -89,7 +100,7 @@ function obterDataHoraSaoPauloIso(): string {
     partes.find((parte) => parte.type === type)?.value ?? "";
 
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get(
-    "minute"
+    "minute",
   )}:${get("second")}-03:00`;
 }
 
@@ -145,7 +156,7 @@ function normalizarDataExecucao(dataExecucao: string | null | undefined) {
 
 async function buscarMinutosOracaoHojeInterno(
   supabase: SupabaseServerClient,
-  usuarioId: string
+  usuarioId: string,
 ) {
   const { inicioDoDia, fimDoDia } = getIntervaloHojeSaoPaulo();
 
@@ -181,7 +192,7 @@ export async function buscarMinutosOracaoHoje() {
 
 async function usuarioJaOrouHoje(
   supabase: SupabaseServerClient,
-  usuarioId: string
+  usuarioId: string,
 ) {
   const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, usuarioId);
   return minutosHoje > 0;
@@ -193,7 +204,7 @@ async function usuarioJaOrouHoje(
 
 async function atualizarSequenciaEspiritualAposOracao(
   supabase: SupabaseServerClient,
-  usuarioId: string
+  usuarioId: string,
 ) {
   const hoje = obterDataSaoPaulo();
 
@@ -206,7 +217,7 @@ async function atualizarSequenciaEspiritualAposOracao(
 
   if (sequenciaError) {
     throw new Error(
-      `Erro ao buscar sequência espiritual: ${sequenciaError.message}`
+      `Erro ao buscar sequência espiritual: ${sequenciaError.message}`,
     );
   }
 
@@ -219,15 +230,17 @@ async function atualizarSequenciaEspiritualAposOracao(
     .order("data_execucao", { ascending: false });
 
   if (sessoesError) {
-    throw new Error(`Erro ao buscar sessões de oração: ${sessoesError.message}`);
+    throw new Error(
+      `Erro ao buscar sessões de oração: ${sessoesError.message}`,
+    );
   }
 
   const diasUnicos = Array.from(
     new Set(
       (sessoes ?? [])
         .map((sessao) => normalizarDataExecucao(sessao.data_execucao))
-        .filter((data): data is string => Boolean(data))
-    )
+        .filter((data): data is string => Boolean(data)),
+    ),
   ).sort((a, b) => b.localeCompare(a));
 
   if (diasUnicos.length === 0) {
@@ -251,7 +264,7 @@ async function atualizarSequenciaEspiritualAposOracao(
 
   const maiorSequencia = Math.max(
     Number(sequenciaAtual?.maior_sequencia ?? 0),
-    diasSeguidos
+    diasSeguidos,
   );
 
   const { data: sequenciaSalva, error: upsertError } = await supabase
@@ -266,20 +279,20 @@ async function atualizarSequenciaEspiritualAposOracao(
         pontos_consistencia: Number(sequenciaAtual?.pontos_consistencia ?? 0),
         escudos_disponiveis: Number(sequenciaAtual?.escudos_disponiveis ?? 0),
         ultimo_marco_escudo_concedido: Number(
-          sequenciaAtual?.ultimo_marco_escudo_concedido ?? 0
+          sequenciaAtual?.ultimo_marco_escudo_concedido ?? 0,
         ),
         updated_at: obterDataHoraSaoPauloIso(),
       },
       {
         onConflict: "usuario_id,materia_id",
-      }
+      },
     )
     .select()
     .single();
 
   if (upsertError) {
     throw new Error(
-      `Erro ao salvar sequência espiritual: ${upsertError.message}`
+      `Erro ao salvar sequência espiritual: ${upsertError.message}`,
     );
   }
 
@@ -292,7 +305,7 @@ async function atualizarSequenciaEspiritualAposOracao(
 
 async function buscarSaldoItensJardimInterno(
   supabase: SupabaseServerClient,
-  usuarioId: string
+  usuarioId: string,
 ) {
   const { data, error } = await supabase
     .from("next_movimentacoes_moeda")
@@ -340,7 +353,7 @@ export async function buscarSaldoItensJardimHoje() {
 async function sincronizarCreditosJardimHojeInterno(
   supabase: SupabaseServerClient,
   usuarioId: string,
-  minutosHoje: number
+  minutosHoje: number,
 ) {
   const creditosPermitidosHoje = calcularCreditosPorMinutos(minutosHoje);
   const { inicioDoDia, fimDoDia } = getIntervaloHojeSaoPaulo();
@@ -373,7 +386,7 @@ async function sincronizarCreditosJardimHojeInterno(
 
   const creditosNovos = Math.max(
     0,
-    creditosPermitidosHoje - creditosJaConcedidos
+    creditosPermitidosHoje - creditosJaConcedidos,
   );
 
   if (creditosNovos > 0) {
@@ -411,7 +424,7 @@ async function sincronizarCreditosJardimHoje() {
   return await sincronizarCreditosJardimHojeInterno(
     supabase,
     user.id,
-    minutosHoje
+    minutosHoje,
   );
 }
 
@@ -442,9 +455,19 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
     return false;
   }
 
-  const metaDiaria = Number(meta?.meta_diaria ?? 10);
+  const metaDiaria = Number(meta?.meta_diaria ?? META_PADRAO_ORACAO_MINUTOS);
+  const metaAtingida = minutosHoje >= metaDiaria;
 
-  if (minutosHoje < metaDiaria) {
+  registrarInfoDev("[JOIA ESPIRITUAL] Verificação de meta", {
+    usuarioId,
+    materiaId: MATERIA_ESPIRITUAL_ID,
+    minutosHoje,
+    metaDiaria,
+    metaOrigem: meta?.meta_diaria ? "next_metas_usuario" : "fallback_codigo",
+    metaAtingida,
+  });
+
+  if (!metaAtingida) {
     return false;
   }
 
@@ -453,13 +476,20 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
     {
       p_usuario_id: usuarioId,
       p_materia_id: MATERIA_ESPIRITUAL_ID,
-    }
+    },
   );
 
   if (joiaError) {
     registrarErroDev("Erro ao conceder joia espiritual:", joiaError);
     return false;
   }
+
+  registrarInfoDev("[JOIA ESPIRITUAL] Resultado da RPC", {
+    usuarioId,
+    materiaId: MATERIA_ESPIRITUAL_ID,
+    joiaConquistada: Boolean(joiaConquistada),
+    retornoRpc: joiaConquistada,
+  });
 
   return Boolean(joiaConquistada);
 }
@@ -487,7 +517,7 @@ function getDataLocalInicioDiaSaoPaulo(dataIso: string) {
 
 function calcularDiferencaDiasIso(
   dataMaisRecenteIso: string,
-  dataMaisAntigaIso: string
+  dataMaisAntigaIso: string,
 ) {
   const umDiaMs = 1000 * 60 * 60 * 24;
 
@@ -520,12 +550,12 @@ export async function buscarStatusSaudeJardim(): Promise<StatusSaudeJardim> {
     const hoje = obterDataSaoPaulo();
     const ultimaDataAtividade = String(sequencia.ultima_data_atividade).slice(
       0,
-      10
+      10,
     );
 
     const diasSemOracao = Math.max(
       0,
-      calcularDiferencaDiasIso(hoje, ultimaDataAtividade) - 1
+      calcularDiferencaDiasIso(hoje, ultimaDataAtividade) - 1,
     );
 
     const diasSeguidos = Math.max(0, Number(sequencia.dias_seguidos ?? 0));
@@ -635,7 +665,7 @@ export async function registrarMomentoOracao(minutos: number) {
 
     const sequenciaEspiritual = await atualizarSequenciaEspiritualAposOracao(
       supabase,
-      user.id
+      user.id,
     );
 
     if (!jaTinhaOracaoHoje) {
@@ -645,7 +675,7 @@ export async function registrarMomentoOracao(minutos: number) {
     const resumoJardim = await sincronizarCreditosJardimHojeInterno(
       supabase,
       user.id,
-      minutosHoje
+      minutosHoje,
     );
 
     const joiaEspiritualConquistada =
@@ -654,6 +684,17 @@ export async function registrarMomentoOracao(minutos: number) {
         usuarioId: user.id,
         minutosHoje,
       });
+
+    registrarInfoDev("[ORAÇÃO] Registro concluído", {
+      usuarioId: user.id,
+      sessaoId: sessao.id,
+      minutosInformados: minutos,
+      minutosHoje,
+      creditosNovos: resumoJardim.creditosNovos,
+      saldoAtualJardim: resumoJardim.saldoAtual,
+      crescimentoAplicado: !jaTinhaOracaoHoje,
+      joiaEspiritualConquistada,
+    });
 
     return {
       sessao,
