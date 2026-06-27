@@ -38,7 +38,7 @@ export default function NovoLivroPage() {
         titulo: values.titulo,
         autor: values.autor || null,
         dt_inicio: values.dtInicio || null,
-        dt_fim: values.dtFim,
+        dt_fim: values.dtFim || null,
       });
 
       if (error) {
@@ -96,8 +96,7 @@ export default function NovoLivroPage() {
         <h2 className="m-0 mb-1 text-[1.6rem]">Novo Livro</h2>
 
         <p className="text-[0.95rem] text-[#ccc] mb-[18px]">
-          Registre um novo livro concluído para acompanhar sua jornada de
-          leitura.
+          Registre um novo livro para acompanhar sua jornada de leitura.
         </p>
 
         <NovoLivroForm

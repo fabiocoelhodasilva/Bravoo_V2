@@ -23,7 +23,7 @@ type LivroLido = {
   titulo: string;
   autor: string | null;
   dt_inicio: string | null;
-  dt_fim: string;
+  dt_fim: string | null;
   criado_em: string | null;
 };
 
@@ -263,7 +263,12 @@ export default function LivrosPage() {
     const mapa = new Map<number, LivroLido[]>();
 
     for (const livro of livros) {
-      const ano = new Date(`${livro.dt_fim}T00:00:00`).getFullYear();
+      const dataReferencia =
+        livro.dt_fim || livro.dt_inicio || livro.criado_em?.slice(0, 10);
+
+      const ano = dataReferencia
+        ? new Date(`${dataReferencia}T00:00:00`).getFullYear()
+        : new Date().getFullYear();
 
       if (!mapa.has(ano)) {
         mapa.set(ano, []);
@@ -277,8 +282,17 @@ export default function LivrosPage() {
       .map(([ano, livrosDoAno]) => ({
         ano,
         livros: livrosDoAno.sort((a, b) => {
-          const dataA = new Date(`${a.dt_fim}T00:00:00`).getTime();
-          const dataB = new Date(`${b.dt_fim}T00:00:00`).getTime();
+          const dataReferenciaA =
+            a.dt_fim || a.dt_inicio || a.criado_em?.slice(0, 10) || "";
+          const dataReferenciaB =
+            b.dt_fim || b.dt_inicio || b.criado_em?.slice(0, 10) || "";
+
+          const dataA = dataReferenciaA
+            ? new Date(`${dataReferenciaA}T00:00:00`).getTime()
+            : 0;
+          const dataB = dataReferenciaB
+            ? new Date(`${dataReferenciaB}T00:00:00`).getTime()
+            : 0;
 
           return dataB - dataA;
         }),
@@ -419,7 +433,10 @@ export default function LivrosPage() {
                                     )}
 
                                     <span>
-                                      Conclusão: {formatarData(livro.dt_fim)}
+                                      Conclusão:{" "}
+                                      {livro.dt_fim
+                                        ? formatarData(livro.dt_fim)
+                                        : "—"}
                                     </span>
                                   </div>
                                 </div>
