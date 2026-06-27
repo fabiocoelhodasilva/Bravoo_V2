@@ -311,7 +311,7 @@ export default function LivrosPage() {
         className="min-h-screen bg-black text-white flex flex-col"
         style={CSS_VARS}
       >
-        <header className="fixed top-0 left-0 w-full z-50 px-4 sm:px-5 h-[48px] flex items-center justify-between bg-[#050505]/95 backdrop-blur border-b border-white/5">
+        <header className="fixed top-0 left-0 w-full z-50 px-4 sm:px-5 h-[44px] flex items-center justify-between bg-[#050505]/95 backdrop-blur border-b border-white/5">
           <div className="gradient-text text-[1.15rem] font-semibold tracking-[-0.4px] opacity-90">
             Bravoo
           </div>
@@ -325,9 +325,9 @@ export default function LivrosPage() {
           </button>
         </header>
 
-        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[120px]">
-          <div className="mb-6 relative w-full">
-            <h1 className="text-center text-4xl font-bold gradient-text">
+        <div className="flex-1 w-full max-w-[1100px] mx-auto px-3 pt-[50px] pb-[110px] sm:px-4 sm:pt-[60px] sm:pb-[120px]">
+          <div className="mb-3 sm:mb-6 relative w-full">
+            <h1 className="text-center text-[1.55rem] sm:text-4xl font-bold gradient-text">
               Minhas Leituras
             </h1>
 
@@ -335,7 +335,7 @@ export default function LivrosPage() {
               href="/livros/novo"
               aria-label="Cadastrar novo livro"
               title="Cadastrar novo livro"
-              className="absolute right-0 top-1/2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
+              className="absolute right-0 top-1/2 flex h-[34px] w-[34px] sm:h-[38px] sm:w-[38px] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] font-bold text-black shadow-md transition active:scale-[0.95]"
             >
               +
             </Link>
@@ -348,7 +348,7 @@ export default function LivrosPage() {
           )}
 
           {!loadingMessage && gruposPorAno.length > 0 && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {gruposPorAno.map((grupo, index) => {
                 const borderColor =
                   CARD_BORDER_COLORS[index % CARD_BORDER_COLORS.length];
@@ -356,7 +356,7 @@ export default function LivrosPage() {
                 return (
                   <section
                     key={grupo.ano}
-                    className="rounded-[20px] border px-4 py-4"
+                    className="rounded-[20px] border px-3 py-3 sm:px-4 sm:py-4"
                     style={{
                       borderColor,
                       background: `radial-gradient(900px 260px at 0% 0%, ${borderColor}10, transparent 58%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)), #0d0d0d`,
@@ -379,19 +379,19 @@ export default function LivrosPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-1.5 sm:gap-2.5">
                       {grupo.livros.map((livro, livroIndex) => {
                         const deleting = deletingIds.includes(livro.id);
 
                         return (
                           <article
                             key={livro.id}
-                            className="rounded-[16px] border border-white/8 bg-[#0a0a0a] px-4 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:border-white/15 hover:bg-[#0d0d0d]"
+                            className="rounded-[16px] border border-white/8 bg-[#0a0a0a] px-3 py-[6px] sm:px-4 sm:py-3 shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:border-white/15 hover:bg-[#0d0d0d]"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 flex-1 items-start gap-3">
                                 <div
-                                  className="mt-[2px] flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.82rem] font-bold text-black shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                                  className="mt-[2px] flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full text-[0.82rem] font-bold text-black shadow-[0_0_12px_rgba(255,255,255,0.08)]"
                                   style={{
                                     backgroundColor: borderColor,
                                     boxShadow: `0 0 14px ${borderColor}35`,
@@ -401,17 +401,17 @@ export default function LivrosPage() {
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                  <h4 className="text-[0.96rem] sm:text-[1rem] font-semibold text-[#f3f3f3] leading-6 transition hover:text-white">
+                                  <h4 className="text-[0.88rem] sm:text-[1rem] font-semibold text-[#f3f3f3] leading-6 transition hover:text-white">
                                     {livro.titulo}
                                   </h4>
 
                                   {livro.autor && (
-                                    <p className="mt-0.5 text-[0.84rem] text-white/70">
+                                    <p className="mt-0.5 text-[0.78rem] sm:text-[0.84rem] text-white/70">
                                       {livro.autor}
                                     </p>
                                   )}
 
-                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.78rem] text-white/50">
+                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.72rem] sm:text-[0.78rem] text-white/50">
                                     {livro.dt_inicio && (
                                       <span>
                                         Início: {formatarData(livro.dt_inicio)}
