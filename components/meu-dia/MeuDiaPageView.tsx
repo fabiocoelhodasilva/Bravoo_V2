@@ -193,15 +193,79 @@ export function MeuDiaPageView({
       <main className="min-h-screen bg-black text-white flex flex-col">
         <HeaderInterno onLogout={onLogout} />
 
-        <div className="flex-1 w-full max-w-[1100px] mx-auto px-4 pt-[60px] pb-[120px]">
-          <div className="mb-5 flex flex-col items-center gap-5">
+        <div className="flex-1 w-full max-w-[1100px] mx-auto px-3 pt-[50px] pb-[110px] sm:px-4 sm:pt-[60px] sm:pb-[120px]">
+          <div className="mb-3 flex flex-col items-center gap-3 sm:mb-5 sm:gap-5">
             <div className="relative w-full">
-              <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
+              <h1 className="mb-2 text-center text-[1.55rem] font-bold leading-tight gradient-text sm:mb-6 sm:text-4xl">
                 Meu Dia
               </h1>
             </div>
 
-            <div className="w-full">
+            {/* Mobile: cards compactos lado a lado */}
+            <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
+              <div
+                className="rounded-[18px] border px-3 py-3"
+                style={{
+                  background:
+                    "radial-gradient(160px 90px at 10% 0%, rgba(233,137,29,0.18), transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), #14110c",
+                  borderColor: "rgba(233,137,29,0.23)",
+                  boxShadow:
+                    "0 8px 18px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.02) inset",
+                }}
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2a1908] text-[1.25rem] shadow-[0_0_16px_rgba(233,137,29,0.25)]">
+                    🔥
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-[#f1e6a7]">
+                      Persistência
+                    </p>
+                    <p className="mt-0.5 text-[1.35rem] font-black leading-none text-white">
+                      {diasSeguidos}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[0.72rem] font-medium leading-tight text-white/60">
+                  {diasSeguidos === 1 ? "dia seguido" : "dias seguidos"}
+                </p>
+              </div>
+
+              <div
+                className="rounded-[18px] border px-3 py-3"
+                style={{
+                  background:
+                    "radial-gradient(160px 90px at 10% 0%, rgba(93,198,161,0.16), transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), #0b1518",
+                  borderColor: "rgba(93,198,161,0.22)",
+                  boxShadow:
+                    "0 8px 18px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.02) inset",
+                }}
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#071f23] text-[1.2rem] shadow-[0_0_16px_rgba(93,198,161,0.25)]">
+                    💎
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-[#f1e6a7]">
+                      Joias
+                    </p>
+                    <p className="mt-0.5 text-[1.35rem] font-black leading-none text-white">
+                      {totalTopazios}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[0.72rem] font-medium leading-tight text-white/60">
+                  {totalTopazios === 1 ? "Topázio" : "Topázios"}
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop/tablet: mantém o dashboard original */}
+            <div className="hidden w-full sm:block">
               <MeuDiaResumoDashboard
                 diasSeguidos={diasSeguidos}
                 totalJoias={totalTopazios}
