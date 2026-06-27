@@ -281,9 +281,6 @@ export function MeuDiaPageView({
                   </div>
                 </div>
 
-                <p className="text-[0.72rem] font-medium leading-tight text-white/60">
-                  {diasSeguidos === 1 ? "dia seguido" : "dias seguidos"}
-                </p>
               </div>
 
               <div
@@ -311,9 +308,6 @@ export function MeuDiaPageView({
                   </div>
                 </div>
 
-                <p className="text-[0.72rem] font-medium leading-tight text-white/60">
-                  {totalTopazios === 1 ? "Topázio" : "Topázios"}
-                </p>
               </div>
             </div>
 
@@ -327,7 +321,7 @@ export function MeuDiaPageView({
           </div>
 
           <section
-            className="mb-3 rounded-[22px] px-4 py-4"
+            className="mb-3 rounded-[20px] px-3 py-3 sm:rounded-[22px] sm:px-4 sm:py-4"
             style={{
               background:
                 "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
@@ -336,44 +330,44 @@ export function MeuDiaPageView({
                 "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
             }}
           >
-            <p className="mb-3 text-center text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+            <p className="mb-2 text-center text-[10px] sm:text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
               Atividades
             </p>
 
             <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
-              <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
+              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <Link
                   href="/meu-dia/novo"
                   aria-label="Adicionar tarefa"
                   title="Adicionar tarefa"
-                  className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.5rem] font-black text-black shadow-[0_0_18px_rgba(233,137,29,0.35)] transition active:scale-[0.95]"
+                  className="flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-full bg-[var(--color-2)] text-[1.3rem] sm:text-[1.5rem] font-black text-black shadow-[0_0_18px_rgba(233,137,29,0.35)] transition active:scale-[0.95]"
                 >
                   +
                 </Link>
 
-                <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Adicionar
                 </div>
               </div>
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
-                <div className="text-[2rem] leading-none font-black text-[var(--color-2)]">
+              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+                <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-2)]">
                   {pendentes}
                 </div>
-                <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Pendentes
                 </div>
               </div>
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[52px] flex-col items-center justify-center text-center">
-                <div className="text-[2rem] leading-none font-black text-[var(--color-4)]">
+              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+                <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-4)]">
                   {feitas}
                 </div>
-                <div className="mt-1 text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Feitas
                 </div>
               </div>
