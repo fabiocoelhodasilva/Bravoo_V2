@@ -223,12 +223,12 @@ export function MeuDiaPageView({
 
                       <span
                         className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
-                          selecionado ? "scale-[1.06] text-[#7df2c2]" : "text-white/88"
+                          selecionado ? "scale-[1.06] text-[var(--color-2)]" : "text-white/88"
                         }`}
                         style={{
-                          background: selecionado ? "#103a30a6" : "transparent",
-                          borderColor: selecionado ? "#7df2c299" : "transparent",
-                          boxShadow: selecionado ? "0 0 18px #7df2c255" : "none",
+                          background: selecionado ? "rgba(233,137,29,0.18)" : "transparent",
+                          borderColor: selecionado ? "rgba(233,137,29,0.75)" : "transparent",
+                          boxShadow: selecionado ? "0 0 18px rgba(233,137,29,0.45)" : "none",
                         }}
                       >
                         {dia.diaNumero}
@@ -321,7 +321,7 @@ export function MeuDiaPageView({
           </div>
 
           <section
-            className="mb-3 rounded-[20px] px-3 py-3 sm:rounded-[22px] sm:px-4 sm:py-4"
+            className="mb-3 rounded-[20px] px-3 py-2 sm:rounded-[22px] sm:px-4 sm:py-4"
             style={{
               background:
                 "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
@@ -330,12 +330,12 @@ export function MeuDiaPageView({
                 "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
             }}
           >
-            <p className="mb-2 text-center text-[10px] sm:text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+            <p className="mb-1 text-center text-[10px] sm:text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
               Atividades
             </p>
 
-            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
-              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 sm:gap-3">
+              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <Link
                   href="/meu-dia/novo"
                   aria-label="Adicionar tarefa"
@@ -352,7 +352,7 @@ export function MeuDiaPageView({
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-2)]">
                   {pendentes}
                 </div>
@@ -363,7 +363,7 @@ export function MeuDiaPageView({
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[44px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-4)]">
                   {feitas}
                 </div>
@@ -384,7 +384,7 @@ export function MeuDiaPageView({
               </p>
             </section>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 sm:gap-2">
               {tarefas.map((tarefa) => {
                 const salvando = salvandoIds.includes(tarefa.id);
                 const deletando = deletingIds.includes(tarefa.id);
@@ -392,7 +392,7 @@ export function MeuDiaPageView({
                 return (
                   <div
                     key={tarefa.id}
-                    className={`flex items-center gap-2 rounded-[16px] border border-white/8 bg-[#0a0a0a] px-3 py-2 transition hover:border-white/15 hover:bg-[#0d0d0d] ${
+                    className={`flex items-center gap-2 rounded-[16px] border border-white/8 bg-[#0a0a0a] px-3 py-[7px] sm:py-2 transition hover:border-white/15 hover:bg-[#0d0d0d] ${
                       salvando || deletando ? "opacity-70" : ""
                     }`}
                   >
@@ -403,7 +403,7 @@ export function MeuDiaPageView({
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
                       <div
-                        className={`h-5 w-5 shrink-0 rounded-full border flex items-center justify-center text-[0.7rem] ${
+                        className={`h-[18px] w-[18px] sm:h-5 sm:w-5 shrink-0 rounded-full border flex items-center justify-center text-[0.7rem] ${
                           tarefa.concluida
                             ? "bg-[var(--color-4)] text-black border-[var(--color-4)]"
                             : "border-white/30 text-transparent"
@@ -413,7 +413,7 @@ export function MeuDiaPageView({
                       </div>
 
                       <span
-                        className={`flex-1 text-[0.95rem] ${
+                        className={`flex-1 text-[0.87rem] sm:text-[0.95rem] ${
                           tarefa.concluida
                             ? "line-through text-white/40"
                             : "text-white"
