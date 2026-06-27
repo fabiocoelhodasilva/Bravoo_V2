@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BottomNav from "../ui/BottomNav";
 import HeaderInterno from "../ui/HeaderInterno";
-import BotaoVoltar from "../ui/BotaoVoltar";
 import DeleteButton from "../ui/DeleteButton";
 import MeuDiaResumoDashboard from "../gamification/MeuDiaResumoDashboard";
 
@@ -48,11 +47,6 @@ function addDays(data: Date, quantidade: number) {
 function getStartOfWeekSunday(data: Date) {
   const diaSemana = data.getDay();
   return addDays(data, -diaSemana);
-}
-
-function capitalize(texto: string) {
-  if (!texto) return texto;
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 function obterHojeLocalIso() {
@@ -158,24 +152,6 @@ export function MeuDiaPageView({
     });
   }, [inicioSemana]);
 
-  const tituloMesAno = useMemo(() => {
-    return capitalize(
-      new Intl.DateTimeFormat("pt-BR", {
-        month: "long",
-        year: "numeric",
-      }).format(dataAtual)
-    );
-  }, [dataAtual]);
-
-  const dataCompletaSelecionada = useMemo(() => {
-    return capitalize(
-      new Intl.DateTimeFormat("pt-BR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      }).format(dataAtual)
-    );
-  }, [dataAtual]);
 
   const hojeIso = useMemo(() => obterHojeLocalIso(), []);
   const podeExcluirNoDiaSelecionado = dataSelecionada >= hojeIso;
@@ -194,13 +170,90 @@ export function MeuDiaPageView({
         <HeaderInterno onLogout={onLogout} />
 
         <div className="flex-1 w-full max-w-[1100px] mx-auto px-3 pt-[50px] pb-[110px] sm:px-4 sm:pt-[60px] sm:pb-[120px]">
-          <div className="mb-3 flex flex-col items-center gap-3 sm:mb-5 sm:gap-5">
+          <div className="mb-2 flex flex-col items-center sm:mb-5">
             <div className="relative w-full">
               <h1 className="mb-2 text-center text-[1.55rem] font-bold leading-tight gradient-text sm:mb-6 sm:text-4xl">
                 Meu Dia
               </h1>
             </div>
+          </div>
 
+          <section
+            className="mb-3 rounded-[22px] px-2 py-3 sm:px-3"
+            style={{
+              background:
+                "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow:
+                "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
+            }}
+          >
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => navegarSemana(-1)}
+                aria-label="Semana anterior"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+                style={{
+                  borderColor: "#7df2c299",
+                  boxShadow: "0 0 18px #7df2c255",
+                }}
+              >
+                ‹
+              </button>
+
+              <div className="grid min-w-0 flex-1 grid-cols-7 gap-0.5 sm:gap-2">
+                {diasDaSemana.map((dia) => {
+                  const selecionado = dia.iso === dataSelecionada;
+
+                  return (
+                    <button
+                      key={dia.iso}
+                      type="button"
+                      onClick={() => onSelecionarData(dia.iso)}
+                      className="flex min-w-0 flex-col items-center justify-center rounded-[14px] px-0.5 py-1 transition active:scale-[0.97] sm:py-2"
+                    >
+                      <span
+                        className={`mb-1 text-[0.58rem] font-semibold sm:mb-2 sm:text-[0.72rem] ${
+                          selecionado ? "text-white" : "text-white/42"
+                        }`}
+                      >
+                        {dia.diaCurto}
+                      </span>
+
+                      <span
+                        className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
+                          selecionado ? "scale-[1.06] text-[#7df2c2]" : "text-white/88"
+                        }`}
+                        style={{
+                          background: selecionado ? "#103a30a6" : "transparent",
+                          borderColor: selecionado ? "#7df2c299" : "transparent",
+                          boxShadow: selecionado ? "0 0 18px #7df2c255" : "none",
+                        }}
+                      >
+                        {dia.diaNumero}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navegarSemana(1)}
+                aria-label="Próxima semana"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+                style={{
+                  borderColor: "#7df2c299",
+                  boxShadow: "0 0 18px #7df2c255",
+                }}
+              >
+                ›
+              </button>
+            </div>
+          </section>
+
+          <div className="mb-3 sm:mb-5">
             {/* Mobile: cards compactos lado a lado */}
             <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
               <div
@@ -272,90 +325,6 @@ export function MeuDiaPageView({
               />
             </div>
           </div>
-
-          <section
-            className="mb-3 rounded-[22px] px-3 py-3"
-            style={{
-              background:
-                "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow:
-                "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
-            }}
-          >
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => navegarSemana(-1)}
-                aria-label="Semana anterior"
-                className="flex h-9 w-9 items-center justify-center rounded-full border bg-[#103a30]/65 text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
-                style={{
-                  borderColor: "#7df2c299",
-                  boxShadow: "0 0 18px #7df2c255",
-                }}
-              >
-                ‹
-              </button>
-
-              <div className="min-w-0 text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
-                  {tituloMesAno}
-                </div>
-                <div className="mt-0.5 text-[0.78rem] text-white/45">
-                  {dataCompletaSelecionada}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navegarSemana(1)}
-                aria-label="Próxima semana"
-                className="flex h-9 w-9 items-center justify-center rounded-full border bg-[#103a30]/65 text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96]"
-                style={{
-                  borderColor: "#7df2c299",
-                  boxShadow: "0 0 18px #7df2c255",
-                }}
-              >
-                ›
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
-              {diasDaSemana.map((dia) => {
-                const selecionado = dia.iso === dataSelecionada;
-
-                return (
-                  <button
-                    key={dia.iso}
-                    type="button"
-                    onClick={() => onSelecionarData(dia.iso)}
-                    className="flex flex-col items-center justify-center rounded-[16px] py-2 transition active:scale-[0.97]"
-                  >
-                    <span
-                      className={`mb-2 text-[0.72rem] font-semibold ${
-                        selecionado ? "text-white" : "text-white/42"
-                      }`}
-                    >
-                      {dia.diaCurto}
-                    </span>
-
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border text-[0.95rem] font-bold transition ${
-                        selecionado ? "scale-[1.08] text-[#7df2c2]" : "text-white/88"
-                      }`}
-                      style={{
-                        background: selecionado ? "#103a30a6" : "transparent",
-                        borderColor: selecionado ? "#7df2c299" : "transparent",
-                        boxShadow: selecionado ? "0 0 18px #7df2c255" : "none",
-                      }}
-                    >
-                      {dia.diaNumero}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
           <section
             className="mb-3 rounded-[22px] px-4 py-4"
