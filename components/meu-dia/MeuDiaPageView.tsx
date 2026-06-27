@@ -321,7 +321,7 @@ export function MeuDiaPageView({
           </div>
 
           <section
-            className="mb-3 rounded-[20px] px-3 py-2 sm:rounded-[22px] sm:px-4 sm:py-4"
+            className="mb-3 rounded-[20px] px-3 py-[6px] sm:rounded-[22px] sm:px-4 sm:py-4"
             style={{
               background:
                 "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
@@ -330,12 +330,12 @@ export function MeuDiaPageView({
                 "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
             }}
           >
-            <p className="mb-1 text-center text-[10px] sm:text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+            <p className="mb-0.5 text-center text-[10px] sm:text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
               Atividades
             </p>
 
-            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 sm:gap-3">
-              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 sm:gap-3">
+              <div className="flex min-h-[34px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <Link
                   href="/meu-dia/novo"
                   aria-label="Adicionar tarefa"
@@ -345,29 +345,29 @@ export function MeuDiaPageView({
                   +
                 </Link>
 
-                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-0.5 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Adicionar
                 </div>
               </div>
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+              <div className="flex min-h-[34px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-2)]">
                   {pendentes}
                 </div>
-                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-0.5 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Pendentes
                 </div>
               </div>
 
               <div className="w-px h-12 bg-white/10" />
 
-              <div className="flex min-h-[38px] sm:min-h-[52px] flex-col items-center justify-center text-center">
+              <div className="flex min-h-[34px] sm:min-h-[52px] flex-col items-center justify-center text-center">
                 <div className="text-[1.7rem] sm:text-[2rem] leading-none font-black text-[var(--color-4)]">
                   {feitas}
                 </div>
-                <div className="mt-1 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
+                <div className="mt-0.5 text-[0.78rem] sm:text-[0.9rem] text-[#bdbdbd] font-medium">
                   Feitas
                 </div>
               </div>
@@ -384,7 +384,7 @@ export function MeuDiaPageView({
               </p>
             </section>
           ) : (
-            <div className="flex flex-col gap-1.5 sm:gap-2">
+            <div className="flex flex-col gap-1 sm:gap-2">
               {tarefas.map((tarefa) => {
                 const salvando = salvandoIds.includes(tarefa.id);
                 const deletando = deletingIds.includes(tarefa.id);
@@ -392,7 +392,7 @@ export function MeuDiaPageView({
                 return (
                   <div
                     key={tarefa.id}
-                    className={`flex items-center gap-2 rounded-[16px] border border-white/8 bg-[#0a0a0a] px-3 py-[7px] sm:py-2 transition hover:border-white/15 hover:bg-[#0d0d0d] ${
+                    className={`flex items-center gap-2 rounded-[16px] border border-white/8 bg-[#0a0a0a] px-3 py-[5px] sm:py-2 transition hover:border-white/15 hover:bg-[#0d0d0d] ${
                       salvando || deletando ? "opacity-70" : ""
                     }`}
                   >
