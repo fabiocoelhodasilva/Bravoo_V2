@@ -5,6 +5,7 @@ type MandalaResumoProps = {
 const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
 const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
 const MATERIA_GEOGRAFIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
+const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
 
 const joias = [
   {
@@ -30,7 +31,7 @@ const joias = [
   },
   {
     nome: "Verde",
-    materiaId: null,
+    materiaId: MATERIA_MATEMATICA_ID,
     src: "/imagens/joias/joia_verde.png",
     cor: "16,185,129",
     sombra: "drop-shadow-[0_0_24px_rgba(16,185,129,1)]",

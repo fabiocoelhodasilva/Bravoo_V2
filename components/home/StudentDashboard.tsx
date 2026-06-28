@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import Header from "../ui/Header";
-import GradientTitle from "../ui/GradientTitle";
 import HomeFeatureCard from "../ui/HomeFeatureCard";
 import { supabase } from "@/lib/supabase/client";
 
@@ -245,7 +244,24 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      <GradientTitle>{nomeUsuario ? `Olá ${nomeUsuario}!` : "Olá!"}</GradientTitle>
+      <h1 className="mb-6 mt-2 text-center text-3xl font-extrabold leading-tight sm:text-4xl">
+        <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+          Olá
+        </span>
+
+        {nomeUsuario && (
+          <>
+            {" "}
+            <span className="bg-gradient-to-r from-[var(--color-5)] via-[#4fc3ff] to-[var(--color-4)] bg-clip-text text-transparent">
+              {nomeUsuario}
+            </span>
+          </>
+        )}
+
+        <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+          !
+        </span>
+      </h1>
 
       <div className="flex flex-col gap-5 w-full max-w-sm px-4">
         <HomeFeatureCard
