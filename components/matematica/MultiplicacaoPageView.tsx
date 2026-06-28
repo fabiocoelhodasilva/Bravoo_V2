@@ -1,16 +1,29 @@
 "use client";
 
+/* =========================================================
+   Imports
+========================================================= */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import { supabase } from "@/lib/supabase/client";
 import { concederJoiaTabuada } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
 
+/* =========================================================
+   IDs fixos
+========================================================= */
+
 const MATEMATICA_MATERIA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
 const TABUADA_ASSUNTO_ID = "84d7724b-2272-4014-960d-b04733430473";
 const MULTIPLICACAO_ATIVIDADE_ID = "ab1333a9-41dd-4c06-8232-4fe600c9c4ab";
+
+/* =========================================================
+   Dados fixos da atividade
+========================================================= */
 
 const TABUADAS = [2, 3, 4, 5, 6, 7, 8, 9];
 const MULTIPLICADORES = [2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -32,6 +45,10 @@ const TABUADA_POR_DETALHE_ID: Record<string, number> = Object.fromEntries(
     Number(tabuada),
   ])
 );
+
+/* =========================================================
+   Tipos
+========================================================= */
 
 type Rodada = "ordem" | "embaralhada";
 
@@ -87,6 +104,10 @@ type ResumoRevisao = {
   dataExecucao: string;
 };
 
+/* =========================================================
+   Componente principal
+========================================================= */
+
 export default function MultiplicacaoPageView() {
   const router = useRouter();
 
@@ -107,15 +128,32 @@ export default function MultiplicacaoPageView() {
   const [processandoRodada, setProcessandoRodada] = useState(false);
   const [resultadoConclusao, setResultadoConclusao] =
     useState<ResultadoConclusao | null>(null);
+
   const [modoRevisao, setModoRevisao] = useState(false);
   const [resumoRevisao, setResumoRevisao] = useState<ResumoRevisao | null>(null);
   const [respostasRevisao, setRespostasRevisao] = useState<
     Record<string, RespostaRevisao>
   >({});
 
+  /* =========================================================
+     Inicialização
+  ========================================================= */
+
   useEffect(() => {
     inicializarPagina();
   }, []);
+
+  /* =========================================================
+     Verificação automática da rodada
+  ========================================================= */
+
+  useEffect(() => {
+    verificarPreenchimentoAutomatico();
+  }, [respostas, questoesDaTabuadaSelecionada, rodada, modoRevisao]);
+
+  /* =========================================================
+     Formatações
+  ========================================================= */
 
   function formatarDataHoraLocal(data: Date) {
     const ano = data.getFullYear();
@@ -147,33 +185,9 @@ export default function MultiplicacaoPageView() {
     return `${minutos}min e ${segundos} seg`;
   }
 
-  function limparEstadoDaTabuada(tabuada: number) {
-    setRespostas((respostasAtuais) => {
-      const novasRespostas = { ...respostasAtuais };
-
-      MULTIPLICADORES.forEach((multiplicador) => {
-        delete novasRespostas[gerarChaveResposta(tabuada, multiplicador, "ordem")];
-        delete novasRespostas[
-          gerarChaveResposta(tabuada, multiplicador, "embaralhada")
-        ];
-      });
-
-      return novasRespostas;
-    });
-
-    setCamposValidados((camposAtuais) => {
-      const novosCampos = { ...camposAtuais };
-
-      MULTIPLICADORES.forEach((multiplicador) => {
-        delete novosCampos[gerarChaveResposta(tabuada, multiplicador, "ordem")];
-        delete novosCampos[
-          gerarChaveResposta(tabuada, multiplicador, "embaralhada")
-        ];
-      });
-
-      return novosCampos;
-    });
-  }
+  /* =========================================================
+     Funções auxiliares da tabuada
+  ========================================================= */
 
   function gerarEnunciado(tabuada: number, multiplicador: number) {
     return `${tabuada} x ${multiplicador}`;
@@ -213,6 +227,21 @@ export default function MultiplicacaoPageView() {
     });
   }
 
+  function embaralharArray(array: number[]) {
+    const novoArray = [...array];
+
+    for (let i = novoArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]];
+    }
+
+    return novoArray;
+  }
+
+  /* =========================================================
+     Questões exibidas na tela
+  ========================================================= */
+
   const questoesDaTabuadaSelecionada = useMemo<QuestaoTela[]>(() => {
     return ordemMultiplicadores.map((multiplicador) => {
       const enunciado = gerarEnunciado(tabuadaSelecionada, multiplicador);
@@ -234,9 +263,9 @@ export default function MultiplicacaoPageView() {
     });
   }, [tabuadaSelecionada, ordemMultiplicadores, questoesBanco]);
 
-  useEffect(() => {
-    verificarPreenchimentoAutomatico();
-  }, [respostas, questoesDaTabuadaSelecionada, rodada, modoRevisao]);
+  /* =========================================================
+     Carregamento inicial
+  ========================================================= */
 
   async function inicializarPagina() {
     const { data } = await supabase.auth.getUser();
@@ -316,16 +345,9 @@ export default function MultiplicacaoPageView() {
     }
   }
 
-  function embaralharArray(array: number[]) {
-    const novoArray = [...array];
-
-    for (let i = novoArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]];
-    }
-
-    return novoArray;
-  }
+  /* =========================================================
+     Respostas e validação visual
+  ========================================================= */
 
   function atualizarResposta(questao: QuestaoTela, valor: string) {
     const apenasNumeros = valor.replace(/\D/g, "");
@@ -388,6 +410,12 @@ export default function MultiplicacaoPageView() {
     focarCampoPorIndice(indice + 1);
   }
 
+  /* =========================================================
+     Correção principal:
+     só finaliza quando cada campo tem a quantidade
+     mínima de dígitos da resposta correta.
+  ========================================================= */
+
   function verificarPreenchimentoAutomatico() {
     if (modoRevisao) return;
     if (processandoRodada) return;
@@ -398,7 +426,10 @@ export default function MultiplicacaoPageView() {
 
     const todasRespondidas = questoesDaTabuadaSelecionada.every((questao) => {
       const chave = gerarChaveResposta(questao.tabuada, questao.multiplicador);
-      return Boolean(respostas[chave]);
+      const respostaUsuario = respostas[chave] ?? "";
+      const respostaCorreta = questao.resposta_correta ?? "";
+
+      return respostaUsuario.length >= respostaCorreta.length;
     });
 
     if (!todasRespondidas) return;
@@ -407,7 +438,7 @@ export default function MultiplicacaoPageView() {
 
     setTimeout(() => {
       finalizarRodadaAutomaticamente();
-    }, 300);
+    }, 700);
   }
 
   async function finalizarRodadaAutomaticamente() {
@@ -469,6 +500,10 @@ export default function MultiplicacaoPageView() {
     setProcessandoRodada(false);
   }
 
+  /* =========================================================
+     Registro no banco
+  ========================================================= */
+
   async function registrarRodadaEmbaralhadaNoBanco(): Promise<ResultadoGravacaoRodada> {
     const totalItens = questoesDaTabuadaSelecionada.length;
 
@@ -511,13 +546,14 @@ export default function MultiplicacaoPageView() {
 
       if (!detalheTabuadaId) {
         console.error("Detalhe da tabuada não encontrado:", tabuadaSelecionada);
+
         return {
-        sucesso: false,
-        acertos,
-        totalItens,
-        tempoTotalSegundos,
-        ganhouJoia: false,
-      };
+          sucesso: false,
+          acertos,
+          totalItens,
+          tempoTotalSegundos,
+          ganhouJoia: false,
+        };
       }
 
       const questoesSemId = questoesDaTabuadaSelecionada.filter(
@@ -526,13 +562,14 @@ export default function MultiplicacaoPageView() {
 
       if (questoesSemId.length > 0) {
         console.error("Existem questões sem ID no Supabase:", questoesSemId);
+
         return {
-        sucesso: false,
-        acertos,
-        totalItens,
-        tempoTotalSegundos,
-        ganhouJoia: false,
-      };
+          sucesso: false,
+          acertos,
+          totalItens,
+          tempoTotalSegundos,
+          ganhouJoia: false,
+        };
       }
 
       const { data: sessaoData, error: sessaoError } = await supabase
@@ -553,13 +590,14 @@ export default function MultiplicacaoPageView() {
 
       if (sessaoError) {
         console.error("Erro ao criar sessão da tabuada:", sessaoError);
+
         return {
-        sucesso: false,
-        acertos,
-        totalItens,
-        tempoTotalSegundos,
-        ganhouJoia: false,
-      };
+          sucesso: false,
+          acertos,
+          totalItens,
+          tempoTotalSegundos,
+          ganhouJoia: false,
+        };
       }
 
       const sessaoId = sessaoData.id;
@@ -591,6 +629,7 @@ export default function MultiplicacaoPageView() {
 
       if (respostasError) {
         console.error("Erro ao gravar respostas da tabuada:", respostasError);
+
         return {
           sucesso: false,
           acertos,
@@ -615,6 +654,7 @@ export default function MultiplicacaoPageView() {
       };
     } catch (error) {
       console.error("Erro inesperado ao gravar tabuada:", error);
+
       return {
         sucesso: false,
         acertos,
@@ -624,6 +664,10 @@ export default function MultiplicacaoPageView() {
       };
     }
   }
+
+  /* =========================================================
+     Revisão
+  ========================================================= */
 
   async function carregarRevisaoTabuada(numero: number) {
     if (!usuarioId) return;
@@ -736,6 +780,38 @@ export default function MultiplicacaoPageView() {
     }
   }
 
+  /* =========================================================
+     Trocas de tabuada
+  ========================================================= */
+
+  function limparEstadoDaTabuada(tabuada: number) {
+    setRespostas((respostasAtuais) => {
+      const novasRespostas = { ...respostasAtuais };
+
+      MULTIPLICADORES.forEach((multiplicador) => {
+        delete novasRespostas[gerarChaveResposta(tabuada, multiplicador, "ordem")];
+        delete novasRespostas[
+          gerarChaveResposta(tabuada, multiplicador, "embaralhada")
+        ];
+      });
+
+      return novasRespostas;
+    });
+
+    setCamposValidados((camposAtuais) => {
+      const novosCampos = { ...camposAtuais };
+
+      MULTIPLICADORES.forEach((multiplicador) => {
+        delete novosCampos[gerarChaveResposta(tabuada, multiplicador, "ordem")];
+        delete novosCampos[
+          gerarChaveResposta(tabuada, multiplicador, "embaralhada")
+        ];
+      });
+
+      return novosCampos;
+    });
+  }
+
   function selecionarTabuada(numero: number, feitaHoje: boolean) {
     if (feitaHoje) {
       carregarRevisaoTabuada(numero);
@@ -774,6 +850,10 @@ export default function MultiplicacaoPageView() {
     rodadaProcessadaRef.current = "";
   }
 
+  /* =========================================================
+     Logout
+  ========================================================= */
+
   async function handleLogout() {
     try {
       const { error } = await supabase.auth.signOut();
@@ -788,6 +868,10 @@ export default function MultiplicacaoPageView() {
       console.error("Erro inesperado ao fazer logout:", error);
     }
   }
+
+  /* =========================================================
+     Renderização
+  ========================================================= */
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
@@ -888,6 +972,7 @@ export default function MultiplicacaoPageView() {
                     resumoRevisao.totalItens
                   )}
                 </span>
+
                 <span className="rounded-full border border-[var(--color-2)]/35 bg-[rgba(233,137,29,0.12)] px-3 py-1 text-[var(--color-2)]">
                   {formatarTempo(resumoRevisao.tempoTotalSegundos)}
                 </span>
