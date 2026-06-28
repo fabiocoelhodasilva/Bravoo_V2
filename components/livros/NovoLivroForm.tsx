@@ -12,13 +12,20 @@ type NovoLivroFormValues = {
 type NovoLivroFormProps = {
   onSubmit: (values: NovoLivroFormValues) => Promise<void>;
   onCancel: () => void;
+  initialValues?: Partial<NovoLivroFormValues>;
+  submitLabel?: string;
 };
 
-export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
-  const [titulo, setTitulo] = useState("");
-  const [autor, setAutor] = useState("");
-  const [dtInicio, setDtInicio] = useState("");
-  const [dtFim, setDtFim] = useState("");
+export function NovoLivroForm({
+  onSubmit,
+  onCancel,
+  initialValues,
+  submitLabel = "Salvar livro",
+}: NovoLivroFormProps) {
+  const [titulo, setTitulo] = useState(initialValues?.titulo ?? "");
+  const [autor, setAutor] = useState(initialValues?.autor ?? "");
+  const [dtInicio, setDtInicio] = useState(initialValues?.dtInicio ?? "");
+  const [dtFim, setDtFim] = useState(initialValues?.dtFim ?? "");
 
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
@@ -34,12 +41,7 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
       return;
     }
 
-    if (!dtFim) {
-      setErro("Informe a data de conclusão.");
-      return;
-    }
-
-    if (dtInicio && dtInicio > dtFim) {
+    if (dtFim && dtInicio && dtInicio > dtFim) {
       setErro("A data de início não pode ser maior que a data de conclusão.");
       return;
     }
@@ -76,7 +78,6 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
         }}
       >
         <div className="flex flex-col gap-4">
-
           <div>
             <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
               Título
@@ -149,10 +150,9 @@ export function NovoLivroForm({ onSubmit, onCancel }: NovoLivroFormProps) {
               className="w-full rounded-full px-5 py-3 text-[0.92rem] font-semibold text-black shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               style={{ background: "var(--color-4)" }}
             >
-              {saving ? "Salvando..." : "Salvar livro"}
+              {saving ? "Salvando..." : submitLabel}
             </button>
           </div>
-
         </div>
       </form>
 

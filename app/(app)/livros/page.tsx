@@ -12,7 +12,6 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 
 import BottomNav from "@/components/ui/BottomNav";
-import DeleteButton from "@/components/ui/DeleteButton";
 
 /* =========================================================
    Tipos
@@ -442,12 +441,27 @@ export default function LivrosPage() {
                                 </div>
                               </div>
 
-                              <DeleteButton
-                                onClick={() => handleDelete(livro.id)}
-                                disabled={deleting}
-                                ariaLabel={`Excluir ${livro.titulo}`}
-                                title="Excluir livro"
-                              />
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <Link
+                                  href={`/livros/editar?id=${livro.id}`}
+                                  aria-label={`Editar ${livro.titulo}`}
+                                  title="Editar livro"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[0.95rem] text-white/80 transition hover:bg-white/[0.08] hover:text-white active:scale-[0.96] sm:h-9 sm:w-9"
+                                >
+                                  ✎
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(livro.id)}
+                                  disabled={deleting}
+                                  aria-label={`Excluir ${livro.titulo}`}
+                                  title="Excluir livro"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[0.95rem] text-white/80 transition hover:bg-white/[0.08] hover:text-white active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9"
+                                >
+                                  🗑
+                                </button>
+                              </div>
                             </div>
                           </article>
                         );
