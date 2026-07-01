@@ -144,14 +144,6 @@ export default function MultiplicacaoPageView() {
   }, []);
 
   /* =========================================================
-     Verificação automática da rodada
-  ========================================================= */
-
-  useEffect(() => {
-    verificarPreenchimentoAutomatico();
-  }, [respostas, questoesDaTabuadaSelecionada, rodada, modoRevisao]);
-
-  /* =========================================================
      Formatações
   ========================================================= */
 
@@ -440,6 +432,15 @@ export default function MultiplicacaoPageView() {
       finalizarRodadaAutomaticamente();
     }, 700);
   }
+
+
+  /* =========================================================
+     Verificação automática da rodada
+  ========================================================= */
+
+  useEffect(() => {
+    verificarPreenchimentoAutomatico();
+  }, [respostas, questoesDaTabuadaSelecionada, rodada, modoRevisao]);
 
   async function finalizarRodadaAutomaticamente() {
     setProcessandoRodada(true);
