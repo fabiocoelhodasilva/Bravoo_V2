@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import JoiaIcon from "@/components/gamification/JoiaIcon";
+import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
 
 const MATEMATICA_MATERIA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
 const CACHE_DASHBOARD_MATEMATICA_KEY = "cache_dashboard_matematica_menu";
 const CACHE_MAX_IDADE_MS = 1000 * 60 * 3;
+const IMAGEM_JOIA_MATEMATICA = "/imagens/joias/joia_verde.png";
 
 type DashboardMatematica = {
   diasSeguidos: number;
@@ -42,10 +43,6 @@ function lerCacheDashboardMatematica(): DashboardMatematica | null {
   }
 }
 
-/* =========================================================
-   Regras de exibição da persistência
-========================================================= */
-
 function calcularDiasSeguidosParaExibicao(params: {
   diasSeguidosSalvo: number;
   ultimaDataAtividade: string | null | undefined;
@@ -79,96 +76,25 @@ function calcularDiasSeguidosParaExibicao(params: {
   return 0;
 }
 
-/* =========================================================
-   Skeleton
-========================================================= */
-
 function DashboardMatematicaSkeleton() {
   return (
-    <div className="w-full max-w-sm animate-pulse rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
-      <div className="mb-4 h-4 w-32 rounded-full bg-white/10" />
+    <div className="w-full max-w-sm animate-pulse">
+      <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
+        <div className="h-[66px] rounded-[18px] bg-white/10" />
+        <div className="h-[66px] rounded-[18px] bg-white/10" />
+      </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="h-[106px] rounded-2xl bg-white/10" />
-        <div className="h-[106px] rounded-2xl bg-white/10" />
+      <div className="hidden rounded-[26px] border border-white/10 bg-white/[0.04] p-4 sm:block">
+        <div className="mb-4 h-4 w-32 rounded-full bg-white/10" />
+
+        <div className="flex flex-col gap-3">
+          <div className="h-[106px] rounded-2xl bg-white/10" />
+          <div className="h-[106px] rounded-2xl bg-white/10" />
+        </div>
       </div>
     </div>
   );
 }
-
-/* =========================================================
-   Card visual
-========================================================= */
-
-function DashboardMatematicaCard({
-  diasSeguidos,
-  totalJoias,
-}: {
-  diasSeguidos: number;
-  totalJoias: number;
-}) {
-  return (
-    <section className="w-full max-w-sm rounded-[26px] border border-white/10 bg-[#101010] p-4 shadow-[0_0_30px_rgba(0,0,0,0.45)]">
-      <p className="mb-4 text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
-        Meu progresso
-      </p>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex min-h-[106px] items-center gap-4 rounded-2xl border border-[#e9891d]/20 bg-[#e9891d]/10 px-4 py-3">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#e9891d]/25 bg-black/25 text-4xl shadow-[0_0_18px_rgba(233,137,29,0.18)]">
-            🔥
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-wide text-white">
-              Persistência
-            </p>
-
-            <div className="mt-1 flex items-end gap-1">
-              <span className="text-4xl font-black leading-none text-white">
-                {diasSeguidos}
-              </span>
-
-              <span className="pb-[6px] text-sm font-bold text-white/70">
-                dias seguidos
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative min-h-[106px] overflow-hidden rounded-2xl border border-[#3d7a99]/35 bg-gradient-to-br from-[#3d7a99]/35 via-[#1d4f7a]/18 to-black/20 px-4 py-3">
-          <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#3d7a99]/25 blur-2xl" />
-
-          <div className="relative flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#3d7a99]/45 bg-black/25 shadow-[0_0_22px_rgba(93,198,161,0.25)]">
-              <JoiaIcon cor="verdeclaro" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-black uppercase tracking-wide text-white">
-                Joias
-              </p>
-
-              <div className="mt-1 flex items-end gap-2">
-                <span className="text-4xl font-black leading-none text-white">
-                  {totalJoias}
-                </span>
-
-                <span className="pb-[6px] text-sm font-bold text-white/70">
-                  Esmeraldas
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================
-   Componente principal
-========================================================= */
 
 export default function MatematicaResumoDashboard() {
   const carregamentoEmAndamentoRef = useRef<Promise<void> | null>(null);
@@ -319,9 +245,11 @@ export default function MatematicaResumoDashboard() {
   }
 
   return (
-    <DashboardMatematicaCard
+    <MateriaResumoDashboardPadrao
       diasSeguidos={diasSeguidos}
       totalJoias={totalJoias}
+      nomeJoia="Esmeraldas"
+      imagemJoia={IMAGEM_JOIA_MATEMATICA}
     />
   );
 }
