@@ -47,14 +47,16 @@ export default function GeografiaMenu() {
 
       <div className="h-[48px]" />
 
-      <main className="flex flex-col items-center px-4 pt-10">
-        <h1 className="mb-6 text-center text-4xl font-bold gradient-text">
+      <main className="flex flex-col items-center px-3 pt-3 sm:px-4 sm:pt-10">
+        <h1 className="mb-3 text-center text-[1.55rem] font-bold leading-tight gradient-text sm:mb-6 sm:text-4xl">
           Geografia
         </h1>
 
-        <GeografiaResumoDashboard />
+        <div className="w-full max-w-sm">
+          <GeografiaResumoDashboard />
+        </div>
 
-        <div className="mt-6 flex w-full max-w-sm animate-fade-in flex-col gap-5">
+        <div className="mt-4 flex w-full max-w-sm animate-fade-in flex-col gap-3 sm:mt-6 sm:gap-5">
           <HomeFeatureCard
             title="América do Sul — Países"
             href="/geografia/america-do-sul/paises"
@@ -86,7 +88,7 @@ export default function GeografiaMenu() {
           />
         </div>
 
-        <div className="mt-12 mb-8">
+        <div className="mt-8 mb-6 sm:mt-12 sm:mb-8">
           <BotaoVoltar />
         </div>
       </main>

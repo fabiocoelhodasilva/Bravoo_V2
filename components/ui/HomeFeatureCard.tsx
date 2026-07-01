@@ -43,15 +43,19 @@ export default function HomeFeatureCard({
     relative
     overflow-hidden
     w-full
-    h-[72px]
-    rounded-2xl
+    h-[56px]
+    sm:h-[72px]
+    rounded-[18px]
+    sm:rounded-2xl
     text-white
     font-semibold
-    text-[1rem]
+    text-[0.92rem]
+    sm:text-[1rem]
     flex
     items-center
     justify-center
-    px-4
+    px-3
+    sm:px-4
     transition-all
     duration-200
     active:scale-[0.99]
@@ -74,12 +78,15 @@ export default function HomeFeatureCard({
         <div
           className="
             absolute
-            left-3
+            left-2
+            sm:left-3
             top-1/2
             z-10
             flex
-            h-[82px]
-            w-[82px]
+            h-[64px]
+            w-[64px]
+            sm:h-[82px]
+            sm:w-[82px]
             -translate-y-1/2
             items-center
             justify-center
@@ -89,8 +96,10 @@ export default function HomeFeatureCard({
           <div
             className="
               absolute
-              h-[58px]
-              w-[58px]
+              h-[44px]
+              w-[44px]
+              sm:h-[58px]
+              sm:w-[58px]
               rounded-full
               bg-white/10
               blur-3xl
@@ -104,6 +113,10 @@ export default function HomeFeatureCard({
             height={105}
             priority
             className="
+              h-[72px]
+              w-[72px]
+              sm:h-[105px]
+              sm:w-[105px]
               object-contain
               bg-transparent
               drop-shadow-[0_0_22px_rgba(255,255,255,0.35)]
@@ -118,6 +131,7 @@ export default function HomeFeatureCard({
           z-10
           w-full
           text-center
+          leading-tight
         "
       >
         {title}
