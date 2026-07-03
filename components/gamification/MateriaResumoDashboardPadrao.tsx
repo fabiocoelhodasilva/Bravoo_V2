@@ -18,7 +18,7 @@ export default function MateriaResumoDashboardPadrao({
   emojiJoia = "💎",
 }: MateriaResumoDashboardPadraoProps) {
   return (
-    <section className="w-full max-w-sm">
+    <section className="w-full">
       {/* Mobile: cards compactos lado a lado */}
       <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
         <div

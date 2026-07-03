@@ -253,71 +253,11 @@ export function MeuDiaPageView({
             </div>
           </section>
 
-          <div className="mb-3 sm:mb-5">
-            {/* Mobile: cards compactos lado a lado */}
-            <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
-              <div
-                className="rounded-[18px] border px-3 py-3"
-                style={{
-                  background:
-                    "radial-gradient(160px 90px at 10% 0%, rgba(233,137,29,0.18), transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), #14110c",
-                  borderColor: "rgba(233,137,29,0.23)",
-                  boxShadow:
-                    "0 8px 18px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.02) inset",
-                }}
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2a1908] text-[1.25rem] shadow-[0_0_16px_rgba(233,137,29,0.25)]">
-                    🔥
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-[#f1e6a7]">
-                      Persistência
-                    </p>
-                    <p className="mt-0.5 text-[1.35rem] font-black leading-none text-white">
-                      {diasSeguidos}
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-
-              <div
-                className="rounded-[18px] border px-3 py-3"
-                style={{
-                  background:
-                    "radial-gradient(160px 90px at 10% 0%, rgba(93,198,161,0.16), transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), #0b1518",
-                  borderColor: "rgba(93,198,161,0.22)",
-                  boxShadow:
-                    "0 8px 18px rgba(0,0,0,0.22), 0 0 0 1px rgba(255,255,255,0.02) inset",
-                }}
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#071f23] text-[1.2rem] shadow-[0_0_16px_rgba(93,198,161,0.25)]">
-                    💎
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-[#f1e6a7]">
-                      Joias
-                    </p>
-                    <p className="mt-0.5 text-[1.35rem] font-black leading-none text-white">
-                      {totalTopazios}
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Desktop/tablet: mantém o dashboard original */}
-            <div className="hidden w-full sm:block">
-              <MeuDiaResumoDashboard
-                diasSeguidos={diasSeguidos}
-                totalJoias={totalTopazios}
-              />
-            </div>
+          <div className="mb-3 w-full sm:mb-5">
+            <MeuDiaResumoDashboard
+              diasSeguidos={diasSeguidos}
+              totalJoias={totalTopazios}
+            />
           </div>
 
           <section
