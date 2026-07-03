@@ -24,6 +24,7 @@ type Props = {
   onSelecionarData: (data: string) => void;
   totalTopazios?: number;
   diasSeguidos?: number;
+  joiasSemana?: Record<string, string>;
 };
 
 function parseIsoDateLocal(iso: string) {
@@ -70,6 +71,7 @@ export function MeuDiaPageView({
   onSelecionarData,
   totalTopazios = 0,
   diasSeguidos = 0,
+  joiasSemana = {},
 }: Props) {
   const [tarefas, setTarefas] = useState<Tarefa[]>(tarefasIniciais);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
@@ -205,6 +207,7 @@ export function MeuDiaPageView({
               <div className="grid min-w-0 flex-1 grid-cols-7 gap-0.5 sm:gap-2">
                 {diasDaSemana.map((dia) => {
                   const selecionado = dia.iso === dataSelecionada;
+                  const imagemJoiaDia = joiasSemana[dia.iso];
 
                   return (
                     <button
@@ -232,6 +235,17 @@ export function MeuDiaPageView({
                         }}
                       >
                         {dia.diaNumero}
+                      </span>
+
+                      <span className="mt-0.5 flex h-4 items-center justify-center sm:h-5">
+                        {imagemJoiaDia && (
+                          <img
+                            src={imagemJoiaDia}
+                            alt="Joia conquistada"
+                            className="h-3.5 w-3.5 object-contain sm:h-4 sm:w-4"
+                            draggable={false}
+                          />
+                        )}
                       </span>
                     </button>
                   );

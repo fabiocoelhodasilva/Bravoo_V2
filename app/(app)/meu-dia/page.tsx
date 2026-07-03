@@ -11,6 +11,7 @@ import { MeuDiaPageView } from "@/components/meu-dia/MeuDiaPageView";
 import { supabase } from "@/lib/supabase/client";
 import { sincronizarJoiaMeuDiaPorConclusao } from "@/lib/gamificacao/minhajornada/meu-dia-joias-actions";
 import { carregarTotalTopaziosMeuDia } from "@/lib/gamificacao/minhajornada/meu-dia-resumo-service";
+import { carregarJoiasSemana } from "@/lib/gamificacao/geral/carregar-joias-semana";
 
 /* =========================================================
    Constantes
@@ -19,6 +20,7 @@ import { carregarTotalTopaziosMeuDia } from "@/lib/gamificacao/minhajornada/meu-
 const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
 const CACHE_PREFIX = "bravoo_meu_dia_";
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
+const IMAGEM_JOIA_MEU_DIA = "/imagens/joias/joia_or.png";
 
 /* =========================================================
    Tipos
@@ -55,6 +57,7 @@ type MeuDiaCache = {
   tarefas: TarefaMeuDia[];
   totalTopazios: number;
   diasSeguidos: number;
+  joiasSemana: Record<string, string>;
 };
 
 /* =========================================================
@@ -68,6 +71,40 @@ function obterDataHojeLocal(): string {
   const dia = String(agora.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
+}
+
+function parseIsoDateLocal(iso: string) {
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  return new Date(ano, mes - 1, dia);
+}
+
+function formatIsoDateLocal(data: Date) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function addDays(data: Date, quantidade: number) {
+  const novaData = new Date(data);
+  novaData.setDate(novaData.getDate() + quantidade);
+  return novaData;
+}
+
+function getStartOfWeekSunday(data: Date) {
+  const diaSemana = data.getDay();
+  return addDays(data, -diaSemana);
+}
+
+function obterIntervaloSemana(dataReferencia: string) {
+  const data = parseIsoDateLocal(dataReferencia);
+  const inicioSemana = getStartOfWeekSunday(data);
+  const fimSemana = addDays(inicioSemana, 6);
+
+  return {
+    inicio: formatIsoDateLocal(inicioSemana),
+    fim: formatIsoDateLocal(fimSemana),
+  };
 }
 
 function getCacheKey(usuarioId: string, dataReferencia: string) {
@@ -98,6 +135,7 @@ function carregarMeuDiaDoCache(
       tarefas: cacheParseado.tarefas ?? [],
       totalTopazios: Number(cacheParseado.totalTopazios ?? 0),
       diasSeguidos: Number(cacheParseado.diasSeguidos ?? 0),
+      joiasSemana: cacheParseado.joiasSemana ?? {},
     };
   } catch {
     return null;
@@ -172,6 +210,7 @@ export default function MeuDiaPage() {
 
   const [totalTopazios, setTotalTopazios] = useState(0);
   const [diasSeguidos, setDiasSeguidos] = useState(0);
+  const [joiasSemana, setJoiasSemana] = useState<Record<string, string>>({});
 
   const [dataSelecionada, setDataSelecionada] = useState<string>(
     obterDataHojeLocal()
@@ -229,6 +268,26 @@ export default function MeuDiaPage() {
   }, []);
 
   /* =========================================================
+     Busca joias da semana visível
+  ========================================================= */
+
+  const carregarJoiasSemanaMeuDia = useCallback(
+    async (idUsuario: string, dataReferencia: string) => {
+      const intervaloSemana = obterIntervaloSemana(dataReferencia);
+
+      return carregarJoiasSemana({
+        supabase,
+        usuarioId: idUsuario,
+        materiaId: MATERIA_MEU_DIA_ID,
+        dataInicio: intervaloSemana.inicio,
+        dataFim: intervaloSemana.fim,
+        imagemJoia: IMAGEM_JOIA_MEU_DIA,
+      });
+    },
+    []
+  );
+
+  /* =========================================================
      Carrega Meu Dia com cache rápido + atualização real
   ========================================================= */
 
@@ -261,6 +320,7 @@ export default function MeuDiaPage() {
           setTarefas(cache.tarefas);
           setTotalTopazios(cache.totalTopazios);
           setDiasSeguidos(cache.diasSeguidos);
+          setJoiasSemana(cache.joiasSemana);
           setCarregando(false);
         }
 
@@ -268,6 +328,7 @@ export default function MeuDiaPage() {
           tarefasResponse,
           totalTopaziosAtualizado,
           diasSeguidosAtualizado,
+          joiasSemanaAtualizadas,
         ] = await Promise.all([
           supabase.rpc("fn_next_meu_dia_status", {
             p_usuario_id: user.id,
@@ -275,6 +336,7 @@ export default function MeuDiaPage() {
           }),
           carregarTotalTopazios(user.id),
           carregarDiasSeguidosMeuDia(user.id),
+          carregarJoiasSemanaMeuDia(user.id, dataReferencia),
         ]);
 
         if (!componenteAtivoRef.current) return;
@@ -299,17 +361,20 @@ export default function MeuDiaPage() {
         setTarefas(tarefasFormatadas);
         setTotalTopazios(totalTopaziosAtualizado);
         setDiasSeguidos(diasSeguidosAtualizado);
+        setJoiasSemana(joiasSemanaAtualizadas);
 
         salvarMeuDiaNoCache(user.id, dataReferencia, {
           tarefas: tarefasFormatadas,
           totalTopazios: totalTopaziosAtualizado,
           diasSeguidos: diasSeguidosAtualizado,
+          joiasSemana: joiasSemanaAtualizadas,
         });
       } catch (error) {
         registrarErroDev("Erro inesperado ao carregar Meu Dia:", error);
 
         if (componenteAtivoRef.current) {
           setTarefas([]);
+          setJoiasSemana({});
         }
       } finally {
         carregandoMeuDiaRef.current = false;
@@ -319,7 +384,7 @@ export default function MeuDiaPage() {
         }
       }
     },
-    [router, carregarTotalTopazios, carregarDiasSeguidosMeuDia]
+    [router, carregarTotalTopazios, carregarDiasSeguidosMeuDia, carregarJoiasSemanaMeuDia]
   );
 
   useEffect(() => {
@@ -373,6 +438,7 @@ export default function MeuDiaPage() {
         tarefas: tarefasAtualizadas,
         totalTopazios,
         diasSeguidos,
+        joiasSemana,
       });
 
       setSalvandoIds((prev) =>
@@ -407,20 +473,27 @@ export default function MeuDiaPage() {
           notificarAtualizacaoJoias();
         }
 
-        const [totalAtualizado, diasSeguidosAtualizado] = await Promise.all([
+        const [
+          totalAtualizado,
+          diasSeguidosAtualizado,
+          joiasSemanaAtualizadas,
+        ] = await Promise.all([
           carregarTotalTopazios(idUsuario),
           carregarDiasSeguidosMeuDia(idUsuario),
+          carregarJoiasSemanaMeuDia(idUsuario, dataSelecionada),
         ]);
 
         if (!componenteAtivoRef.current) return;
 
         setTotalTopazios(totalAtualizado);
         setDiasSeguidos(diasSeguidosAtualizado);
+        setJoiasSemana(joiasSemanaAtualizadas);
 
         salvarMeuDiaNoCache(idUsuario, dataSelecionada, {
           tarefas: tarefasAtualizadas,
           totalTopazios: totalAtualizado,
           diasSeguidos: diasSeguidosAtualizado,
+          joiasSemana: joiasSemanaAtualizadas,
         });
       } catch (error) {
         registrarErroDev("Erro ao atualizar tarefa do Meu Dia:", error);
@@ -437,6 +510,7 @@ export default function MeuDiaPage() {
           tarefas: tarefasRestauradas,
           totalTopazios,
           diasSeguidos,
+          joiasSemana,
         });
       } finally {
         setSalvandoIds((prev) => prev.filter((id) => id !== tarefaId));
@@ -451,6 +525,8 @@ export default function MeuDiaPage() {
       diasSeguidos,
       carregarTotalTopazios,
       carregarDiasSeguidosMeuDia,
+      carregarJoiasSemanaMeuDia,
+      joiasSemana,
     ]
   );
 
@@ -502,20 +578,27 @@ export default function MeuDiaPage() {
           notificarAtualizacaoJoias();
         }
 
-        const [totalAtualizado, diasSeguidosAtualizado] = await Promise.all([
+        const [
+          totalAtualizado,
+          diasSeguidosAtualizado,
+          joiasSemanaAtualizadas,
+        ] = await Promise.all([
           carregarTotalTopazios(idUsuario),
           carregarDiasSeguidosMeuDia(idUsuario),
+          carregarJoiasSemanaMeuDia(idUsuario, dataSelecionada),
         ]);
 
         if (!componenteAtivoRef.current) return;
 
         setTotalTopazios(totalAtualizado);
         setDiasSeguidos(diasSeguidosAtualizado);
+        setJoiasSemana(joiasSemanaAtualizadas);
 
         salvarMeuDiaNoCache(idUsuario, dataSelecionada, {
           tarefas: tarefasAtualizadas,
           totalTopazios: totalAtualizado,
           diasSeguidos: diasSeguidosAtualizado,
+          joiasSemana: joiasSemanaAtualizadas,
         });
       } catch (error) {
         registrarErroDev("Erro ao excluir tarefa do Meu Dia:", error);
@@ -531,6 +614,7 @@ export default function MeuDiaPage() {
       dataSelecionada,
       carregarTotalTopazios,
       carregarDiasSeguidosMeuDia,
+      carregarJoiasSemanaMeuDia,
     ]
   );
 
@@ -550,6 +634,7 @@ export default function MeuDiaPage() {
       onSelecionarData={setDataSelecionada}
       totalTopazios={totalTopazios}
       diasSeguidos={diasSeguidos}
+      joiasSemana={joiasSemana}
     />
   );
 }
