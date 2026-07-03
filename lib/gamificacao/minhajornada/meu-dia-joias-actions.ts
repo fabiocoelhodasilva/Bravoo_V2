@@ -1,6 +1,7 @@
 "use server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { processarGamificacaoAposAtividade } from "@/lib/gamificacao/geral/gamificacao-actions";
 
 const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
 
@@ -115,6 +116,23 @@ export async function sincronizarJoiaMeuDiaPorConclusao(dataReferencia: string) 
       tarefasConcluidas,
       minimoNecessario,
     };
+  }
+
+  try {
+    await processarGamificacaoAposAtividade({
+      supabase,
+      usuarioId: user.id,
+      materiaId: MATERIA_MEU_DIA_ID,
+      atividadeId: null,
+      sessaoAtividadeId: null,
+      dataReferencia,
+      pontuacao: tarefasConcluidas,
+    });
+  } catch (erroGamificacao) {
+    console.error(
+      "Joia Meu Dia sincronizada, mas houve erro ao atualizar persistência:",
+      erroGamificacao
+    );
   }
 
   return {
