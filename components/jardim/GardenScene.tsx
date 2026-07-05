@@ -363,16 +363,16 @@ function GardenModel({
 
   const isSelected = selectedGardenItemId === item.id;
   const treeItem = isTreeItem(item.type);
-  const markerRadius = treeItem ? 1.35 : 0.75;
+  const markerRadius = treeItem ? 1.65 : 0.95;
   const yOffset = ITEM_Y_OFFSETS[item.type] ?? 0;
 
   const hitboxSize: [number, number, number] = treeItem
-    ? [3.4, 7.2, 3.4]
-    : [1.8, 1.8, 1.8];
+    ? [4.2, 7.5, 4.2]
+    : [2.6, 2.6, 2.6];
 
   const hitboxCenterY = treeItem
-    ? item.position[1] + 3.6
-    : item.position[1] + 0.9;
+    ? item.position[1] + 3.75
+    : item.position[1] + 1.3;
 
   function handlePointerDown(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
