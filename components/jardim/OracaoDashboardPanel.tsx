@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { registrarMomentoOracao } from "@/lib/gamificacao/oracao/oracao-actions";
+import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
 import { supabase } from "@/lib/supabase/client";
 
 /* =========================================================
@@ -595,107 +596,32 @@ export default function OracaoDashboardPanel({
   }
 
   /* =========================================================
-     Componentes internos
-  ========================================================= */
-
-  function CardPersistenciaOracao() {
-    const textoDias = persistenciaDias === 1 ? "dia seguido" : "dias seguidos";
-
-    return (
-      <div className="relative min-h-[106px] overflow-hidden rounded-2xl border border-[#e9891d]/35 bg-gradient-to-br from-[#e9891d]/30 via-[#7a3f1d]/18 to-black/20 px-4 py-3 shadow-[0_0_18px_rgba(233,137,29,0.12)]">
-        <div className="pointer-events-none absolute -right-8 -bottom-10 text-[7rem] leading-none opacity-[0.08]">
-          🔥
-        </div>
-
-        <div className="relative flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#e9891d]/45 bg-black/25 text-4xl shadow-[0_0_22px_rgba(233,137,29,0.25)]">
-            🔥
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-wide text-white">
-              Persistência
-            </p>
-
-            <div className="mt-1 flex items-end gap-2">
-              <span className="text-4xl font-black leading-none text-white">
-                {persistenciaDias}
-              </span>
-
-              <span className="pb-[6px] text-sm font-bold text-white/70">
-                {textoDias}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function CardJoiasEspiritual() {
-    const totalDiamantes = totalJoiasEspiritual ?? "...";
-
-    return (
-      <div className="relative min-h-[106px] overflow-hidden rounded-2xl border border-[#3d7a99]/35 bg-gradient-to-br from-[#3d7a99]/35 via-[#1d4f7a]/18 to-black/20 px-4 py-3 shadow-[0_0_18px_rgba(61,122,153,0.12)]">
-        <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#3d7a99]/25 blur-2xl" />
-
-        <div className="relative flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#3d7a99]/45 bg-black/25 shadow-[0_0_22px_rgba(61,122,153,0.25)]">
-            <img
-              src={IMAGEM_JOIA_ESPIRITUAL}
-              alt="Diamantes"
-              className="h-14 w-14 object-contain"
-              draggable={false}
-            />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-wide text-white">
-              Joias
-            </p>
-
-            <div className="mt-1 flex items-end gap-2">
-              <span className="text-4xl font-black leading-none text-white">
-                {totalDiamantes}
-              </span>
-
-              <span className="pb-[6px] text-sm font-bold text-white/70">
-                Diamantes
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* =========================================================
      Renderização
   ========================================================= */
 
   return (
-    <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[24px] backdrop-blur-[2px]">
-      <div className="relative max-h-[calc(100dvh-110px)] w-full max-w-[480px] overflow-y-auto rounded-[28px] border border-white/10 bg-[#101514]/95 text-white shadow-2xl">
+    <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[16px] backdrop-blur-[2px] sm:pt-[24px]">
+      <div className="relative max-h-[calc(100dvh-96px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-white/10 bg-[#101514]/95 text-white shadow-2xl sm:max-h-[calc(100dvh-110px)] sm:max-w-[480px] sm:rounded-[28px]">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-bold hover:bg-white/20"
+          className="absolute right-3 top-3 z-50 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-base font-bold hover:bg-white/20 sm:h-9 sm:w-9 sm:text-lg"
         >
           ×
         </button>
 
-        <div className="p-4">
-          <div className="mb-4 pr-10">
-            <h2 className="text-2xl font-black">Minhas Orações</h2>
+        <div className="p-3 sm:p-4">
+          <div className="mb-3 pr-10 sm:mb-4">
+            <h2 className="text-xl font-black sm:text-2xl">Minhas Orações</h2>
 
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-1 text-xs font-semibold leading-snug text-white/65 sm:mt-2 sm:text-sm">
               Registre suas orações e acompanhe seu progresso.
             </p>
           </div>
 
-          <div className="mb-4 rounded-3xl border border-[#5dc6a1]/25 bg-gradient-to-br from-[#5dc6a1]/20 via-[#3d7a99]/15 to-[#f1e6a7]/10 p-4">
-            <div className="flex items-center gap-5">
-              <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-black/30">
+          <div className="mb-3 rounded-[22px] border border-[#5dc6a1]/25 bg-gradient-to-br from-[#5dc6a1]/20 via-[#3d7a99]/15 to-[#f1e6a7]/10 p-3 sm:mb-4 sm:rounded-3xl sm:p-4">
+            <div className="flex items-center gap-3 sm:gap-5">
+              <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full bg-black/30 sm:h-24 sm:w-24">
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
@@ -703,22 +629,24 @@ export default function OracaoDashboardPanel({
                   }}
                 />
 
-                <div className="relative flex h-[76px] w-[76px] flex-col items-center justify-center rounded-full bg-[#101514]">
-                  <div className="text-2xl font-black leading-none">
+                <div className="relative flex h-[60px] w-[60px] flex-col items-center justify-center rounded-full bg-[#101514] sm:h-[76px] sm:w-[76px]">
+                  <div className="text-xl font-black leading-none sm:text-2xl">
                     {metaSegura}
                   </div>
-                  <div className="mt-1 text-xs font-black uppercase tracking-wide text-white/70">
+                  <div className="mt-0.5 text-[0.62rem] font-black uppercase tracking-wide text-white/70 sm:mt-1 sm:text-xs">
                     min
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-black">🙏 Meta do dia</h3>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black leading-tight sm:text-lg">
+                      🙏 Meta do dia
+                    </h3>
 
-                    <p className="mt-1 text-sm text-white/65">
+                    <p className="mt-1 text-xs font-semibold leading-snug text-white/65 sm:text-sm">
                       {carregando
                         ? "Carregando seus dados..."
                         : minutosHoje >= metaSegura
@@ -731,24 +659,24 @@ export default function OracaoDashboardPanel({
                     type="button"
                     onClick={() => setModalMetaAberto(true)}
                     disabled={carregando || salvandoMeta}
-                    className="shrink-0 rounded-full border border-[#5dc6a1]/40 bg-black/20 px-3 py-1 text-[11px] font-bold text-[#5dc6a1] transition hover:bg-[#5dc6a1]/10 disabled:cursor-wait disabled:opacity-50"
+                    className="shrink-0 rounded-full border border-[#5dc6a1]/40 bg-black/20 px-2.5 py-1 text-[0.62rem] font-bold text-[#5dc6a1] transition hover:bg-[#5dc6a1]/10 disabled:cursor-wait disabled:opacity-50 sm:px-3 sm:text-[11px]"
                   >
-                    Alterar Meta
+                    Alterar
                   </button>
                 </div>
 
                 {!carregando && (
                   <p
-                    className={`mt-4 text-sm font-bold ${
+                    className={`mt-2 text-xs font-bold leading-snug sm:mt-4 sm:text-sm ${
                       minutosHoje >= metaSegura
                         ? "text-[#5dc6a1]"
                         : "text-white/70"
                     }`}
                   >
                     {minutosHoje > metaSegura
-                      ? "🎉 Parabéns, você superou a meta."
+                      ? "🎉 Você superou a meta."
                       : minutosHoje === metaSegura
-                      ? "🎉 Parabéns, você cumpriu a meta hoje."
+                      ? "🎉 Meta cumprida hoje."
                       : `Faltam ${Math.max(
                           0,
                           metaSegura - minutosHoje
@@ -759,20 +687,24 @@ export default function OracaoDashboardPanel({
             </div>
           </div>
 
-          <div className="mb-3 rounded-2xl border border-[#5dc6a1]/20 bg-[#5dc6a1]/10 px-4 py-2 text-center text-xs font-bold text-[#5dc6a1]">
+          <div className="mb-3 rounded-2xl border border-[#5dc6a1]/20 bg-[#5dc6a1]/10 px-3 py-2 text-center text-[0.72rem] font-bold leading-snug text-[#5dc6a1] sm:px-4 sm:text-xs">
             Ore e ganhe até 10 itens para seu jardim por dia!
           </div>
 
-          <div className="mx-auto mb-4 flex w-full max-w-[420px] flex-col gap-3">
-            <CardPersistenciaOracao />
-            <CardJoiasEspiritual />
+          <div className="mx-auto mb-4 w-full max-w-[420px]">
+            <MateriaResumoDashboardPadrao
+              diasSeguidos={persistenciaDias}
+              totalJoias={totalJoiasEspiritual ?? 0}
+              nomeJoia="Diamantes"
+              imagemJoia={IMAGEM_JOIA_ESPIRITUAL}
+            />
           </div>
 
           <button
             type="button"
             onClick={() => setModalAberto(true)}
             disabled={carregando || salvando}
-            className="w-full rounded-2xl bg-[#5dc6a1] px-5 py-4 text-base font-black text-white shadow-lg disabled:cursor-wait disabled:opacity-50"
+            className="w-full rounded-2xl bg-[#5dc6a1] px-5 py-3.5 text-sm font-black text-white shadow-lg disabled:cursor-wait disabled:opacity-50 sm:py-4 sm:text-base"
           >
             {salvando ? "Salvando..." : "Registrar oração"}
           </button>
