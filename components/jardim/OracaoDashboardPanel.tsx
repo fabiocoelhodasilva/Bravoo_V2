@@ -745,77 +745,6 @@ export default function OracaoDashboardPanel({
               Minhas Orações
             </h2>
 
-            <p className="mt-1 text-xs font-semibold leading-snug text-white/65 sm:mt-2 sm:text-sm">
-              Registre suas orações e acompanhe seu progresso.
-            </p>
-          </div>
-
-          <div className="mb-3 rounded-[22px] border border-[#5dc6a1]/25 bg-gradient-to-br from-[#5dc6a1]/20 via-[#3d7a99]/15 to-[#f1e6a7]/10 p-3 sm:mb-4 sm:rounded-3xl sm:p-4">
-            <div className="flex items-center gap-3 sm:gap-5">
-              <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full bg-black/30 sm:h-24 sm:w-24">
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `conic-gradient(#5dc6a1 ${progresso}%, rgba(255,255,255,0.12) 0)`,
-                  }}
-                />
-
-                <div className="relative flex h-[60px] w-[60px] flex-col items-center justify-center rounded-full bg-[#101514] sm:h-[76px] sm:w-[76px]">
-                  <div className="text-xl font-black leading-none sm:text-2xl">
-                    {metaSegura}
-                  </div>
-                  <div className="mt-0.5 text-[0.62rem] font-black uppercase tracking-wide text-white/70 sm:mt-1 sm:text-xs">
-                    min
-                  </div>
-                </div>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2 sm:gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-base font-black leading-tight sm:text-lg">
-                      🙏 Meta do dia
-                    </h3>
-
-                    <p className="mt-1 text-xs font-semibold leading-snug text-white/65 sm:text-sm">
-                      {carregando
-                        ? "Carregando seus dados..."
-                        : minutosHoje >= metaSegura
-                        ? `Minutos totais hoje: ${minutosHoje} min.`
-                        : `${minutosHoje} de ${metaSegura} minutos hoje.`}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setModalMetaAberto(true)}
-                    disabled={carregando || salvandoMeta}
-                    className="shrink-0 rounded-full border border-[#5dc6a1]/40 bg-black/20 px-2.5 py-1 text-[0.62rem] font-bold text-[#5dc6a1] transition hover:bg-[#5dc6a1]/10 disabled:cursor-wait disabled:opacity-50 sm:px-3 sm:text-[11px]"
-                  >
-                    Alterar
-                  </button>
-                </div>
-
-                {!carregando && (
-                  <p
-                    className={`mt-2 text-xs font-bold leading-snug sm:mt-4 sm:text-sm ${
-                      minutosHoje >= metaSegura
-                        ? "text-[#5dc6a1]"
-                        : "text-white/70"
-                    }`}
-                  >
-                    {minutosHoje > metaSegura
-                      ? "🎉 Você superou a meta."
-                      : minutosHoje === metaSegura
-                      ? "🎉 Meta cumprida hoje."
-                      : `Faltam ${Math.max(
-                          0,
-                          metaSegura - minutosHoje
-                        )} min para cumprir a meta`}
-                  </p>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="mb-3 rounded-2xl border border-[#5dc6a1]/20 bg-[#5dc6a1]/10 px-3 py-2 text-center text-[0.72rem] font-bold leading-snug text-[#5dc6a1] sm:px-4 sm:text-xs">
@@ -924,6 +853,74 @@ export default function OracaoDashboardPanel({
               nomeJoia="Diamantes"
               imagemJoia={IMAGEM_JOIA_ESPIRITUAL}
             />
+          </div>
+
+          <div className="mb-3 rounded-[22px] border border-[#5dc6a1]/25 bg-gradient-to-br from-[#5dc6a1]/20 via-[#3d7a99]/15 to-[#f1e6a7]/10 p-3 sm:mb-4 sm:rounded-3xl sm:p-4">
+            <div className="flex items-center gap-3 sm:gap-5">
+              <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full bg-black/30 sm:h-24 sm:w-24">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: `conic-gradient(#5dc6a1 ${progresso}%, rgba(255,255,255,0.12) 0)`,
+                  }}
+                />
+
+                <div className="relative flex h-[60px] w-[60px] flex-col items-center justify-center rounded-full bg-[#101514] sm:h-[76px] sm:w-[76px]">
+                  <div className="text-xl font-black leading-none sm:text-2xl">
+                    {metaSegura}
+                  </div>
+                  <div className="mt-0.5 text-[0.62rem] font-black uppercase tracking-wide text-white/70 sm:mt-1 sm:text-xs">
+                    min
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black leading-tight sm:text-lg">
+                      🙏 Meta do dia
+                    </h3>
+
+                    <p className="mt-1 text-xs font-semibold leading-snug text-white/65 sm:text-sm">
+                      {carregando
+                        ? "Carregando seus dados..."
+                        : minutosHoje >= metaSegura
+                        ? `Minutos totais hoje: ${minutosHoje} min.`
+                        : `${minutosHoje} de ${metaSegura} minutos hoje.`}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalMetaAberto(true)}
+                    disabled={carregando || salvandoMeta}
+                    className="shrink-0 rounded-full border border-[#5dc6a1]/40 bg-black/20 px-2.5 py-1 text-[0.62rem] font-bold text-[#5dc6a1] transition hover:bg-[#5dc6a1]/10 disabled:cursor-wait disabled:opacity-50 sm:px-3 sm:text-[11px]"
+                  >
+                    Alterar
+                  </button>
+                </div>
+
+                {!carregando && (
+                  <p
+                    className={`mt-2 text-xs font-bold leading-snug sm:mt-4 sm:text-sm ${
+                      minutosHoje >= metaSegura
+                        ? "text-[#5dc6a1]"
+                        : "text-white/70"
+                    }`}
+                  >
+                    {minutosHoje > metaSegura
+                      ? "🎉 Você superou a meta."
+                      : minutosHoje === metaSegura
+                      ? "🎉 Meta cumprida hoje."
+                      : `Faltam ${Math.max(
+                          0,
+                          metaSegura - minutosHoje
+                        )} min para cumprir a meta`}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <button
