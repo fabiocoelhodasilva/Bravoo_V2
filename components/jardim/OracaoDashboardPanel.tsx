@@ -747,10 +747,6 @@ export default function OracaoDashboardPanel({
 
           </div>
 
-          <div className="mb-3 rounded-2xl border border-[#5dc6a1]/20 bg-[#5dc6a1]/10 px-3 py-2 text-center text-[0.72rem] font-bold leading-snug text-[#5dc6a1] sm:px-4 sm:text-xs">
-            Ore e ganhe até 10 itens para seu jardim por dia!
-          </div>
-
           <section
             className="mb-3 w-full rounded-[22px] px-2 py-3 sm:px-3"
             style={{
@@ -865,32 +861,36 @@ export default function OracaoDashboardPanel({
                 "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
             }}
           >
-            <p className="mb-3 text-center text-[0.62rem] font-black uppercase tracking-[0.26em] text-[#f1e6a7] sm:text-xs">
+            <p className="text-center text-[0.62rem] font-black uppercase tracking-[0.26em] text-[#f1e6a7] sm:text-xs">
               Oração
             </p>
 
-            <div className="grid grid-cols-3 items-center divide-x divide-white/10">
+            <p className="mx-auto mt-1 max-w-[260px] text-center text-[0.68rem] font-bold leading-snug text-[#5dc6a1] sm:text-xs">
+              🌱 Ore e ganhe até 10 itens para seu jardim por dia!
+            </p>
+
+            <div className="mt-3 grid grid-cols-3 items-end divide-x divide-white/10">
               <button
                 type="button"
                 onClick={() => setModalAberto(true)}
                 disabled={carregando || salvando}
-                className="flex flex-col items-center justify-center gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50"
+                className="flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px]"
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e9891d] text-3xl font-black leading-none text-black shadow-[0_0_20px_rgba(233,137,29,0.35)] sm:h-14 sm:w-14">
                   +
                 </span>
 
-                <span className="text-[0.68rem] font-black text-white sm:text-xs">
+                <span className="h-4 text-center text-[0.68rem] font-black leading-4 text-white sm:text-xs">
                   Registrar
                 </span>
               </button>
 
-              <div className="flex flex-col items-center justify-center px-2 text-center">
-                <span className="text-[1.8rem] font-black leading-none text-white sm:text-4xl">
+              <div className="flex min-h-[78px] flex-col items-center justify-end gap-1 px-2 text-center sm:min-h-[88px]">
+                <span className="flex h-12 items-center text-[1.8rem] font-black leading-none text-white sm:h-14 sm:text-4xl">
                   {minutosHoje}
                 </span>
 
-                <span className="mt-1 text-[0.68rem] font-black leading-tight text-[#5dc6a1] sm:text-xs">
+                <span className="h-4 text-center text-[0.68rem] font-black leading-4 text-[#5dc6a1] sm:text-xs">
                   min hoje
                 </span>
               </div>
@@ -899,9 +899,10 @@ export default function OracaoDashboardPanel({
                 type="button"
                 onClick={() => setModalMetaAberto(true)}
                 disabled={carregando || salvandoMeta}
-                className="flex flex-col items-center justify-center gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50"
+                className="flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px]"
+                title="Alterar meta"
               >
-                <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/30 sm:h-14 sm:w-14">
+                <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-black/30 sm:h-16 sm:w-16">
                   <span
                     className="absolute inset-0 rounded-full"
                     style={{
@@ -909,7 +910,7 @@ export default function OracaoDashboardPanel({
                     }}
                   />
 
-                  <span className="relative flex h-9 w-9 flex-col items-center justify-center rounded-full bg-[#101514] sm:h-10 sm:w-10">
+                  <span className="relative flex h-11 w-11 flex-col items-center justify-center rounded-full bg-[#101514] sm:h-12 sm:w-12">
                     <span className="text-base font-black leading-none text-white sm:text-lg">
                       {metaSegura}
                     </span>
@@ -919,8 +920,8 @@ export default function OracaoDashboardPanel({
                   </span>
                 </span>
 
-                <span className="text-[0.68rem] font-black text-white sm:text-xs">
-                  Meta
+                <span className="flex h-4 items-center justify-center gap-1 text-center text-[0.68rem] font-black leading-4 text-white sm:text-xs">
+                  Meta <span className="text-[#e9891d]">✎</span>
                 </span>
               </button>
             </div>
