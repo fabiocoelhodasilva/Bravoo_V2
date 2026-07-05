@@ -165,7 +165,7 @@ function normalizarPercentualCrescimento(percentualEscala: number) {
 const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
   flor_geranio_roxo: 0.7,
   arvore_japonesa: -0.5,
-  arvore_selva: 3.2,
+  arvore_selva: 0,
   japanese_maple: 0,
   jabami_sakura: 0,
   banana_tree: 0,
@@ -905,11 +905,7 @@ export default function GardenScene() {
       return "Ande pelo jardim, mire no chão e clique para plantar.";
     }
 
-    if (selectedGardenItemId) {
-      return "Item selecionado. Use o botão Deletar se quiser removê-lo.";
-    }
-
-    if (isMobile) {
+    if (isMobile || selectedGardenItemId) {
       return "";
     }
 
@@ -1424,36 +1420,41 @@ export default function GardenScene() {
         </div>
       )}
 
-      {selectedGardenItemId && (
-        <div className="absolute right-5 top-24 z-30 flex w-[min(330px,calc(100vw-40px))] select-none flex-col gap-3">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleDeleteSelectedItem();
-            }}
-            onContextMenu={(event) => safePreventDefault(event)}
-            className="self-end rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700"
-            style={{
-              WebkitUserSelect: "none",
-              userSelect: "none",
-              WebkitTouchCallout: "none",
-            }}
-          >
-            Deletar
-          </button>
+      {selectedGardenItem && (
+        <div className="absolute left-4 right-4 top-20 z-30 mx-auto w-[min(360px,calc(100vw-32px))] select-none sm:left-auto sm:right-5 sm:top-24 sm:mx-0">
+          <div className="overflow-hidden rounded-[22px] border border-[#5dc6a1]/25 bg-[#101514]/95 text-white shadow-2xl backdrop-blur-md">
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-[0.62rem] font-black uppercase tracking-[0.18em] text-[#5dc6a1]">
+                  Crescimento da planta
+                </div>
 
-          {selectedGardenItem && (
-            <div className="rounded-2xl border border-[#5dc6a1]/25 bg-[#101514]/95 p-4 text-white shadow-2xl backdrop-blur-md">
-              <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#5dc6a1]">
-                Crescimento da planta
+                <div className="mt-1 text-base font-black capitalize leading-tight">
+                  {getGardenItemDisplayName(selectedGardenItem.type)}
+                </div>
               </div>
 
-              <div className="mt-1 text-base font-black capitalize">
-                {getGardenItemDisplayName(selectedGardenItem.type)}
-              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedGardenItemId(null);
+                }}
+                onContextMenu={(event) => safePreventDefault(event)}
+                aria-label="Fechar painel da planta"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-black text-white transition hover:bg-white/20 active:scale-[0.96]"
+                style={{
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
+                ×
+              </button>
+            </div>
 
-              <div className="mt-3 flex items-center justify-between text-xs font-bold text-white/70">
+            <div className="px-4 py-3">
+              <div className="flex items-center justify-between text-xs font-bold text-white/70">
                 <span>Tamanho atual</span>
                 <span className="text-[#5dc6a1]">
                   {selectedGardenItemGrowthPercent}%
@@ -1467,17 +1468,34 @@ export default function GardenScene() {
                 />
               </div>
 
-              <div className="mt-2 text-xs font-semibold text-white/60">
+              <div className="mt-3 rounded-2xl border border-[#5dc6a1]/15 bg-[#5dc6a1]/10 px-3 py-2 text-xs font-semibold leading-relaxed text-white/70">
                 {selectedGardenItemGrowthPercent >= 100
                   ? "🌿 Esta planta está totalmente desenvolvida."
-                  : `Faltam ${Math.ceil(selectedGardenItemGrowthRemaining / 10)} ${
+                  : `🌱 Faltam ${Math.ceil(selectedGardenItemGrowthRemaining / 10)} ${
                       Math.ceil(selectedGardenItemGrowthRemaining / 10) === 1
                         ? "dia"
                         : "dias"
                     } de oração para atingir o tamanho máximo.`}
               </div>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleDeleteSelectedItem();
+                }}
+                onContextMenu={(event) => safePreventDefault(event)}
+                className="mt-3 w-full rounded-2xl border border-red-500/30 bg-red-500/12 px-4 py-3 text-sm font-black text-red-200 shadow-lg transition hover:bg-red-500/20 active:scale-[0.98]"
+                style={{
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
+                🗑 Remover planta
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
 
