@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -142,67 +143,25 @@ export function NovoLivroForm({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
-                Total de páginas
-              </label>
+          <div>
+            <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
+              Total de páginas
+            </label>
 
-              <input
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                value={totalPaginas}
-                onChange={(event) => {
-                  setTotalPaginas(event.target.value);
-                  setErro("");
-                }}
-                placeholder="Ex.: 250"
-                className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-              />
-            </div>
-
-            <div>
-              <span className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
-                Sua avaliação
-              </span>
-
-              <div
-                className="flex min-h-[43px] items-center gap-1 rounded-[12px] border bg-black px-3"
-                style={{ borderColor: "rgba(255,255,255,0.12)" }}
-              >
-                {Array.from({ length: 5 }).map((_, index) => {
-                  const nota = index + 1;
-                  const selecionada =
-                    classificacao !== null && nota <= classificacao;
-
-                  return (
-                    <button
-                      key={nota}
-                      type="button"
-                      onClick={() => selecionarClassificacao(nota)}
-                      aria-label={`${nota} ${
-                        nota === 1 ? "estrela" : "estrelas"
-                      }`}
-                      aria-pressed={classificacao === nota}
-                      className={`flex h-8 w-8 items-center justify-center text-[1.55rem] leading-none transition active:scale-90 ${
-                        selecionada
-                          ? "text-[#f5c451]"
-                          : "text-white/25 hover:text-white/45"
-                      }`}
-                    >
-                      ★
-                    </button>
-                  );
-                })}
-              </div>
-
-              <p className="mt-1.5 text-[0.72rem] text-white/40">
-                Opcional. Toque novamente na nota escolhida para remover.
-              </p>
-            </div>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={totalPaginas}
+              onChange={(event) => {
+                setTotalPaginas(event.target.value);
+                setErro("");
+              }}
+              placeholder="Ex.: 250"
+              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -239,6 +198,46 @@ export function NovoLivroForm({
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               />
             </div>
+          </div>
+
+          <div>
+            <span className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
+              Minha avaliação
+            </span>
+
+            <div
+              className="flex min-h-[43px] items-center gap-1 rounded-[12px] border bg-black px-3"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}
+            >
+              {Array.from({ length: 5 }).map((_, index) => {
+                const nota = index + 1;
+                const selecionada =
+                  classificacao !== null && nota <= classificacao;
+
+                return (
+                  <button
+                    key={nota}
+                    type="button"
+                    onClick={() => selecionarClassificacao(nota)}
+                    aria-label={`${nota} ${
+                      nota === 1 ? "estrela" : "estrelas"
+                    }`}
+                    aria-pressed={classificacao === nota}
+                    className={`flex h-8 w-8 items-center justify-center text-[1.55rem] leading-none transition active:scale-90 ${
+                      selecionada
+                        ? "text-[#f5c451]"
+                        : "text-white/25 hover:text-white/45"
+                    }`}
+                  >
+                    ★
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mt-1.5 text-[0.72rem] text-white/40">
+              Opcional. Toque novamente na nota escolhida para remover.
+            </p>
           </div>
 
           {erro && (
