@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 
-type NovoLivroFormValues = {
+export type NovoLivroFormValues = {
   titulo: string;
   autor: string;
+  totalPaginas: string;
+  classificacao: number | null;
   dtInicio: string;
   dtFim: string;
 };
@@ -24,21 +26,45 @@ export function NovoLivroForm({
 }: NovoLivroFormProps) {
   const [titulo, setTitulo] = useState(initialValues?.titulo ?? "");
   const [autor, setAutor] = useState(initialValues?.autor ?? "");
+  const [totalPaginas, setTotalPaginas] = useState(
+    initialValues?.totalPaginas ?? ""
+  );
+  const [classificacao, setClassificacao] = useState<number | null>(
+    initialValues?.classificacao ?? null
+  );
   const [dtInicio, setDtInicio] = useState(initialValues?.dtInicio ?? "");
   const [dtFim, setDtFim] = useState(initialValues?.dtFim ?? "");
 
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
 
+  function selecionarClassificacao(nota: number) {
+    setClassificacao((notaAtual) => (notaAtual === nota ? null : nota));
+    setErro("");
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const tituloLimpo = titulo.trim();
     const autorLimpo = autor.trim();
+    const totalPaginasLimpo = totalPaginas.trim();
 
     if (!tituloLimpo) {
       setErro("Informe o título do livro.");
       return;
+    }
+
+    if (totalPaginasLimpo) {
+      const totalPaginasNumero = Number(totalPaginasLimpo);
+
+      if (
+        !Number.isInteger(totalPaginasNumero) ||
+        totalPaginasNumero <= 0
+      ) {
+        setErro("Informe um total de páginas válido e maior que zero.");
+        return;
+      }
     }
 
     if (dtFim && dtInicio && dtInicio > dtFim) {
@@ -53,6 +79,8 @@ export function NovoLivroForm({
       await onSubmit({
         titulo: tituloLimpo,
         autor: autorLimpo,
+        totalPaginas: totalPaginasLimpo,
+        classificacao,
         dtInicio,
         dtFim,
       });
@@ -82,10 +110,14 @@ export function NovoLivroForm({
             <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
               Título
             </label>
+
             <input
               type="text"
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(event) => {
+                setTitulo(event.target.value);
+                setErro("");
+              }}
               placeholder="Ex.: O Peregrino"
               className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
               style={{ borderColor: "rgba(255,255,255,0.12)" }}
@@ -96,10 +128,14 @@ export function NovoLivroForm({
             <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
               Autor
             </label>
+
             <input
               type="text"
               value={autor}
-              onChange={(e) => setAutor(e.target.value)}
+              onChange={(event) => {
+                setAutor(event.target.value);
+                setErro("");
+              }}
               placeholder="Ex.: John Bunyan"
               className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
               style={{ borderColor: "rgba(255,255,255,0.12)" }}
@@ -109,12 +145,79 @@ export function NovoLivroForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
+                Total de páginas
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={totalPaginas}
+                onChange={(event) => {
+                  setTotalPaginas(event.target.value);
+                  setErro("");
+                }}
+                placeholder="Ex.: 250"
+                className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              />
+            </div>
+
+            <div>
+              <span className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
+                Sua avaliação
+              </span>
+
+              <div
+                className="flex min-h-[43px] items-center gap-1 rounded-[12px] border bg-black px-3"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const nota = index + 1;
+                  const selecionada =
+                    classificacao !== null && nota <= classificacao;
+
+                  return (
+                    <button
+                      key={nota}
+                      type="button"
+                      onClick={() => selecionarClassificacao(nota)}
+                      aria-label={`${nota} ${
+                        nota === 1 ? "estrela" : "estrelas"
+                      }`}
+                      aria-pressed={classificacao === nota}
+                      className={`flex h-8 w-8 items-center justify-center text-[1.55rem] leading-none transition active:scale-90 ${
+                        selecionada
+                          ? "text-[#f5c451]"
+                          : "text-white/25 hover:text-white/45"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="mt-1.5 text-[0.72rem] text-white/40">
+                Opcional. Toque novamente na nota escolhida para remover.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
                 Data de início
               </label>
+
               <input
                 type="date"
                 value={dtInicio}
-                onChange={(e) => setDtInicio(e.target.value)}
+                onChange={(event) => {
+                  setDtInicio(event.target.value);
+                  setErro("");
+                }}
                 className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               />
@@ -124,10 +227,14 @@ export function NovoLivroForm({
               <label className="mb-2 block text-[0.86rem] font-medium text-[#dddddd]">
                 Data de conclusão
               </label>
+
               <input
                 type="date"
                 value={dtFim}
-                onChange={(e) => setDtFim(e.target.value)}
+                onChange={(event) => {
+                  setDtFim(event.target.value);
+                  setErro("");
+                }}
                 className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               />

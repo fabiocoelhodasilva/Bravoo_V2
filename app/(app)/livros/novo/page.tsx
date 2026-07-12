@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { getObjetivosPageCssVars } from "@/lib/objetivos/objetivos-utils";
-import { NovoLivroForm } from "@/components/livros/NovoLivroForm";
+import {
+  NovoLivroForm,
+  type NovoLivroFormValues,
+} from "@/components/livros/NovoLivroForm";
+
+const CACHE_PREFIX = "bravoo_livros_usuario_";
 
 export default function NovoLivroPage() {
   const router = useRouter();
@@ -23,26 +28,33 @@ export default function NovoLivroPage() {
   }, [router]);
 
   const handleSubmit = useCallback(
-    async (values: {
-      titulo: string;
-      autor: string;
-      dtInicio: string;
-      dtFim: string;
-    }) => {
+    async (values: NovoLivroFormValues) => {
       if (!user?.id) {
         throw new Error("Usuário não autenticado.");
       }
+
+      const totalPaginas = values.totalPaginas
+        ? Number(values.totalPaginas)
+        : null;
 
       const { error } = await supabase.from("next_livros_lidos").insert({
         usuario_id: user.id,
         titulo: values.titulo,
         autor: values.autor || null,
+        total_paginas: totalPaginas,
+        classificacao: values.classificacao,
         dt_inicio: values.dtInicio || null,
         dt_fim: values.dtFim || null,
       });
 
       if (error) {
         throw error;
+      }
+
+      try {
+        sessionStorage.removeItem(`${CACHE_PREFIX}${user.id}`);
+      } catch {
+        // Evita quebrar o fluxo caso o sessionStorage esteja indisponível.
       }
 
       router.push("/livros");

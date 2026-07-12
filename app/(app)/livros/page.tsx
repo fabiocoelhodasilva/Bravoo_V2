@@ -21,6 +21,8 @@ type LivroLido = {
   id: string;
   titulo: string;
   autor: string | null;
+  total_paginas: number | null;
+  classificacao: number | null;
   dt_inicio: string | null;
   dt_fim: string | null;
   criado_em: string | null;
@@ -131,7 +133,9 @@ export default function LivrosPage() {
     try {
       const { data, error } = await supabase
         .from("next_livros_lidos")
-        .select("id, titulo, autor, dt_inicio, dt_fim, criado_em")
+        .select(
+          "id, titulo, autor, total_paginas, classificacao, dt_inicio, dt_fim, criado_em"
+        )
         .eq("usuario_id", userId)
         .order("dt_fim", { ascending: false })
         .order("criado_em", { ascending: false });
@@ -298,10 +302,6 @@ export default function LivrosPage() {
       }));
   }, [livros]);
 
-  /* =========================================================
-     Estado de carregamento inicial
-  ========================================================= */
-
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -313,10 +313,6 @@ export default function LivrosPage() {
   if (!user) {
     return null;
   }
-
-  /* =========================================================
-     Renderização
-  ========================================================= */
 
   return (
     <>
@@ -422,6 +418,43 @@ export default function LivrosPage() {
                                     <p className="mt-0.5 text-[0.78rem] sm:text-[0.84rem] text-white/70">
                                       {livro.autor}
                                     </p>
+                                  )}
+
+                                  {(livro.total_paginas ||
+                                    livro.classificacao) && (
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                      {livro.classificacao && (
+                                        <div
+                                          className="flex items-center gap-[2px]"
+                                          aria-label={`${livro.classificacao} de 5 estrelas`}
+                                        >
+                                          {Array.from({ length: 5 }).map(
+                                            (_, estrelaIndex) => (
+                                              <span
+                                                key={estrelaIndex}
+                                                className={`text-[0.86rem] leading-none ${
+                                                  estrelaIndex <
+                                                  livro.classificacao!
+                                                    ? "text-[#f5c451]"
+                                                    : "text-white/20"
+                                                }`}
+                                              >
+                                                ★
+                                              </span>
+                                            )
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {livro.total_paginas && (
+                                        <span className="text-[0.74rem] sm:text-[0.8rem] text-white/60">
+                                          📖 {livro.total_paginas}{" "}
+                                          {livro.total_paginas === 1
+                                            ? "página"
+                                            : "páginas"}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
 
                                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.72rem] sm:text-[0.78rem] text-white/50">

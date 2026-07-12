@@ -5,14 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { getObjetivosPageCssVars } from "@/lib/objetivos/objetivos-utils";
-import { NovoLivroForm } from "@/components/livros/NovoLivroForm";
+import {
+  NovoLivroForm,
+  type NovoLivroFormValues,
+} from "@/components/livros/NovoLivroForm";
 
-type LivroFormValues = {
-  titulo: string;
-  autor: string;
-  dtInicio: string;
-  dtFim: string;
-};
+const CACHE_PREFIX = "bravoo_livros_usuario_";
 
 export default function EditarLivroPage() {
   const router = useRouter();
@@ -23,9 +21,8 @@ export default function EditarLivroPage() {
 
   const [carregandoLivro, setCarregandoLivro] = useState(true);
   const [erro, setErro] = useState("");
-  const [initialValues, setInitialValues] = useState<LivroFormValues | null>(
-    null
-  );
+  const [initialValues, setInitialValues] =
+    useState<NovoLivroFormValues | null>(null);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -57,7 +54,9 @@ export default function EditarLivroPage() {
       try {
         const { data, error } = await supabase
           .from("next_livros_lidos")
-          .select("id, titulo, autor, dt_inicio, dt_fim")
+          .select(
+            "id, titulo, autor, total_paginas, classificacao, dt_inicio, dt_fim"
+          )
           .eq("id", livroId)
           .eq("usuario_id", user.id)
           .single();
@@ -69,6 +68,12 @@ export default function EditarLivroPage() {
         setInitialValues({
           titulo: data.titulo ?? "",
           autor: data.autor ?? "",
+          totalPaginas:
+            data.total_paginas !== null &&
+            data.total_paginas !== undefined
+              ? String(data.total_paginas)
+              : "",
+          classificacao: data.classificacao ?? null,
           dtInicio: data.dt_inicio ?? "",
           dtFim: data.dt_fim ?? "",
         });
@@ -86,7 +91,7 @@ export default function EditarLivroPage() {
   }, [livroId, loading, user?.id]);
 
   const handleSubmit = useCallback(
-    async (values: LivroFormValues) => {
+    async (values: NovoLivroFormValues) => {
       if (!user?.id) {
         throw new Error("Usuário não autenticado.");
       }
@@ -95,11 +100,17 @@ export default function EditarLivroPage() {
         throw new Error("Livro não informado.");
       }
 
+      const totalPaginas = values.totalPaginas
+        ? Number(values.totalPaginas)
+        : null;
+
       const { error } = await supabase
         .from("next_livros_lidos")
         .update({
           titulo: values.titulo,
           autor: values.autor || null,
+          total_paginas: totalPaginas,
+          classificacao: values.classificacao,
           dt_inicio: values.dtInicio || null,
           dt_fim: values.dtFim || null,
         })
@@ -108,6 +119,12 @@ export default function EditarLivroPage() {
 
       if (error) {
         throw error;
+      }
+
+      try {
+        sessionStorage.removeItem(`${CACHE_PREFIX}${user.id}`);
+      } catch {
+        // Evita quebrar o fluxo caso o sessionStorage esteja indisponível.
       }
 
       router.push("/livros");
