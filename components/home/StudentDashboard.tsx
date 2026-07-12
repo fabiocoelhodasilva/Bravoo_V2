@@ -34,6 +34,7 @@ const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
 ========================================================= */
 
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
+const DEZ_DIAS_EM_MS = 10 * 24 * 60 * 60 * 1000;
 
 /* =========================================================
    Tipos
@@ -66,6 +67,20 @@ function obterDataLocalHoje() {
   const dia = String(hoje.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
+}
+
+function usuarioTemAteDezDias(dataCadastro: string | undefined) {
+  if (!dataCadastro) return false;
+
+  const dataCadastroEmMs = new Date(dataCadastro).getTime();
+
+  if (Number.isNaN(dataCadastroEmMs)) {
+    return false;
+  }
+
+  const tempoDesdeCadastro = Date.now() - dataCadastroEmMs;
+
+  return tempoDesdeCadastro <= DEZ_DIAS_EM_MS;
 }
 
 /* =========================================================
@@ -131,6 +146,27 @@ export default function StudentDashboard() {
         temJoiaMatematicaHoje: Boolean(resumo.tem_joia_matematica),
       });
 
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Erro ao consultar usuário autenticado:", userError);
+        }
+
+        setMostrarPopup(false);
+        return;
+      }
+
+      const contaTemAteDezDias = usuarioTemAteDezDias(user?.created_at);
+
+      if (!contaTemAteDezDias) {
+        setMostrarPopup(false);
+        return;
+      }
+
       const hoje = obterDataLocalHoje();
       const chavePopup = "student_dashboard_popup_mandala_data";
       const ultimaDataPopup = localStorage.getItem(chavePopup);
@@ -138,6 +174,8 @@ export default function StudentDashboard() {
       if (ultimaDataPopup !== hoje) {
         setMostrarPopup(true);
         localStorage.setItem(chavePopup, hoje);
+      } else {
+        setMostrarPopup(false);
       }
     } finally {
       carregandoDashboardRef.current = false;
