@@ -483,7 +483,7 @@ export default function StudentDashboard() {
       </div>
 
       {carregarResumo && (
-        <div className="mt-8">
+        <div className="student-dashboard-mandala mt-5 sm:mt-8">
           <JornadaResumo
             joiasConquistadas={
               joiasConquistadasHoje
@@ -491,6 +491,37 @@ export default function StudentDashboard() {
           />
         </div>
       )}
+
+      {/* =====================================================
+          Ajuste exclusivo para celular:
+          reduz a Mandala em 15% e também reduz o espaço
+          ocupado por ela no fluxo da página.
+      ===================================================== */}
+      <style jsx global>{`
+        @media (max-width: 639px) {
+          .student-dashboard-mandala {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+            align-items: flex-start;
+          }
+
+          .student-dashboard-mandala > * {
+            zoom: 0.85;
+          }
+
+          @supports not (zoom: 1) {
+            .student-dashboard-mandala > * {
+              transform: scale(0.85);
+              transform-origin: top center;
+            }
+
+            .student-dashboard-mandala {
+              margin-bottom: -48px;
+            }
+          }
+        }
+      `}</style>
     </div>
   );
 }
