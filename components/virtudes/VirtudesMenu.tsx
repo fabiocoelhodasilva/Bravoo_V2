@@ -538,7 +538,7 @@ export default function VirtudesMenu() {
                           className="group w-[155px] shrink-0 text-left sm:w-[210px]"
                         >
                           <div
-                            className={`relative aspect-[2/3] overflow-hidden rounded-[18px] border bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.035] group-active:scale-[0.98] ${
+                            className={`relative aspect-[2/3] overflow-hidden rounded-[18px] border bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 sm:group-hover:scale-[1.035] group-active:scale-[0.98] ${
                               concluida
                                 ? "border-[#5dc6a1]/35 group-hover:border-[#5dc6a1]/60"
                                 : "border-white/10 group-hover:border-white/25"
@@ -547,9 +547,9 @@ export default function VirtudesMenu() {
                             <img
                               src={obterImagemVirtude(virtude)}
                               alt={virtude.titulo}
-                              className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.06] ${
+                              className={`h-full w-full object-cover transition duration-500 sm:group-hover:scale-[1.06] ${
                                 concluida
-                                  ? "grayscale brightness-[0.45] opacity-30"
+                                  ? "grayscale brightness-[0.55] opacity-40"
                                   : ""
                               }`}
                               draggable={false}
@@ -557,7 +557,7 @@ export default function VirtudesMenu() {
 
                             <div
                               className={`absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent ${
-                                concluida ? "bg-black/45" : ""
+                                concluida ? "bg-black/35" : ""
                               }`}
                             />
 
@@ -582,7 +582,7 @@ export default function VirtudesMenu() {
                             </div>
 
                             <div
-                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-[0.8rem] text-white backdrop-blur-sm transition group-hover:scale-110 ${
+                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-[0.8rem] text-white backdrop-blur-sm transition sm:group-hover:scale-110 ${
                                 concluida ? "opacity-35" : "opacity-90"
                               }`}
                             >
