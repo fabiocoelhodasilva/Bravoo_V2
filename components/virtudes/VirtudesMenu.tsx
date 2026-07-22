@@ -526,7 +526,7 @@ export default function VirtudesMenu() {
                 </div>
 
                 <div className="mx-auto w-full max-w-[1240px] overflow-x-auto px-4 pb-4 sm:px-6">
-                  <div className="flex w-max gap-3 sm:gap-5">
+                  <div className="flex w-max items-start gap-3 sm:gap-5">
                     {grupo.itens.map((virtude) => {
                       const concluida = virtudesConcluidas.has(virtude.id);
 
@@ -535,7 +535,7 @@ export default function VirtudesMenu() {
                           key={virtude.id}
                           type="button"
                           onClick={() => abrirVirtude(virtude.id)}
-                          className="group w-[155px] shrink-0 text-left sm:w-[210px]"
+                          className="group flex w-[155px] shrink-0 flex-col items-stretch self-start text-left sm:w-[210px]"
                         >
                           <div
                             className={`relative aspect-[2/3] overflow-hidden rounded-[18px] border bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 sm:group-hover:scale-[1.035] group-active:scale-[0.98] ${
@@ -590,14 +590,19 @@ export default function VirtudesMenu() {
                             </div>
                           </div>
 
-                          {concluida && (
-                            <div className="mt-2 flex w-full items-center justify-center gap-1.5 text-[0.72rem] font-bold text-[#5dc6a1] sm:text-sm">
-                              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-[#5dc6a1]/15 text-[0.72rem] shadow-[0_0_12px_rgba(93,198,161,0.22)]">
-                                ✓
-                              </span>
-                              <span>Concluído</span>
-                            </div>
-                          )}
+                          <div
+                            className={`mt-2 flex h-6 w-full items-center justify-center gap-1.5 text-[0.72rem] font-bold sm:h-7 sm:text-sm ${
+                              concluida
+                                ? "text-[#5dc6a1]"
+                                : "pointer-events-none invisible"
+                            }`}
+                            aria-hidden={!concluida}
+                          >
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-[#5dc6a1]/15 text-[0.72rem] shadow-[0_0_12px_rgba(93,198,161,0.22)]">
+                              ✓
+                            </span>
+                            <span>Concluído</span>
+                          </div>
                         </button>
                       );
                     })}
