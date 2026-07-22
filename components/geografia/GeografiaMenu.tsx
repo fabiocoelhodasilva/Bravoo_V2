@@ -287,25 +287,25 @@ export default function GeografiaMenu() {
 
         <div className="mt-4 flex w-full max-w-sm animate-fade-in flex-col gap-3 sm:mt-6 sm:gap-5">
           <HomeFeatureCard
-            title="América do Sul — Países"
+            title="América do Sul"
             href="/geografia/america-do-sul/paises"
             colorClass="bg-[var(--color-5)] hover:brightness-110"
           />
 
           <HomeFeatureCard
-            title="América Central — Países"
+            title="América Central"
             href="/geografia/america-central/paises"
             colorClass="bg-[var(--color-6)] hover:brightness-110"
           />
 
           <HomeFeatureCard
-            title="América do Norte — Países"
+            title="América do Norte"
             href="/geografia/america-do-norte/paises"
             colorClass="bg-[var(--color-7)] hover:brightness-110"
           />
 
           <HomeFeatureCard
-            title="Europa — Países"
+            title="Europa"
             href="/geografia/europa"
             colorClass="bg-[var(--color-2)] hover:brightness-110"
           />

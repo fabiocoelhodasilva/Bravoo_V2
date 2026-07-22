@@ -108,6 +108,9 @@ export default function VirtudesMenu() {
   const [erro, setErro] = useState("");
   const [dataSelecionada, setDataSelecionada] = useState(obterHojeLocalIso());
   const [joiasSemana, setJoiasSemana] = useState<Record<string, string>>({});
+  const [virtudesConcluidas, setVirtudesConcluidas] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const dataAtual = useMemo(
     () => parseIsoDateLocal(dataSelecionada),
@@ -132,6 +135,8 @@ export default function VirtudesMenu() {
       };
     });
   }, [inicioSemana]);
+
+  const hojeIso = useMemo(() => obterHojeLocalIso(), []);
 
   /* =========================================================
      Carrega conteúdos de Virtudes
@@ -228,12 +233,63 @@ export default function VirtudesMenu() {
   }, [inicioSemana, fimSemana]);
 
   /* =========================================================
-     Conteúdo em destaque
+     Busca as virtudes já concluídas pelo usuário
   ========================================================= */
 
-  const virtudeDestaque = useMemo(() => {
-    return virtudes.find((virtude) => virtude.destaque) ?? virtudes[0] ?? null;
-  }, [virtudes]);
+  useEffect(() => {
+    let cancelado = false;
+
+    async function carregarVirtudesConcluidas() {
+      try {
+        const {
+          data: { user },
+          error: erroUsuario,
+        } = await supabase.auth.getUser();
+
+        if (erroUsuario || !user) {
+          if (!cancelado) {
+            setVirtudesConcluidas(new Set());
+          }
+
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("next_virtudes_respostas")
+          .select("virtude_id")
+          .eq("usuario_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        const idsConcluidos = new Set(
+          (data ?? [])
+            .map((registro) => registro.virtude_id)
+            .filter(
+              (virtudeId): virtudeId is string =>
+                typeof virtudeId === "string" && virtudeId.length > 0,
+            ),
+        );
+
+        if (!cancelado) {
+          setVirtudesConcluidas(idsConcluidos);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar virtudes concluídas:", error);
+
+        if (!cancelado) {
+          setVirtudesConcluidas(new Set());
+        }
+      }
+    }
+
+    void carregarVirtudesConcluidas();
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   /* =========================================================
      Agrupamento por assunto
@@ -312,7 +368,7 @@ export default function VirtudesMenu() {
             </h1>
 
             <section
-              className="mb-3 w-full max-w-sm rounded-[22px] px-2 py-3 sm:px-3"
+              className="mb-3 w-full max-w-sm rounded-[22px] px-2 py-3 sm:px-3 lg:max-w-none lg:px-5"
               style={{
                 background:
                   "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
@@ -338,6 +394,7 @@ export default function VirtudesMenu() {
                 <div className="grid min-w-0 flex-1 grid-cols-7 gap-0.5 sm:gap-2">
                   {diasDaSemana.map((dia) => {
                     const selecionado = dia.iso === dataSelecionada;
+                    const hoje = dia.iso === hojeIso;
                     const imagemJoiaDia = joiasSemana[dia.iso];
 
                     return (
@@ -349,7 +406,11 @@ export default function VirtudesMenu() {
                       >
                         <span
                           className={`mb-1 text-[0.58rem] font-semibold sm:mb-2 sm:text-[0.72rem] ${
-                            selecionado ? "text-white" : "text-white/42"
+                            hoje
+                              ? "text-[var(--color-2)]"
+                              : selecionado
+                              ? "text-white"
+                              : "text-white/42"
                           }`}
                         >
                           {dia.diaCurto}
@@ -357,18 +418,26 @@ export default function VirtudesMenu() {
 
                         <span
                           className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
-                            selecionado
+                            hoje
+                              ? "scale-[1.06] text-[var(--color-2)]"
+                              : selecionado
                               ? "scale-[1.06] text-[var(--color-5)]"
                               : "text-white/88"
                           }`}
                           style={{
-                            background: selecionado
+                            background: hoje
+                              ? "rgba(233,137,29,0.22)"
+                              : selecionado
                               ? "rgba(61,122,153,0.22)"
                               : "transparent",
-                            borderColor: selecionado
+                            borderColor: hoje
+                              ? "rgba(233,137,29,0.9)"
+                              : selecionado
                               ? "rgba(61,122,153,0.8)"
                               : "transparent",
-                            boxShadow: selecionado
+                            boxShadow: hoje
+                              ? "0 0 18px rgba(233,137,29,0.48)"
+                              : selecionado
                               ? "0 0 18px rgba(61,122,153,0.45)"
                               : "none",
                           }}
@@ -443,57 +512,11 @@ export default function VirtudesMenu() {
         )}
 
         {/* =====================================================
-            Hero principal
-        ===================================================== */}
-
-        {!carregando && !erro && virtudeDestaque && (
-          <section className="px-3 sm:px-6">
-            <div
-              className="relative mx-auto min-h-[390px] w-full max-w-[1200px] overflow-hidden rounded-[26px] border border-white/10 bg-[#111] shadow-[0_24px_70px_rgba(0,0,0,0.55)] sm:min-h-[480px]"
-              style={{
-                backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.78) 40%, rgba(0,0,0,0.22) 100%), linear-gradient(0deg, #000 0%, transparent 55%), url("${obterImagemVirtude(
-                  virtudeDestaque,
-                )}")`,
-                backgroundPosition: "center",
-                backgroundSize: "cover",
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
-
-              <div className="relative z-10 flex min-h-[390px] max-w-[650px] flex-col justify-end px-5 pb-7 pt-20 sm:min-h-[480px] sm:px-10 sm:pb-10">
-                <span className="mb-3 w-fit rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-[var(--color-6)] backdrop-blur-sm sm:text-[0.78rem]">
-                  {obterNomeAssunto(virtudeDestaque)}
-                </span>
-
-                <h2 className="max-w-[600px] text-[2rem] font-black leading-[1.05] text-white sm:text-[3.5rem]">
-                  {virtudeDestaque.titulo}
-                </h2>
-
-                {virtudeDestaque.descricao && (
-                  <p className="mt-4 max-w-[560px] text-[0.9rem] leading-relaxed text-white/75 sm:text-base">
-                    {virtudeDestaque.descricao}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => abrirVirtude(virtudeDestaque.id)}
-                  className="mt-6 flex w-fit items-center gap-2 rounded-full bg-white px-5 py-3 text-[0.9rem] font-bold text-black shadow-lg transition hover:bg-white/90 active:scale-[0.97]"
-                >
-                  <span className="text-[1rem]">▶</span>
-                  Começar jornada
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* =====================================================
-            Fileiras por assunto
+            Trilhas horizontais por assunto
         ===================================================== */}
 
         {!carregando && !erro && gruposPorAssunto.length > 0 && (
-          <section className="mt-8 flex flex-col gap-9 sm:mt-12">
+          <section className="mt-2 flex flex-col gap-9 sm:mt-4">
             {gruposPorAssunto.map((grupo) => (
               <div key={grupo.assunto}>
                 <div className="mx-auto mb-4 w-full max-w-[1200px] px-4 sm:px-6">
@@ -504,39 +527,80 @@ export default function VirtudesMenu() {
 
                 <div className="mx-auto w-full max-w-[1240px] overflow-x-auto px-4 pb-4 sm:px-6">
                   <div className="flex w-max gap-3 sm:gap-5">
-                    {grupo.itens.map((virtude) => (
-                      <button
-                        key={virtude.id}
-                        type="button"
-                        onClick={() => abrirVirtude(virtude.id)}
-                        className="group w-[155px] shrink-0 text-left sm:w-[210px]"
-                      >
-                        <div className="relative aspect-[2/3] overflow-hidden rounded-[18px] border border-white/10 bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.035] group-hover:border-white/25 group-active:scale-[0.98]">
-                          <img
-                            src={obterImagemVirtude(virtude)}
-                            alt={virtude.titulo}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]"
-                            draggable={false}
-                          />
+                    {grupo.itens.map((virtude) => {
+                      const concluida = virtudesConcluidas.has(virtude.id);
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
+                      return (
+                        <button
+                          key={virtude.id}
+                          type="button"
+                          onClick={() => abrirVirtude(virtude.id)}
+                          className="group w-[155px] shrink-0 text-left sm:w-[210px]"
+                        >
+                          <div
+                            className={`relative aspect-[2/3] overflow-hidden rounded-[18px] border bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 group-hover:scale-[1.035] group-active:scale-[0.98] ${
+                              concluida
+                                ? "border-[#5dc6a1]/35 group-hover:border-[#5dc6a1]/60"
+                                : "border-white/10 group-hover:border-white/25"
+                            }`}
+                          >
+                            <img
+                              src={obterImagemVirtude(virtude)}
+                              alt={virtude.titulo}
+                              className={`h-full w-full object-cover transition duration-500 group-hover:scale-[1.06] ${
+                                concluida
+                                  ? "grayscale brightness-[0.45] opacity-30"
+                                  : ""
+                              }`}
+                              draggable={false}
+                            />
 
-                          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                            <span className="text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--color-6)] sm:text-[0.7rem]">
-                              {obterNomeAssunto(virtude)}
-                            </span>
+                            <div
+                              className={`absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent ${
+                                concluida ? "bg-black/45" : ""
+                              }`}
+                            />
 
-                            <h4 className="mt-1 line-clamp-2 text-[0.9rem] font-bold leading-tight text-white sm:text-[1.05rem]">
-                              {virtude.titulo}
-                            </h4>
+                            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                              <span
+                                className={`text-[0.62rem] font-bold uppercase tracking-[0.1em] sm:text-[0.7rem] ${
+                                  concluida
+                                    ? "text-white/35"
+                                    : "text-[var(--color-6)]"
+                                }`}
+                              >
+                                {obterNomeAssunto(virtude)}
+                              </span>
+
+                              <h4
+                                className={`mt-1 line-clamp-2 text-[0.9rem] font-bold leading-tight sm:text-[1.05rem] ${
+                                  concluida ? "text-white/55" : "text-white"
+                                }`}
+                              >
+                                {virtude.titulo}
+                              </h4>
+                            </div>
+
+                            <div
+                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-[0.8rem] text-white backdrop-blur-sm transition group-hover:scale-110 ${
+                                concluida ? "opacity-35" : "opacity-90"
+                              }`}
+                            >
+                              ▶
+                            </div>
                           </div>
 
-                          <div className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-[0.8rem] text-white opacity-90 backdrop-blur-sm transition group-hover:scale-110">
-                            ▶
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                          {concluida && (
+                            <div className="mt-2 flex w-full items-center justify-center gap-1.5 text-[0.72rem] font-bold text-[#5dc6a1] sm:text-sm">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-[#5dc6a1]/15 text-[0.72rem] shadow-[0_0_12px_rgba(93,198,161,0.22)]">
+                                ✓
+                              </span>
+                              <span>Concluído</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

@@ -344,7 +344,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
     <div className="min-h-screen bg-black text-white overflow-hidden">
       <HeaderInterno onLogout={logout} />
 
-      <main className="h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-16 md:pt-9 lg:pt-10 pb-6 gap-1">
+      <main className="h-[calc(100vh-48px)] flex flex-col items-center px-4 pt-[64px] pb-6 gap-1">
         {!finalizado && linhaSuperior && (
           <p className="mt-6 md:mt-7 text-sm md:text-base font-semibold text-center text-white/85 mb-[1px] leading-[1]">
             {linhaSuperior}

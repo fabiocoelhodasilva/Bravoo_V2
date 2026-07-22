@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 import AnimacaoGestoGlobo from "./AnimacaoGestoGlobo";
 
 type Props = {
@@ -10,7 +11,15 @@ type Props = {
   mostrarGesto?: boolean;
   className?: string;
   onFinalizar?: () => void;
+
+  /**
+   * Define por quantos dias, após o cadastro, a instrução pode aparecer.
+   * Use null para desativar a limitação por tempo de cadastro.
+   */
+  limiteDiasCadastro?: number | null;
 };
+
+const UM_DIA_EM_MS = 24 * 60 * 60 * 1000;
 
 export default function InstrucaoTemporaria({
   texto,
@@ -19,12 +28,92 @@ export default function InstrucaoTemporaria({
   mostrarGesto = true,
   className = "",
   onFinalizar,
+  limiteDiasCadastro = 20,
 }: Props) {
-  const [renderizar, setRenderizar] = useState(visivel);
-  const [ativo, setAtivo] = useState(visivel);
+  const [usuarioPodeVer, setUsuarioPodeVer] = useState(false);
+  const [verificandoCadastro, setVerificandoCadastro] = useState(true);
+  const [renderizar, setRenderizar] = useState(false);
+  const [ativo, setAtivo] = useState(false);
+
+  /* =========================================================
+     Verificação da idade da conta do usuário
+  ========================================================= */
 
   useEffect(() => {
-    if (!visivel) {
+    let componenteAtivo = true;
+
+    async function verificarTempoDeCadastro() {
+      if (limiteDiasCadastro === null) {
+        if (componenteAtivo) {
+          setUsuarioPodeVer(true);
+          setVerificandoCadastro(false);
+        }
+
+        return;
+      }
+
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (!componenteAtivo) return;
+
+        if (error || !user?.created_at) {
+          setUsuarioPodeVer(false);
+          return;
+        }
+
+        const dataCadastroEmMs = new Date(user.created_at).getTime();
+
+        if (Number.isNaN(dataCadastroEmMs)) {
+          setUsuarioPodeVer(false);
+          return;
+        }
+
+        const tempoDeCadastroEmMs = Math.max(
+          0,
+          Date.now() - dataCadastroEmMs
+        );
+
+        const limiteEmMs = limiteDiasCadastro * UM_DIA_EM_MS;
+
+        setUsuarioPodeVer(tempoDeCadastroEmMs <= limiteEmMs);
+      } catch (error) {
+        console.error(
+          "Erro ao verificar o tempo de cadastro do usuário:",
+          error
+        );
+
+        if (componenteAtivo) {
+          setUsuarioPodeVer(false);
+        }
+      } finally {
+        if (componenteAtivo) {
+          setVerificandoCadastro(false);
+        }
+      }
+    }
+
+    void verificarTempoDeCadastro();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, [limiteDiasCadastro]);
+
+  const deveExibir =
+    visivel && !verificandoCadastro && usuarioPodeVer;
+
+  /* =========================================================
+     Entrada, permanência e saída da instrução
+  ========================================================= */
+
+  useEffect(() => {
+    let timerRemover: ReturnType<typeof setTimeout> | null = null;
+
+    if (!deveExibir) {
       setAtivo(false);
 
       const timerSaida = setTimeout(() => {
@@ -43,19 +132,21 @@ export default function InstrucaoTemporaria({
     const timer = setTimeout(() => {
       setAtivo(false);
 
-      const timerRemover = setTimeout(() => {
+      timerRemover = setTimeout(() => {
         setRenderizar(false);
         onFinalizar?.();
       }, 350);
-
-      return () => clearTimeout(timerRemover);
     }, duracaoMs);
 
     return () => {
       cancelAnimationFrame(frame);
       clearTimeout(timer);
+
+      if (timerRemover) {
+        clearTimeout(timerRemover);
+      }
     };
-  }, [visivel, duracaoMs, onFinalizar]);
+  }, [deveExibir, duracaoMs, onFinalizar]);
 
   if (!renderizar) return null;
 
