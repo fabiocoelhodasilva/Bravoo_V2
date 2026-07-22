@@ -4,7 +4,13 @@
    Imports
 ========================================================= */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 
 import Header from "../ui/Header";
@@ -15,26 +21,42 @@ import { supabase } from "@/lib/supabase/client";
    Carregamento leve da mandala/resumo
 ========================================================= */
 
-const JornadaResumo = dynamic(() => import("../gamification/JornadaResumo"), {
-  ssr: false,
-  loading: () => null,
-});
+const JornadaResumo = dynamic(
+  () => import("../gamification/JornadaResumo"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 /* =========================================================
    IDs fixos das matérias
 ========================================================= */
 
-const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
-const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
-const MATERIA_GEOGRAFIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
-const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
+const MATERIA_MEU_DIA_ID =
+  "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
+
+const MATERIA_ESPIRITUAL_ID =
+  "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
+
+const MATERIA_GEOGRAFIA_ID =
+  "d366c6de-2345-4bb2-ac1f-a88747a2248d";
+
+const MATERIA_MATEMATICA_ID =
+  "24b7c418-81b4-47c2-b96f-f051786fa187";
+
+const MATERIA_VIRTUDES_ID =
+  "c9b9d5e2-3d8b-4d75-8c3d-6d2b7f9a4c11";
 
 /* =========================================================
    Eventos internos
 ========================================================= */
 
-const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
-const DEZ_DIAS_EM_MS = 10 * 24 * 60 * 60 * 1000;
+const EVENTO_JOIA_CONQUISTADA =
+  "bravoo:joia-conquistada";
+
+const DEZ_DIAS_EM_MS =
+  10 * 24 * 60 * 60 * 1000;
 
 /* =========================================================
    Tipos
@@ -46,6 +68,7 @@ type DashboardResumo = {
   tem_joia_espiritual: boolean;
   tem_joia_geografia: boolean;
   tem_joia_matematica: boolean;
+  tem_joia_virtudes: boolean;
 };
 
 type DashboardState = {
@@ -54,6 +77,7 @@ type DashboardState = {
   temJoiaEspiritualHoje: boolean;
   temJoiaGeografiaHoje: boolean;
   temJoiaMatematicaHoje: boolean;
+  temJoiaVirtudesHoje: boolean;
 };
 
 /* =========================================================
@@ -62,23 +86,34 @@ type DashboardState = {
 
 function obterDataLocalHoje() {
   const hoje = new Date();
+
   const ano = hoje.getFullYear();
-  const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+  const mes = String(hoje.getMonth() + 1).padStart(
+    2,
+    "0"
+  );
   const dia = String(hoje.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
 }
 
-function usuarioTemAteDezDias(dataCadastro: string | undefined) {
-  if (!dataCadastro) return false;
+function usuarioTemAteDezDias(
+  dataCadastro: string | undefined
+) {
+  if (!dataCadastro) {
+    return false;
+  }
 
-  const dataCadastroEmMs = new Date(dataCadastro).getTime();
+  const dataCadastroEmMs = new Date(
+    dataCadastro
+  ).getTime();
 
   if (Number.isNaN(dataCadastroEmMs)) {
     return false;
   }
 
-  const tempoDesdeCadastro = Date.now() - dataCadastroEmMs;
+  const tempoDesdeCadastro =
+    Date.now() - dataCadastroEmMs;
 
   return tempoDesdeCadastro <= DEZ_DIAS_EM_MS;
 }
@@ -91,16 +126,21 @@ export default function StudentDashboard() {
   const componenteAtivoRef = useRef(true);
   const carregandoDashboardRef = useRef(false);
 
-  const [dashboard, setDashboard] = useState<DashboardState>({
-    nomeUsuario: "",
-    temJoiaMeuDiaHoje: false,
-    temJoiaEspiritualHoje: false,
-    temJoiaGeografiaHoje: false,
-    temJoiaMatematicaHoje: false,
-  });
+  const [dashboard, setDashboard] =
+    useState<DashboardState>({
+      nomeUsuario: "",
+      temJoiaMeuDiaHoje: false,
+      temJoiaEspiritualHoje: false,
+      temJoiaGeografiaHoje: false,
+      temJoiaMatematicaHoje: false,
+      temJoiaVirtudesHoje: false,
+    });
 
-  const [carregarResumo, setCarregarResumo] = useState(false);
-  const [mostrarPopup, setMostrarPopup] = useState(false);
+  const [carregarResumo, setCarregarResumo] =
+    useState(false);
+
+  const [mostrarPopup, setMostrarPopup] =
+    useState(false);
 
   const {
     nomeUsuario,
@@ -108,6 +148,7 @@ export default function StudentDashboard() {
     temJoiaEspiritualHoje,
     temJoiaGeografiaHoje,
     temJoiaMatematicaHoje,
+    temJoiaVirtudesHoje,
   } = dashboard;
 
   /* =========================================================
@@ -115,7 +156,9 @@ export default function StudentDashboard() {
   ========================================================= */
 
   const carregarDashboard = useCallback(async () => {
-    if (carregandoDashboardRef.current) return;
+    if (carregandoDashboardRef.current) {
+      return;
+    }
 
     carregandoDashboardRef.current = true;
 
@@ -125,25 +168,52 @@ export default function StudentDashboard() {
       );
 
       if (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Erro ao carregar dashboard:", error);
+        if (
+          process.env.NODE_ENV === "development"
+        ) {
+          console.error(
+            "Erro ao carregar dashboard:",
+            error
+          );
         }
 
         return;
       }
 
-      if (!componenteAtivoRef.current) return;
+      if (!componenteAtivoRef.current) {
+        return;
+      }
 
-      const resumo = data?.[0] as DashboardResumo | undefined;
+      const resumo = data?.[0] as
+        | DashboardResumo
+        | undefined;
 
-      if (!resumo) return;
+      if (!resumo) {
+        return;
+      }
 
       setDashboard({
         nomeUsuario: resumo.primeiro_nome ?? "",
-        temJoiaMeuDiaHoje: Boolean(resumo.tem_joia_meu_dia),
-        temJoiaEspiritualHoje: Boolean(resumo.tem_joia_espiritual),
-        temJoiaGeografiaHoje: Boolean(resumo.tem_joia_geografia),
-        temJoiaMatematicaHoje: Boolean(resumo.tem_joia_matematica),
+
+        temJoiaMeuDiaHoje: Boolean(
+          resumo.tem_joia_meu_dia
+        ),
+
+        temJoiaEspiritualHoje: Boolean(
+          resumo.tem_joia_espiritual
+        ),
+
+        temJoiaGeografiaHoje: Boolean(
+          resumo.tem_joia_geografia
+        ),
+
+        temJoiaMatematicaHoje: Boolean(
+          resumo.tem_joia_matematica
+        ),
+
+        temJoiaVirtudesHoje: Boolean(
+          resumo.tem_joia_virtudes
+        ),
       });
 
       const {
@@ -152,15 +222,21 @@ export default function StudentDashboard() {
       } = await supabase.auth.getUser();
 
       if (userError) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Erro ao consultar usuário autenticado:", userError);
+        if (
+          process.env.NODE_ENV === "development"
+        ) {
+          console.error(
+            "Erro ao consultar usuário autenticado:",
+            userError
+          );
         }
 
         setMostrarPopup(false);
         return;
       }
 
-      const contaTemAteDezDias = usuarioTemAteDezDias(user?.created_at);
+      const contaTemAteDezDias =
+        usuarioTemAteDezDias(user?.created_at);
 
       if (!contaTemAteDezDias) {
         setMostrarPopup(false);
@@ -168,8 +244,12 @@ export default function StudentDashboard() {
       }
 
       const hoje = obterDataLocalHoje();
-      const chavePopup = "student_dashboard_popup_mandala_data";
-      const ultimaDataPopup = localStorage.getItem(chavePopup);
+
+      const chavePopup =
+        "student_dashboard_popup_mandala_data";
+
+      const ultimaDataPopup =
+        localStorage.getItem(chavePopup);
 
       if (ultimaDataPopup !== hoje) {
         setMostrarPopup(true);
@@ -203,15 +283,34 @@ export default function StudentDashboard() {
       void carregarDashboard();
     }
 
-    window.addEventListener("focus", atualizarAoGanharFoco);
-    window.addEventListener("pageshow", atualizarAoMostrarPagina);
-    window.addEventListener(EVENTO_JOIA_CONQUISTADA, atualizarAoConquistarJoia);
+    window.addEventListener(
+      "focus",
+      atualizarAoGanharFoco
+    );
+
+    window.addEventListener(
+      "pageshow",
+      atualizarAoMostrarPagina
+    );
+
+    window.addEventListener(
+      EVENTO_JOIA_CONQUISTADA,
+      atualizarAoConquistarJoia
+    );
 
     return () => {
       componenteAtivoRef.current = false;
 
-      window.removeEventListener("focus", atualizarAoGanharFoco);
-      window.removeEventListener("pageshow", atualizarAoMostrarPagina);
+      window.removeEventListener(
+        "focus",
+        atualizarAoGanharFoco
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        atualizarAoMostrarPagina
+      );
+
       window.removeEventListener(
         EVENTO_JOIA_CONQUISTADA,
         atualizarAoConquistarJoia
@@ -239,16 +338,32 @@ export default function StudentDashboard() {
 
   const joiasConquistadasHoje = useMemo(() => {
     return [
-      ...(temJoiaMeuDiaHoje ? [MATERIA_MEU_DIA_ID] : []),
-      ...(temJoiaEspiritualHoje ? [MATERIA_ESPIRITUAL_ID] : []),
-      ...(temJoiaGeografiaHoje ? [MATERIA_GEOGRAFIA_ID] : []),
-      ...(temJoiaMatematicaHoje ? [MATERIA_MATEMATICA_ID] : []),
+      ...(temJoiaMeuDiaHoje
+        ? [MATERIA_MEU_DIA_ID]
+        : []),
+
+      ...(temJoiaEspiritualHoje
+        ? [MATERIA_ESPIRITUAL_ID]
+        : []),
+
+      ...(temJoiaGeografiaHoje
+        ? [MATERIA_GEOGRAFIA_ID]
+        : []),
+
+      ...(temJoiaMatematicaHoje
+        ? [MATERIA_MATEMATICA_ID]
+        : []),
+
+      ...(temJoiaVirtudesHoje
+        ? [MATERIA_VIRTUDES_ID]
+        : []),
     ];
   }, [
     temJoiaMeuDiaHoje,
     temJoiaEspiritualHoje,
     temJoiaGeografiaHoje,
     temJoiaMatematicaHoje,
+    temJoiaVirtudesHoje,
   ]);
 
   /* =========================================================
@@ -264,7 +379,9 @@ export default function StudentDashboard() {
           <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111] px-6 py-8 text-center shadow-2xl">
             <button
               type="button"
-              onClick={() => setMostrarPopup(false)}
+              onClick={() =>
+                setMostrarPopup(false)
+              }
               className="absolute right-4 top-4 text-2xl font-bold text-white/70 hover:text-white"
               aria-label="Fechar mensagem da mandala"
             >
@@ -272,11 +389,13 @@ export default function StudentDashboard() {
             </button>
 
             <h2 className="bg-gradient-to-r from-[var(--color-4)] via-[var(--color-2)] to-[var(--color-5)] bg-clip-text text-3xl font-extrabold leading-tight text-transparent">
-              Faça as atividades por matéria para conquistar as joias!
+              Faça as atividades por matéria para
+              conquistar as joias!
             </h2>
 
             <p className="mt-5 text-lg font-semibold leading-relaxed text-white/90">
-              Conquiste as joias e complete sua mandala de hoje.
+              Conquiste as joias e complete sua
+              mandala de hoje.
             </p>
           </div>
         </div>
@@ -307,7 +426,11 @@ export default function StudentDashboard() {
           href="/meu-dia"
           prefetch={false}
           colorClass="bg-[var(--color-2)] hover:brightness-110"
-          joiaCor={temJoiaMeuDiaHoje ? "laranja" : undefined}
+          joiaCor={
+            temJoiaMeuDiaHoje
+              ? "laranja"
+              : undefined
+          }
         />
 
         <HomeFeatureCard
@@ -315,7 +438,11 @@ export default function StudentDashboard() {
           href="/jardim"
           prefetch={false}
           colorClass="bg-[var(--color-1)] hover:brightness-110"
-          joiaCor={temJoiaEspiritualHoje ? "vermelha" : undefined}
+          joiaCor={
+            temJoiaEspiritualHoje
+              ? "vermelha"
+              : undefined
+          }
         />
 
         <HomeFeatureCard
@@ -323,7 +450,11 @@ export default function StudentDashboard() {
           href="/geografia"
           prefetch={false}
           colorClass="bg-[var(--color-5)] hover:brightness-110"
-          joiaCor={temJoiaGeografiaHoje ? "azul" : undefined}
+          joiaCor={
+            temJoiaGeografiaHoje
+              ? "azul"
+              : undefined
+          }
         />
 
         <HomeFeatureCard
@@ -331,19 +462,33 @@ export default function StudentDashboard() {
           href="/matematica"
           prefetch={false}
           colorClass="bg-[var(--color-4)] hover:brightness-110"
-          joiaCor={temJoiaMatematicaHoje ? "verde" : undefined}
+          joiaCor={
+            temJoiaMatematicaHoje
+              ? "verde"
+              : undefined
+          }
         />
 
         <HomeFeatureCard
           title="Virtudes"
-          colorClass="bg-[var(--color-6)]"
-          disabled
+          href="/virtudes"
+          prefetch={false}
+          colorClass="bg-[var(--color-6)] hover:brightness-110"
+          joiaCor={
+            temJoiaVirtudesHoje
+              ? "roxa"
+              : undefined
+          }
         />
       </div>
 
       {carregarResumo && (
         <div className="mt-8">
-          <JornadaResumo joiasConquistadas={joiasConquistadasHoje} />
+          <JornadaResumo
+            joiasConquistadas={
+              joiasConquistadasHoje
+            }
+          />
         </div>
       )}
     </div>

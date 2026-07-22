@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  concederJoiaMateria,
+  type ResultadoConcessaoJoia,
+} from "@/lib/gamificacao/geral/joia-actions";
 
 /* =========================================================
    Constantes
@@ -16,41 +20,44 @@ function registrarErroDev(mensagem: string, error: unknown) {
   }
 }
 
+function resultadoSemConquista(): ResultadoConcessaoJoia {
+  return {
+    joiaConquistada: false,
+    mandalaConquistada: false,
+  };
+}
+
 /* =========================================================
    Concessão de joia de Geografia
 ========================================================= */
 
 /**
- * Concede a joia diária da matéria Geografia.
- *
- * A regra principal fica na função SQL:
- * fn_conceder_joia_materia
- *
- * Esta função apenas:
- * 1. Confere se a matéria recebida é Geografia.
- * 2. Chama a RPC responsável pela concessão.
- * 3. Retorna true se uma nova joia foi conquistada.
+ * Concede a Safira diária da matéria Geografia e, quando a
+ * conquista é nova, verifica se ela completou a Mandala diária.
  */
 export async function concederJoiaGeografia(params: {
   supabase: SupabaseClient;
   usuarioId: string;
   materiaId: string;
-}): Promise<boolean> {
+}): Promise<ResultadoConcessaoJoia> {
   const { supabase, usuarioId, materiaId } = params;
 
   if (materiaId !== MATERIA_GEOGRAFIA_ID) {
-    return false;
+    return resultadoSemConquista();
   }
 
-  const { data, error } = await supabase.rpc("fn_conceder_joia_materia", {
-    p_usuario_id: usuarioId,
-    p_materia_id: materiaId,
-  });
+  try {
+    return await concederJoiaMateria({
+      supabase,
+      usuarioId,
+      materiaId: MATERIA_GEOGRAFIA_ID,
+    });
+  } catch (error) {
+    registrarErroDev(
+      "Erro ao conceder a Safira ou verificar a Mandala:",
+      error
+    );
 
-  if (error) {
-    registrarErroDev("Erro ao conceder joia de Geografia:", error);
-    return false;
+    return resultadoSemConquista();
   }
-
-  return Boolean(data);
 }

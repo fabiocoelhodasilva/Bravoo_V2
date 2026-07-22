@@ -9,6 +9,8 @@ import { registrarMomentoOracao } from "@/lib/gamificacao/oracao/oracao-actions"
 import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
 import { supabase } from "@/lib/supabase/client";
 import { carregarJoiasSemana } from "@/lib/gamificacao/geral/carregar-joias-semana";
+import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
+import MandalaConquistadaModal from "@/components/gamification/MandalaConquistadaModal";
 
 /* =========================================================
    Tipos
@@ -184,6 +186,12 @@ export default function OracaoDashboardPanel({
   const [modalAberto, setModalAberto] = useState(false);
   const [modalMetaAberto, setModalMetaAberto] = useState(false);
   const [modalItensGanhosAberto, setModalItensGanhosAberto] = useState(false);
+  const [modalJoiaConquistadaAberto, setModalJoiaConquistadaAberto] =
+    useState(false);
+  const [modalMandalaConquistadaAberto, setModalMandalaConquistadaAberto] =
+    useState(false);
+  const [mandalaConquistadaPendente, setMandalaConquistadaPendente] =
+    useState(false);
 
   const [mensagem, setMensagem] = useState("");
   const [itensGanhos, setItensGanhos] = useState(0);
@@ -209,6 +217,9 @@ export default function OracaoDashboardPanel({
     Math.round((minutosHoje / metaSegura) * 100)
   );
 
+  const hojeLocalIso = obterHojeLocalIso();
+  const diaSelecionadoEhHoje = dataSelecionada === hojeLocalIso;
+
   const dataAtual = useMemo(
     () => parseIsoDateLocal(dataSelecionada),
     [dataSelecionada]
@@ -233,6 +244,31 @@ export default function OracaoDashboardPanel({
       };
     });
   }, [inicioSemana]);
+
+  function mostrarAvisoDataBloqueada() {
+    setMensagem("🔒 Você só pode registrar as orações de hoje.");
+
+    window.setTimeout(() => {
+      if (montadoRef.current) {
+        setMensagem("");
+      }
+    }, 3000);
+  }
+
+  function abrirModalRegistroOracao() {
+    if (!diaSelecionadoEhHoje) {
+      mostrarAvisoDataBloqueada();
+      return;
+    }
+
+    setModalAberto(true);
+  }
+
+  function abrirModalAlterarMeta() {
+    if (!diaSelecionadoEhHoje) return;
+
+    setModalMetaAberto(true);
+  }
 
   /* =========================================================
      Supabase helpers
@@ -419,6 +455,11 @@ export default function OracaoDashboardPanel({
 
   async function salvarMetaOracao(novaMeta: number) {
     if (salvandoMeta) return;
+
+    if (!diaSelecionadoEhHoje) {
+      setModalMetaAberto(false);
+      return;
+    }
 
     if (!Number.isFinite(novaMeta) || novaMeta < 1 || novaMeta > 180) {
       alert("Digite uma meta entre 1 e 180 minutos.");
@@ -658,6 +699,12 @@ export default function OracaoDashboardPanel({
   async function registrarOracao(minutos: number) {
     if (salvando) return;
 
+    if (!diaSelecionadoEhHoje) {
+      setModalAberto(false);
+      mostrarAvisoDataBloqueada();
+      return;
+    }
+
     const minutosAntes = minutosHoje;
     const minutosOtimista = minutosAntes + minutos;
 
@@ -669,7 +716,12 @@ export default function OracaoDashboardPanel({
 
       const resultado = await registrarMomentoOracao(minutos);
 
-      if (resultado?.joiaConquistada) {
+      const joiaConquistadaAgora = Boolean(resultado?.joiaConquistada);
+      const mandalaConquistadaAgora = Boolean(
+        resultado?.mandalaConquistada
+      );
+
+      if (joiaConquistadaAgora) {
         notificarDashboardSobreJoia();
       }
 
@@ -688,17 +740,30 @@ export default function OracaoDashboardPanel({
         resultado?.resumoJardim?.creditosNovos ?? 0
       );
 
-      if (novosItensLiberados > 0) {
-        setMensagem("");
-        setItensGanhos(novosItensLiberados);
-        setModalItensGanhosAberto(true);
-      } else {
-        setMensagem(`Oração registrada! +${minutos} minuto(s). 🙏`);
+      setItensGanhos(novosItensLiberados);
+      setMandalaConquistadaPendente(mandalaConquistadaAgora);
 
-        setTimeout(() => {
-          if (montadoRef.current) setMensagem("");
-        }, 2500);
+      if (joiaConquistadaAgora) {
+        setModalJoiaConquistadaAberto(true);
+        return;
       }
+
+      if (mandalaConquistadaAgora) {
+        setMandalaConquistadaPendente(false);
+        setModalMandalaConquistadaAberto(true);
+        return;
+      }
+
+      if (novosItensLiberados > 0) {
+        setModalItensGanhosAberto(true);
+        return;
+      }
+
+      setMensagem(`Oração registrada! +${minutos} minuto(s). 🙏`);
+
+      window.setTimeout(() => {
+        if (montadoRef.current) setMensagem("");
+      }, 2500);
     } catch (error) {
       registrarErroDev("Erro ao registrar oração:", error);
       setMinutosHoje(minutosAntes);
@@ -706,6 +771,42 @@ export default function OracaoDashboardPanel({
     } finally {
       setSalvando(false);
     }
+  }
+
+  function fecharModalJoiaConquistada() {
+    setModalJoiaConquistadaAberto(false);
+
+    if (mandalaConquistadaPendente) {
+      setMandalaConquistadaPendente(false);
+      setModalMandalaConquistadaAberto(true);
+      return;
+    }
+
+    if (itensGanhos > 0) {
+      setModalItensGanhosAberto(true);
+      return;
+    }
+
+    setMensagem("Oração registrada com sucesso! 🙏");
+
+    window.setTimeout(() => {
+      if (montadoRef.current) setMensagem("");
+    }, 2500);
+  }
+
+  function fecharModalMandalaConquistada() {
+    setModalMandalaConquistadaAberto(false);
+
+    if (itensGanhos > 0) {
+      setModalItensGanhosAberto(true);
+      return;
+    }
+
+    setMensagem("Oração registrada com sucesso! 🙏");
+
+    window.setTimeout(() => {
+      if (montadoRef.current) setMensagem("");
+    }, 2500);
   }
 
   /* =========================================================
@@ -729,7 +830,8 @@ export default function OracaoDashboardPanel({
   ========================================================= */
 
   return (
-    <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[16px] backdrop-blur-[2px] sm:pt-[24px]">
+    <>
+      <div className="absolute inset-0 z-40 flex items-start justify-center bg-black/45 px-3 pb-[90px] pt-[16px] backdrop-blur-[2px] sm:pt-[24px]">
       <div className="relative max-h-[calc(100dvh-96px)] w-full max-w-sm overflow-y-auto rounded-[24px] border border-white/10 bg-[#101514]/95 text-white shadow-2xl sm:max-h-[calc(100dvh-110px)] sm:max-w-[480px] sm:rounded-[28px]">
         <button
           type="button"
@@ -872,9 +974,14 @@ export default function OracaoDashboardPanel({
             <div className="mt-3 grid grid-cols-3 items-end divide-x divide-white/10">
               <button
                 type="button"
-                onClick={() => setModalAberto(true)}
+                onClick={abrirModalRegistroOracao}
                 disabled={carregando || salvando}
-                className="flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px]"
+                aria-disabled={!diaSelecionadoEhHoje}
+                className={`flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px] ${
+                  !diaSelecionadoEhHoje
+                    ? "cursor-not-allowed opacity-45"
+                    : ""
+                }`}
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e9891d] text-3xl font-black leading-none text-black shadow-[0_0_20px_rgba(233,137,29,0.35)] sm:h-14 sm:w-14">
                   +
@@ -897,9 +1004,14 @@ export default function OracaoDashboardPanel({
 
               <button
                 type="button"
-                onClick={() => setModalMetaAberto(true)}
-                disabled={carregando || salvandoMeta}
-                className="flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px]"
+                onClick={abrirModalAlterarMeta}
+                disabled={carregando || salvandoMeta || !diaSelecionadoEhHoje}
+                aria-disabled={!diaSelecionadoEhHoje}
+                className={`flex min-h-[78px] flex-col items-center justify-end gap-1 transition active:scale-[0.97] disabled:cursor-wait disabled:opacity-50 sm:min-h-[88px] ${
+                  !diaSelecionadoEhHoje
+                    ? "cursor-not-allowed opacity-45"
+                    : ""
+                }`}
                 title="Alterar meta"
               >
                 <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-black/30 sm:h-16 sm:w-16">
@@ -1135,13 +1247,29 @@ export default function OracaoDashboardPanel({
         )}
       </div>
 
-      {mensagem && (
-        <div className="pointer-events-none absolute inset-0 z-[120] flex items-center justify-center px-4">
-          <div className="rounded-2xl border border-[#5dc6a1]/30 bg-[#101514]/95 px-6 py-4 text-center text-sm font-bold text-[#5dc6a1] shadow-2xl backdrop-blur-md">
-            {mensagem}
+        {mensagem && (
+          <div className="pointer-events-none absolute inset-0 z-[120] flex items-center justify-center px-4">
+            <div className="rounded-2xl border border-[#5dc6a1]/30 bg-[#101514]/95 px-6 py-4 text-center text-sm font-bold text-[#5dc6a1] shadow-2xl backdrop-blur-md">
+              {mensagem}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <JoiaConquistadaModal
+        aberto={modalJoiaConquistadaAberto}
+        nomeJoia="Diamante"
+        nomeMateria="Espiritual"
+        imagemJoia={IMAGEM_JOIA_ESPIRITUAL}
+        cor="vermelha"
+        mensagem="Parabéns! Você cumpriu sua meta de oração e conquistou o Diamante da área Espiritual."
+        onFechar={fecharModalJoiaConquistada}
+      />
+
+      <MandalaConquistadaModal
+        aberto={modalMandalaConquistadaAberto}
+        onFechar={fecharModalMandalaConquistada}
+      />
+    </>
   );
 }

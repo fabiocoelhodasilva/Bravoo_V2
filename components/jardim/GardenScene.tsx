@@ -615,11 +615,21 @@ export default function GardenScene() {
   const [selectedGardenItemId, setSelectedGardenItemId] = useState<
     string | null
   >(null);
+  const [movingGardenItemId, setMovingGardenItemId] = useState<string | null>(
+    null
+  );
   const [plantingFeedbackMessage, setPlantingFeedbackMessage] = useState("");
 
   const selectedGardenItem = useMemo(() => {
     return items.find((item) => item.id === selectedGardenItemId) ?? null;
   }, [items, selectedGardenItemId]);
+
+  const movingGardenItem = useMemo(() => {
+    return items.find((item) => item.id === movingGardenItemId) ?? null;
+  }, [items, movingGardenItemId]);
+
+  const placementItemType = pendingItemType ?? movingGardenItem?.type ?? null;
+  const placementModeActive = placementItemType !== null;
 
   const selectedGardenItemGrowthPercent = normalizarPercentualCrescimento(
     selectedGardenItem?.percentualEscala ?? 0
@@ -901,6 +911,10 @@ export default function GardenScene() {
   }, [isMobile, flyMode]);
 
   const instructionText = useMemo(() => {
+    if (movingGardenItemId) {
+      return "Ande pelo jardim, mire no novo local e clique para mover a planta.";
+    }
+
     if (pendingItemType) {
       return "Ande pelo jardim, mire no chão e clique para plantar.";
     }
@@ -910,7 +924,12 @@ export default function GardenScene() {
     }
 
     return "Movimento: W A S D para mover, Q para subir e E para descer.";
-  }, [isMobile, pendingItemType, selectedGardenItemId]);
+  }, [
+    isMobile,
+    movingGardenItemId,
+    pendingItemType,
+    selectedGardenItemId,
+  ]);
 
   function handleAimPositionChange(position: [number, number, number] | null) {
     aimedPlantPositionRef.current = position;
@@ -1041,8 +1060,113 @@ export default function GardenScene() {
     }
   }
 
+  async function handleMoveSelectedItem() {
+    if (!selectedGardenItem) return;
+    if (selectedGardenItem.id.startsWith("temp-")) return;
+
+    moveRef.current.forward = 0;
+    moveRef.current.strafe = 0;
+    moveRef.current.vertical = 0;
+
+    aimedPlantPositionRef.current = null;
+    setPendingItemType(null);
+    setMovingGardenItemId(selectedGardenItem.id);
+    setSelectedGardenItemId(null);
+    setItemsPanelOpen(false);
+    setOracaoDashboardOpen(false);
+    setFlyMode(true);
+
+    if (navigator.vibrate) {
+      navigator.vibrate(35);
+    }
+
+    if (isMobile || !containerRef.current) return;
+
+    try {
+      await containerRef.current.requestPointerLock();
+    } catch {}
+  }
+
+  async function movePendingItemAtAim() {
+    if (!movingGardenItem) return;
+    if (movingGardenItem.id.startsWith("temp-")) return;
+    if (isPlantingRef.current) return;
+
+    const position = aimedPlantPositionRef.current;
+
+    if (!position) {
+      alert("Mire para um ponto válido do chão para mover a planta.");
+      return;
+    }
+
+    const localOcupado = items.some((item) => {
+      if (item.id === movingGardenItem.id) return false;
+
+      return (
+        item.position[0] === position[0] && item.position[2] === position[2]
+      );
+    });
+
+    if (localOcupado) {
+      alert("Já existe uma planta nesse local. Escolha outro ponto.");
+      return;
+    }
+
+    const posicaoOriginal = movingGardenItem.position;
+    const itemId = movingGardenItem.id;
+
+    isPlantingRef.current = true;
+
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, position } : item
+      )
+    );
+
+    try {
+      const { data, error } = await supabase.rpc("mover_item_jardim", {
+        p_item_id: itemId,
+        p_pos_x: position[0],
+        p_pos_y: position[1],
+        p_pos_z: position[2],
+      });
+
+      if (error || data !== true) {
+        throw error ?? new Error("A movimentação não foi confirmada.");
+      }
+
+      setMovingGardenItemId(null);
+      aimedPlantPositionRef.current = null;
+      setPlantingFeedbackMessage(
+        `Sua ${getGardenItemDisplayName(
+          movingGardenItem.type
+        )} foi movida sem perder o crescimento.`
+      );
+
+      window.setTimeout(() => {
+        setPlantingFeedbackMessage("");
+      }, 3500);
+
+      if (navigator.vibrate) {
+        navigator.vibrate(35);
+      }
+    } catch (error) {
+      console.error("Erro ao mover item do jardim:", error);
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, position: posicaoOriginal } : item
+        )
+      );
+
+      alert("Não foi possível mover esta planta agora.");
+    } finally {
+      isPlantingRef.current = false;
+    }
+  }
+
   function handleSelectGardenItem(id: string) {
-    if (pendingItemType) return;
+    if (pendingItemType || movingGardenItemId) return;
 
     setSelectedGardenItemId((current) => (current === id ? null : id));
   }
@@ -1083,6 +1207,8 @@ export default function GardenScene() {
     moveRef.current.vertical = 0;
 
     setPendingItemType(null);
+    setMovingGardenItemId(null);
+    aimedPlantPositionRef.current = null;
     setSelectedGardenItemId(null);
     setOracaoDashboardOpen(false);
 
@@ -1113,6 +1239,8 @@ export default function GardenScene() {
     moveRef.current.vertical = 0;
 
     setPendingItemType(null);
+    setMovingGardenItemId(null);
+    aimedPlantPositionRef.current = null;
     setSelectedGardenItemId(null);
     setItemsPanelOpen(false);
 
@@ -1132,6 +1260,11 @@ export default function GardenScene() {
     if (itemsPanelOpen || oracaoDashboardOpen) return;
 
     if (isMobile && Date.now() - lastMobileTouchPlantRef.current < 450) {
+      return;
+    }
+
+    if (movingGardenItemId) {
+      await movePendingItemAtAim();
       return;
     }
 
@@ -1155,7 +1288,7 @@ export default function GardenScene() {
 
   function handleSceneTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     if (!isMobile) return;
-    if (!pendingItemType) return;
+    if (!placementModeActive) return;
     if (itemsPanelOpen || oracaoDashboardOpen) return;
 
     const target = event.target as HTMLElement | null;
@@ -1177,7 +1310,7 @@ export default function GardenScene() {
 
   function handleSceneTouchMove(event: React.TouchEvent<HTMLDivElement>) {
     if (!isMobile) return;
-    if (!pendingItemType) return;
+    if (!placementModeActive) return;
     if (!touchStartRef.current) return;
 
     const touch = event.touches[0];
@@ -1194,7 +1327,7 @@ export default function GardenScene() {
 
   async function handleSceneTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
     if (!isMobile) return;
-    if (!pendingItemType) return;
+    if (!placementModeActive) return;
     if (!touchStartRef.current) return;
 
     const target = event.target as HTMLElement | null;
@@ -1216,6 +1349,11 @@ export default function GardenScene() {
     event.stopPropagation();
     lastMobileTouchPlantRef.current = Date.now();
 
+    if (movingGardenItemId) {
+      await movePendingItemAtAim();
+      return;
+    }
+
     await plantPendingItemAtAim();
   }
 
@@ -1223,6 +1361,8 @@ export default function GardenScene() {
     setFlyMode(true);
     setItemsPanelOpen(false);
     setOracaoDashboardOpen(false);
+    setMovingGardenItemId(null);
+    aimedPlantPositionRef.current = null;
     setSelectedGardenItemId(null);
 
     if (isMobile || !containerRef.current) return;
@@ -1242,6 +1382,8 @@ export default function GardenScene() {
     setItemsPanelOpen(false);
     setOracaoDashboardOpen(false);
     setFlyMode(true);
+    setMovingGardenItemId(null);
+    aimedPlantPositionRef.current = null;
     setSelectedGardenItemId(null);
     setPendingItemType(type);
 
@@ -1482,10 +1624,27 @@ export default function GardenScene() {
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
+                  void handleMoveSelectedItem();
+                }}
+                onContextMenu={(event) => safePreventDefault(event)}
+                className="mt-3 w-full rounded-2xl border border-[#3d7a99]/40 bg-[#3d7a99]/18 px-4 py-3 text-sm font-black text-[#9edcff] shadow-lg transition hover:bg-[#3d7a99]/28 active:scale-[0.98]"
+                style={{
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
+                ↔ Mover planta
+              </button>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
                   void handleDeleteSelectedItem();
                 }}
                 onContextMenu={(event) => safePreventDefault(event)}
-                className="mt-3 w-full rounded-2xl border border-red-500/30 bg-red-500/12 px-4 py-3 text-sm font-black text-red-200 shadow-lg transition hover:bg-red-500/20 active:scale-[0.98]"
+                className="mt-2 w-full rounded-2xl border border-red-500/30 bg-red-500/12 px-4 py-3 text-sm font-black text-red-200 shadow-lg transition hover:bg-red-500/20 active:scale-[0.98]"
                 style={{
                   WebkitUserSelect: "none",
                   userSelect: "none",
@@ -1519,7 +1678,7 @@ export default function GardenScene() {
         <Scene
           moveRef={moveRef}
           lookRef={lookRef}
-          pendingItemType={pendingItemType}
+          pendingItemType={placementItemType}
           selectedGardenItemId={selectedGardenItemId}
           onAimPositionChange={handleAimPositionChange}
           onSelectItem={handleSelectGardenItem}

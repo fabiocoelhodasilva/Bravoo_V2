@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import { supabase } from "@/lib/supabase/client";
-import { concederJoiaTabuada } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
+import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 
 /* =========================================================
    IDs fixos
@@ -76,7 +76,6 @@ type ResultadoConclusao = {
   acertos: number;
   totalItens: number;
   tempoTotalSegundos: number;
-  ganhouJoia: boolean;
 };
 
 type ResultadoGravacaoRodada = {
@@ -84,7 +83,6 @@ type ResultadoGravacaoRodada = {
   acertos: number;
   totalItens: number;
   tempoTotalSegundos: number;
-  ganhouJoia: boolean;
 };
 
 type RespostaRevisao = {
@@ -483,7 +481,6 @@ export default function MultiplicacaoPageView() {
         acertos: resultadoGravacao.acertos,
         totalItens: resultadoGravacao.totalItens,
         tempoTotalSegundos: resultadoGravacao.tempoTotalSegundos,
-        ganhouJoia: resultadoGravacao.ganhouJoia,
       });
 
       setTimeout(() => {
@@ -528,7 +525,6 @@ export default function MultiplicacaoPageView() {
         acertos,
         totalItens,
         tempoTotalSegundos,
-        ganhouJoia: false,
       };
     }
 
@@ -538,7 +534,6 @@ export default function MultiplicacaoPageView() {
         acertos,
         totalItens,
         tempoTotalSegundos,
-        ganhouJoia: false,
       };
     }
 
@@ -553,7 +548,6 @@ export default function MultiplicacaoPageView() {
           acertos,
           totalItens,
           tempoTotalSegundos,
-          ganhouJoia: false,
         };
       }
 
@@ -569,39 +563,39 @@ export default function MultiplicacaoPageView() {
           acertos,
           totalItens,
           tempoTotalSegundos,
-          ganhouJoia: false,
         };
       }
 
-      const { data: sessaoData, error: sessaoError } = await supabase
-        .from("next_sessoes_atividade")
-        .insert({
-          usuario_id: usuarioId,
-          atividade_id: MULTIPLICACAO_ATIVIDADE_ID,
-          materia_id: MATEMATICA_MATERIA_ID,
-          assunto_id: TABUADA_ASSUNTO_ID,
-          detalhe_id: detalheTabuadaId,
-          pontuacao: acertos,
-          acertos,
-          total_itens: totalItens,
-          tempo_total_segundos: tempoTotalSegundos,
-        })
-        .select("id")
-        .single();
+      /*
+       * Toda sessão da Tabuada deve passar pelo serviço central.
+       * Assim a plataforma grava a sessão, atualiza a persistência,
+       * verifica a Esmeralda e verifica a Mandala no mesmo fluxo.
+       */
+      const resultadoSessao = await salvarSessaoAtividade({
+        atividade_id: MULTIPLICACAO_ATIVIDADE_ID,
+        materia_id: MATEMATICA_MATERIA_ID,
+        assunto_id: TABUADA_ASSUNTO_ID,
+        detalhe_id: detalheTabuadaId,
+        pontuacao: acertos,
+        acertos,
+        total_itens: totalItens,
+        tempo_total_segundos: tempoTotalSegundos,
+      });
 
-      if (sessaoError) {
-        console.error("Erro ao criar sessão da tabuada:", sessaoError);
+      const sessaoId = resultadoSessao.data?.sessao.id;
+
+      if (!sessaoId) {
+        console.error(
+          "A sessão da tabuada foi processada, mas o ID não foi retornado."
+        );
 
         return {
           sucesso: false,
           acertos,
           totalItens,
           tempoTotalSegundos,
-          ganhouJoia: false,
         };
       }
-
-      const sessaoId = sessaoData.id;
 
       const respostasParaInserir = questoesDaTabuadaSelecionada.map(
         (questao) => {
@@ -636,22 +630,14 @@ export default function MultiplicacaoPageView() {
           acertos,
           totalItens,
           tempoTotalSegundos,
-          ganhouJoia: false,
         };
       }
-
-      const ganhouJoia = await concederJoiaTabuada({
-        supabase,
-        usuarioId,
-        materiaId: MATEMATICA_MATERIA_ID,
-      });
 
       return {
         sucesso: true,
         acertos,
         totalItens,
         tempoTotalSegundos,
-        ganhouJoia,
       };
     } catch (error) {
       console.error("Erro inesperado ao gravar tabuada:", error);
@@ -661,7 +647,6 @@ export default function MultiplicacaoPageView() {
         acertos,
         totalItens,
         tempoTotalSegundos,
-        ganhouJoia: false,
       };
     }
   }
@@ -901,14 +886,6 @@ export default function MultiplicacaoPageView() {
                 {formatarTempo(resultadoConclusao.tempoTotalSegundos)}
               </p>
             </div>
-
-            {resultadoConclusao.ganhouJoia && (
-              <div className="mt-4 rounded-2xl border border-[var(--color-2)]/40 bg-[rgba(233,137,29,0.14)] px-4 py-3 shadow-[0_0_18px_rgba(233,137,29,0.18)]">
-                <p className="text-sm font-extrabold text-[var(--color-2)]">
-                  💎 Você ganhou uma joia!
-                </p>
-              </div>
-            )}
 
             <p className="mt-4 text-xs font-bold leading-relaxed text-white/45">
               Para revisar os resultados, clique no card da tabuada.

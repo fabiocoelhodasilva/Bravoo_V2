@@ -7,17 +7,23 @@ import HeaderInterno from "../ui/HeaderInterno";
 import DeleteButton from "../ui/DeleteButton";
 import MeuDiaResumoDashboard from "../gamification/MeuDiaResumoDashboard";
 
+export type TipoExclusaoTarefa = "apenas_esta" | "toda_sequencia";
+
 type Tarefa = {
   id: string;
   titulo: string;
   concluida: boolean;
+  recorrente: boolean;
 };
 
 type Props = {
   onLogout: () => Promise<void>;
   tarefasIniciais?: Tarefa[];
   onToggleTarefa?: (id: string) => Promise<void> | void;
-  onDeleteTarefa?: (id: string) => Promise<void>;
+  onDeleteTarefa?: (
+    id: string,
+    tipoExclusao: TipoExclusaoTarefa
+  ) => Promise<void>;
   salvandoIds?: string[];
   deletingIds?: string[];
   dataSelecionada: string;
@@ -75,7 +81,10 @@ export function MeuDiaPageView({
 }: Props) {
   const [tarefas, setTarefas] = useState<Tarefa[]>(tarefasIniciais);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
+  const [tipoExclusao, setTipoExclusao] =
+    useState<TipoExclusaoTarefa>("apenas_esta");
   const [feedbackErro, setFeedbackErro] = useState("");
+  const [feedbackTipo, setFeedbackTipo] = useState<"erro" | "aviso">("erro");
 
   useEffect(() => {
     setTarefas(tarefasIniciais);
@@ -86,13 +95,19 @@ export function MeuDiaPageView({
 
     const timer = window.setTimeout(() => {
       setFeedbackErro("");
-    }, 3000);
+    }, 2000);
 
     return () => window.clearTimeout(timer);
   }, [feedbackErro]);
 
   async function toggleTarefa(id: string) {
     if (salvandoIds.includes(id) || deletingIds.includes(id)) return;
+
+    if (dataSelecionada !== hojeIso) {
+      setFeedbackTipo("aviso");
+      setFeedbackErro("🔒 Você só pode editar as tarefas de hoje.");
+      return;
+    }
 
     const tarefaAtual = tarefas.find((tarefa) => tarefa.id === id);
     if (!tarefaAtual) return;
@@ -120,14 +135,25 @@ export function MeuDiaPageView({
     }
   }
 
+  function abrirModalExclusao(tarefa: Tarefa) {
+    setTipoExclusao("apenas_esta");
+    setTarefaParaExcluir(tarefa);
+  }
+
   async function confirmarDeleteTarefa() {
     if (!tarefaParaExcluir || !onDeleteTarefa) return;
 
+    const tipoSelecionado = tarefaParaExcluir.recorrente
+      ? tipoExclusao
+      : "apenas_esta";
+
     try {
-      await onDeleteTarefa(tarefaParaExcluir.id);
+      await onDeleteTarefa(tarefaParaExcluir.id, tipoSelecionado);
       setTarefaParaExcluir(null);
+      setTipoExclusao("apenas_esta");
     } catch (error) {
       console.error("Erro ao excluir tarefa:", error);
+      setFeedbackTipo("erro");
       setFeedbackErro("Não foi possível excluir a tarefa.");
     }
   }
@@ -165,6 +191,9 @@ export function MeuDiaPageView({
 
   const pendentes = tarefas.filter((tarefa) => !tarefa.concluida).length;
   const feitas = tarefas.filter((tarefa) => tarefa.concluida).length;
+  const excluindoTarefaSelecionada = tarefaParaExcluir
+    ? deletingIds.includes(tarefaParaExcluir.id)
+    : false;
 
   return (
     <>
@@ -385,7 +414,7 @@ export function MeuDiaPageView({
 
                     {podeExcluirNoDiaSelecionado && (
                       <DeleteButton
-                        onClick={() => setTarefaParaExcluir(tarefa)}
+                        onClick={() => abrirModalExclusao(tarefa)}
                         disabled={deletando || salvando}
                         ariaLabel={`Excluir tarefa ${tarefa.titulo}`}
                         title="Excluir tarefa"
@@ -404,8 +433,14 @@ export function MeuDiaPageView({
       </main>
 
       {feedbackErro && (
-        <div className="fixed top-4 left-1/2 z-[100] w-[92%] max-w-md -translate-x-1/2">
-          <div className="rounded-2xl border border-red-400/30 bg-red-500/15 px-4 py-3 text-sm font-medium text-red-100 shadow-lg">
+        <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <div
+            className={`w-full max-w-md rounded-2xl px-4 py-3 text-center text-sm font-medium shadow-2xl ${
+              feedbackTipo === "erro"
+                ? "border border-red-400/30 bg-[#2a1010]/95 text-red-100"
+                : "border border-[var(--color-2)]/45 bg-[#21170b]/95 text-[#f7e7c0]"
+            }`}
+          >
             {feedbackErro}
           </div>
         </div>
@@ -413,24 +448,81 @@ export function MeuDiaPageView({
 
       {tarefaParaExcluir && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#111111] p-5 text-center shadow-2xl">
-            <h2 className="mb-2 text-lg font-semibold text-white">
+          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#111111] p-5 shadow-2xl">
+            <h2 className="mb-2 text-center text-lg font-semibold text-white">
               Excluir tarefa
             </h2>
 
-            <p className="mb-5 text-sm text-white/75">
-              Deseja excluir a tarefa{" "}
+            <p className="mb-4 text-center text-sm text-white/75">
+              Como deseja excluir{" "}
               <span className="font-semibold text-white">
                 {tarefaParaExcluir.titulo}
               </span>
               ?
             </p>
 
+            <div className="mb-5 flex flex-col gap-2">
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition ${
+                  tipoExclusao === "apenas_esta"
+                    ? "border-[var(--color-2)] bg-[rgba(233,137,29,0.10)]"
+                    : "border-white/10 bg-white/[0.025]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="tipo-exclusao-tarefa"
+                  value="apenas_esta"
+                  checked={tipoExclusao === "apenas_esta"}
+                  onChange={() => setTipoExclusao("apenas_esta")}
+                  disabled={excluindoTarefaSelecionada}
+                  className="mt-0.5 h-4 w-4 accent-[var(--color-2)]"
+                />
+
+                <span className="text-sm font-semibold leading-snug text-white">
+                  Excluir apenas essa atividade
+                </span>
+              </label>
+
+              {tarefaParaExcluir.recorrente && (
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition ${
+                    tipoExclusao === "toda_sequencia"
+                      ? "border-[var(--color-1,#c94a4a)] bg-[rgba(201,74,74,0.10)]"
+                      : "border-white/10 bg-white/[0.025]"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="tipo-exclusao-tarefa"
+                    value="toda_sequencia"
+                    checked={tipoExclusao === "toda_sequencia"}
+                    onChange={() => setTipoExclusao("toda_sequencia")}
+                    disabled={excluindoTarefaSelecionada}
+                    className="mt-0.5 h-4 w-4 accent-[var(--color-1,#c94a4a)]"
+                  />
+
+                  <span>
+                    <span className="block text-sm font-semibold leading-snug text-white">
+                      Excluir toda a sequência dessa atividade
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-white/50">
+                      As atividades anteriores permanecerão no histórico.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setTarefaParaExcluir(null)}
-                className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+                onClick={() => {
+                  setTarefaParaExcluir(null);
+                  setTipoExclusao("apenas_esta");
+                }}
+                disabled={excluindoTarefaSelecionada}
+                className="flex-1 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -438,9 +530,10 @@ export function MeuDiaPageView({
               <button
                 type="button"
                 onClick={() => void confirmarDeleteTarefa()}
-                className="flex-1 rounded-2xl bg-[var(--color-1,#c94a4a)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                disabled={excluindoTarefaSelecionada}
+                className="flex-1 rounded-2xl bg-[var(--color-1,#c94a4a)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Excluir
+                {excluindoTarefaSelecionada ? "Excluindo..." : "Excluir"}
               </button>
             </div>
           </div>

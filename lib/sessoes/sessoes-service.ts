@@ -41,12 +41,20 @@ type ResultadoGamificacao = {
     | "sequencia_reiniciada";
 };
 
+export type RecompensaSessaoConquistada = {
+  materiaId: string;
+  atividadeId: string;
+  joiaConquistada: boolean;
+  mandalaConquistada: boolean;
+};
+
 type SalvarSessaoResponse = {
   ok: boolean;
   data?: {
     sessao: SessaoAtividadeSalva;
     gamificacao?: ResultadoGamificacao;
     joiaConquistada?: boolean;
+    mandalaConquistada?: boolean;
   };
   error?: string;
   details?: string;
@@ -57,6 +65,9 @@ type SalvarSessaoResponse = {
 ========================================================= */
 
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
+
+export const EVENTO_RECOMPENSA_SESSAO_CONQUISTADA =
+  "bravoo:recompensa-sessao-conquistada";
 
 /* =========================================================
    Funções auxiliares
@@ -102,6 +113,27 @@ function notificarDashboardSobreJoia() {
   window.dispatchEvent(new Event(EVENTO_JOIA_CONQUISTADA));
 }
 
+/**
+ * Informa à interface que uma joia e/ou uma Mandala foi conquistada.
+ *
+ * Um componente global poderá escutar este evento e exibir as janelas
+ * na ordem correta: primeiro a joia e depois a Mandala.
+ */
+function notificarRecompensaConquistada(
+  recompensa: RecompensaSessaoConquistada
+) {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent<RecompensaSessaoConquistada>(
+      EVENTO_RECOMPENSA_SESSAO_CONQUISTADA,
+      {
+        detail: recompensa,
+      }
+    )
+  );
+}
+
 /* =========================================================
    Serviço principal
 ========================================================= */
@@ -128,8 +160,20 @@ export async function salvarSessaoAtividade(
     );
   }
 
-  if (result.data?.joiaConquistada) {
+  const joiaConquistada = result.data?.joiaConquistada === true;
+  const mandalaConquistada = result.data?.mandalaConquistada === true;
+
+  if (joiaConquistada) {
     notificarDashboardSobreJoia();
+  }
+
+  if (joiaConquistada || mandalaConquistada) {
+    notificarRecompensaConquistada({
+      materiaId: params.materia_id,
+      atividadeId: params.atividade_id,
+      joiaConquistada,
+      mandalaConquistada,
+    });
   }
 
   return result;

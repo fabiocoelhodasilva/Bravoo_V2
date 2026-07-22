@@ -6,6 +6,7 @@ const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
 const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
 const MATERIA_GEOGRAFIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
 const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
+const MATERIA_VIRTUDES_ID = "c9b9d5e2-3d8b-4d75-8c3d-6d2b7f9a4c11";
 
 const joias = [
   {
@@ -37,12 +38,12 @@ const joias = [
     sombra: "drop-shadow-[0_0_24px_rgba(16,185,129,1)]",
   },
   {
-    nome: "Roxa",
-    materiaId: null,
-    src: "/imagens/joias/joia_purple.png",
-    cor: "168,85,247",
-    sombra: "drop-shadow-[0_0_24px_rgba(168,85,247,1)]",
-  },
+    nome: "Ametista",
+    materiaId: MATERIA_VIRTUDES_ID,
+     src: "/imagens/joias/joia_purple.png",
+     cor: "168,85,247",
+     sombra: "drop-shadow-[0_0_24px_rgba(168,85,247,1)]",
+},
 ];
 
 export default function MandalaResumo({

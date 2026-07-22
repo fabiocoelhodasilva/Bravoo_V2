@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { processarGamificacaoAposAtividade } from "@/lib/gamificacao/geral/gamificacao-actions";
 import { concederJoiaGeografia } from "@/lib/gamificacao/geografia/geografia-joias-actions";
+import { concederJoiaTabuada } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
+
+/* =========================================================
+   Constantes
+========================================================= */
+
+const MATERIA_GEOGRAFIA_ID = "d366c6de-2345-4bb2-ac1f-a88747a2248d";
+const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
 
 /* =========================================================
    Tipos
@@ -29,6 +37,11 @@ type SessaoPayload = {
   total_itens: number;
   tempo_total_segundos: number;
   data_execucao: string;
+};
+
+type ResultadoConquista = {
+  joiaConquistada: boolean;
+  mandalaConquistada: boolean;
 };
 
 /* =========================================================
@@ -91,6 +104,35 @@ function validarNumeroInteiroNaoNegativo(valor: number, nomeCampo: string) {
   }
 
   return null;
+}
+
+async function processarConquistaJoia(params: {
+  supabase: Parameters<typeof concederJoiaGeografia>[0]["supabase"];
+  usuarioId: string;
+  materiaId: string;
+}): Promise<ResultadoConquista> {
+  const { supabase, usuarioId, materiaId } = params;
+
+  if (materiaId === MATERIA_GEOGRAFIA_ID) {
+    return concederJoiaGeografia({
+      supabase,
+      usuarioId,
+      materiaId,
+    });
+  }
+
+  if (materiaId === MATERIA_MATEMATICA_ID) {
+    return concederJoiaTabuada({
+      supabase,
+      usuarioId,
+      materiaId,
+    });
+  }
+
+  return {
+    joiaConquistada: false,
+    mandalaConquistada: false,
+  };
 }
 
 /* =========================================================
@@ -207,7 +249,7 @@ export async function POST(request: Request) {
        Concessão de joia da matéria
     --------------------------------------------------------- */
 
-    const joiaConquistada = await concederJoiaGeografia({
+    const resultadoConquista = await processarConquistaJoia({
       supabase,
       usuarioId: user.id,
       materiaId: materia_id,
@@ -233,7 +275,8 @@ export async function POST(request: Request) {
         data: {
           sessao: sessaoSalva,
           gamificacao: resultadoGamificacao,
-          joiaConquistada,
+          joiaConquistada: resultadoConquista.joiaConquistada,
+          mandalaConquistada: resultadoConquista.mandalaConquistada,
         },
       });
     } catch (erroGamificacao) {
@@ -253,7 +296,8 @@ export async function POST(request: Request) {
           details,
           data: {
             sessao: sessaoSalva,
-            joiaConquistada,
+            joiaConquistada: resultadoConquista.joiaConquistada,
+            mandalaConquistada: resultadoConquista.mandalaConquistada,
           },
         },
         { status: 500 }

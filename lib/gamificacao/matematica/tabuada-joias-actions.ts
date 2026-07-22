@@ -1,10 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { concederMandalaDiaria } from "@/lib/gamificacao/geral/mandala-actions";
+
 /* =========================================================
    Constantes
 ========================================================= */
 
 const MATERIA_MATEMATICA_ID = "24b7c418-81b4-47c2-b96f-f051786fa187";
+
+/* =========================================================
+   Tipos
+========================================================= */
+
+export type ResultadoConcessaoJoiaTabuada = {
+  joiaConquistada: boolean;
+  mandalaConquistada: boolean;
+};
 
 /* =========================================================
    Funções auxiliares
@@ -26,32 +37,29 @@ function registrarErroDev(mensagem: string, error: unknown) {
  * A regra principal fica na função SQL:
  * fn_conceder_joia_tabuada_diaria
  *
- * Esta função apenas:
- * 1. Confere se a matéria recebida é Matemática.
- * 2. Chama a RPC responsável pela concessão.
- * 3. Retorna true se uma nova joia foi conquistada.
- *
  * Regra atual da RPC:
  * - Pelo menos 6 tabuadas diferentes no dia.
  * - Cada tabuada precisa ter pelo menos 6 acertos de 9 questões.
  * - A joia só é concedida uma vez por dia para Matemática.
+ *
+ * Quando uma nova Esmeralda é concedida, também verifica
+ * se ela completou a Mandala diária.
  */
 export async function concederJoiaTabuada(params: {
   supabase: SupabaseClient;
   usuarioId: string | null | undefined;
   materiaId: string;
-}): Promise<boolean> {
+}): Promise<ResultadoConcessaoJoiaTabuada> {
   const { supabase, usuarioId, materiaId } = params;
 
-  if (!usuarioId) {
-    return false;
+  if (!usuarioId || materiaId !== MATERIA_MATEMATICA_ID) {
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
   }
 
-  if (materiaId !== MATERIA_MATEMATICA_ID) {
-    return false;
-  }
-
-  const { data, error } = await supabase.rpc(
+  const { data: joiaConquistada, error } = await supabase.rpc(
     "fn_conceder_joia_tabuada_diaria",
     {
       p_usuario_id: usuarioId,
@@ -60,8 +68,38 @@ export async function concederJoiaTabuada(params: {
 
   if (error) {
     registrarErroDev("Erro ao conceder joia de Tabuada:", error);
-    return false;
+
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
   }
 
-  return data === true;
+  const foiConquistadaAgora = joiaConquistada === true;
+
+  if (!foiConquistadaAgora) {
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
+  }
+
+  try {
+    const mandalaConquistada = await concederMandalaDiaria({
+      supabase,
+      usuarioId,
+    });
+
+    return {
+      joiaConquistada: true,
+      mandalaConquistada,
+    };
+  } catch (error) {
+    registrarErroDev("Esmeralda concedida, mas houve erro ao verificar a Mandala:", error);
+
+    return {
+      joiaConquistada: true,
+      mandalaConquistada: false,
+    };
+  }
 }

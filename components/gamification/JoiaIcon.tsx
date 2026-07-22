@@ -2,33 +2,86 @@
 
 import Image from "next/image";
 
-type CorJoia =
-  | "azul"
-  | "verde"
-  | "verdeclaro"
-  | "vermelha"
-  | "roxa"
-  | "laranja";
+/* =========================================================
+   Tipos
+========================================================= */
+
+export type CorJoia =
+  "azul" | "verde" | "verdeclaro" | "vermelha" | "roxa" | "laranja";
+
+export type JoiaConfig = {
+  nome: string;
+  materia: string;
+  imagem: string;
+};
 
 type Props = {
   cor: CorJoia;
 };
 
-const imagens = {
-  azul: "/imagens/joias/joia_azul.png",
-  verde: "/imagens/joias/joia_verde.png",
-  verdeclaro: "/imagens/joias/joia_verde.png",
-  vermelha: "/imagens/joias/joia_vermelha.png",
-  roxa: "/imagens/joias/joia_roxa.png",
-  laranja: "/imagens/joias/joia_laranja.png",
+/* =========================================================
+   Catálogo oficial de joias da plataforma
+========================================================= */
+
+export const JOIAS: Record<CorJoia, JoiaConfig> = {
+  laranja: {
+    nome: "Topázio",
+    materia: "Minha Jornada",
+    imagem: "/imagens/joias/joia_or.png",
+  },
+
+  vermelha: {
+    nome: "Diamante",
+    materia: "Espiritual",
+    imagem: "/imagens/joias/joia_vermelha.png",
+  },
+
+  azul: {
+    nome: "Safira",
+    materia: "Geografia",
+    imagem: "/imagens/joias/joia_azul.png",
+  },
+
+  verde: {
+    nome: "Esmeralda",
+    materia: "Matemática",
+    imagem: "/imagens/joias/joia_verde.png",
+  },
+
+  /* Mantido por compatibilidade com os componentes existentes. */
+  verdeclaro: {
+    nome: "Esmeralda",
+    materia: "Matemática",
+    imagem: "/imagens/joias/joia_verde.png",
+  },
+
+  roxa: {
+    nome: "Ametista",
+    materia: "Virtudes",
+    imagem: "/imagens/joias/joia_roxa.png",
+  },
 };
 
+/* =========================================================
+   Utilitário para outros componentes
+========================================================= */
+
+export function getJoiaConfig(cor: CorJoia): JoiaConfig {
+  return JOIAS[cor];
+}
+
+/* =========================================================
+   Componente visual
+========================================================= */
+
 export default function JoiaIcon({ cor }: Props) {
+  const joia = JOIAS[cor];
+
   return (
     <div className="relative h-[56px] w-[56px] shrink-0">
       <Image
-        src={imagens[cor]}
-        alt="Joia"
+        src={joia.imagem}
+        alt={`Joia ${joia.nome}`}
         fill
         priority
         className="

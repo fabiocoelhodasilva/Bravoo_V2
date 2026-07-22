@@ -6,6 +6,7 @@
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { aplicarCrescimentoJardimAposOracao } from "@/lib/gamificacao/jardim/jardim-crescimento-actions";
+import { concederJoiaMateria } from "@/lib/gamificacao/geral/joia-actions";
 
 /* =========================================================
    Constantes fixas
@@ -452,7 +453,11 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
 
   if (metaError) {
     registrarErroDev("Erro ao buscar meta espiritual:", metaError);
-    return false;
+
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
   }
 
   const metaDiaria = Number(meta?.meta_diaria ?? META_PADRAO_ORACAO_MINUTOS);
@@ -468,30 +473,43 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
   });
 
   if (!metaAtingida) {
-    return false;
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
   }
 
-  const { data: joiaConquistada, error: joiaError } = await supabase.rpc(
-    "fn_conceder_joia_materia",
-    {
-      p_usuario_id: usuarioId,
-      p_materia_id: MATERIA_ESPIRITUAL_ID,
-    },
-  );
+  try {
+    const resultadoConquista = await concederJoiaMateria({
+      supabase,
+      usuarioId,
+      materiaId: MATERIA_ESPIRITUAL_ID,
+    });
 
-  if (joiaError) {
-    registrarErroDev("Erro ao conceder joia espiritual:", joiaError);
-    return false;
+    registrarInfoDev("[JOIA ESPIRITUAL] Resultado da concessão", {
+      usuarioId,
+      materiaId: MATERIA_ESPIRITUAL_ID,
+      joiaConquistada: resultadoConquista.joiaConquistada,
+      mandalaConquistada: resultadoConquista.mandalaConquistada,
+    });
+
+    return resultadoConquista;
+  } catch (error) {
+    registrarErroDev(
+      "Erro ao conceder joia espiritual ou verificar mandala:",
+      error,
+    );
+
+    /*
+     * A oração já foi registrada. Uma falha isolada na gamificação não deve
+     * apagar nem invalidar esse registro. Uma nova sincronização poderá
+     * tentar conceder a recompensa novamente.
+     */
+    return {
+      joiaConquistada: false,
+      mandalaConquistada: false,
+    };
   }
-
-  registrarInfoDev("[JOIA ESPIRITUAL] Resultado da RPC", {
-    usuarioId,
-    materiaId: MATERIA_ESPIRITUAL_ID,
-    joiaConquistada: Boolean(joiaConquistada),
-    retornoRpc: joiaConquistada,
-  });
-
-  return Boolean(joiaConquistada);
 }
 
 /* =========================================================
@@ -678,7 +696,7 @@ export async function registrarMomentoOracao(minutos: number) {
       minutosHoje,
     );
 
-    const joiaEspiritualConquistada =
+    const resultadoConquista =
       await concederJoiaEspiritualSeMetaAtingida({
         supabase,
         usuarioId: user.id,
@@ -693,7 +711,8 @@ export async function registrarMomentoOracao(minutos: number) {
       creditosNovos: resumoJardim.creditosNovos,
       saldoAtualJardim: resumoJardim.saldoAtual,
       crescimentoAplicado: !jaTinhaOracaoHoje,
-      joiaEspiritualConquistada,
+      joiaEspiritualConquistada: resultadoConquista.joiaConquistada,
+      mandalaConquistada: resultadoConquista.mandalaConquistada,
     });
 
     return {
@@ -703,10 +722,11 @@ export async function registrarMomentoOracao(minutos: number) {
       crescimentoAplicado: !jaTinhaOracaoHoje,
 
       // Mantém compatibilidade com o que você já usa hoje.
-      joiaEspiritualConquistada,
+      joiaEspiritualConquistada: resultadoConquista.joiaConquistada,
 
-      // Nome padronizado para o front avisar o StudentDashboard.
-      joiaConquistada: joiaEspiritualConquistada,
+      // Nomes padronizados consumidos pelo front-end.
+      joiaConquistada: resultadoConquista.joiaConquistada,
+      mandalaConquistada: resultadoConquista.mandalaConquistada,
     };
   } catch (error) {
     registrarErroDev("Erro ao registrar momento de oração:", error);

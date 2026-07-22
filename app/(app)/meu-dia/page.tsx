@@ -7,7 +7,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { MeuDiaPageView } from "@/components/meu-dia/MeuDiaPageView";
+import {
+  MeuDiaPageView,
+  type TipoExclusaoTarefa,
+} from "@/components/meu-dia/MeuDiaPageView";
+import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
+import { JOIAS } from "@/components/gamification/JoiaIcon";
 import { supabase } from "@/lib/supabase/client";
 import { sincronizarJoiaMeuDiaPorConclusao } from "@/lib/gamificacao/minhajornada/meu-dia-joias-actions";
 import { carregarTotalTopaziosMeuDia } from "@/lib/gamificacao/minhajornada/meu-dia-resumo-service";
@@ -18,9 +23,10 @@ import { carregarJoiasSemana } from "@/lib/gamificacao/geral/carregar-joias-sema
 ========================================================= */
 
 const MATERIA_MEU_DIA_ID = "7f5e2d41-9c84-4d2a-b8c1-1f4e8a6b7001";
-const CACHE_PREFIX = "bravoo_meu_dia_";
+const CACHE_PREFIX = "bravoo_meu_dia_v2_";
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
-const IMAGEM_JOIA_MEU_DIA = "/imagens/joias/joia_or.png";
+const JOIA_MEU_DIA = JOIAS.laranja;
+const IMAGEM_JOIA_MEU_DIA = JOIA_MEU_DIA.imagem;
 
 /* =========================================================
    Tipos
@@ -30,6 +36,8 @@ type TarefaMeuDia = {
   id: string;
   titulo: string;
   concluida: boolean;
+  recorrente: boolean;
+  dataInicio: string | null;
 };
 
 type MeuDiaHojeStatusRow = {
@@ -111,6 +119,25 @@ function getCacheKey(usuarioId: string, dataReferencia: string) {
   return `${CACHE_PREFIX}${usuarioId}_${dataReferencia}`;
 }
 
+function limparCacheMeuDiaUsuario(usuarioId: string) {
+  try {
+    const prefixoUsuario = `${CACHE_PREFIX}${usuarioId}_`;
+    const chavesParaRemover: string[] = [];
+
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const chave = sessionStorage.key(index);
+
+      if (chave?.startsWith(prefixoUsuario)) {
+        chavesParaRemover.push(chave);
+      }
+    }
+
+    chavesParaRemover.forEach((chave) => sessionStorage.removeItem(chave));
+  } catch {
+    // Evita quebrar a página caso o navegador bloqueie o sessionStorage.
+  }
+}
+
 function registrarErroDev(mensagem: string, error: unknown) {
   if (process.env.NODE_ENV === "development") {
     console.error(mensagem, error);
@@ -164,6 +191,8 @@ function formatarTarefasMeuDia(
     id: item.tarefa_id,
     titulo: item.titulo,
     concluida: item.concluida,
+    recorrente: item.recorrente,
+    dataInicio: item.data_inicio,
   }));
 }
 
@@ -211,6 +240,7 @@ export default function MeuDiaPage() {
   const [totalTopazios, setTotalTopazios] = useState(0);
   const [diasSeguidos, setDiasSeguidos] = useState(0);
   const [joiasSemana, setJoiasSemana] = useState<Record<string, string>>({});
+  const [joiaConquistada, setJoiaConquistada] = useState(false);
 
   const [dataSelecionada, setDataSelecionada] = useState<string>(
     obterDataHojeLocal()
@@ -455,6 +485,7 @@ export default function MeuDiaPage() {
               data_referencia: dataSelecionada,
               concluida: novoStatus,
               concluida_em: novoStatus ? new Date().toISOString() : null,
+              excluida: false,
             },
             {
               onConflict: "tarefa_id,data_referencia",
@@ -468,6 +499,10 @@ export default function MeuDiaPage() {
         const resultadoJoia = await sincronizarJoiaMeuDiaPorConclusao(
           dataSelecionada
         );
+
+        if (resultadoJoia.joiaConquistada) {
+          setJoiaConquistada(true);
+        }
 
         if (resultadoJoia.joiaConquistada || resultadoJoia.joiaRemovida) {
           notificarAtualizacaoJoias();
@@ -535,7 +570,7 @@ export default function MeuDiaPage() {
   ========================================================= */
 
   const handleDeleteTarefa = useCallback(
-    async (tarefaId: string) => {
+    async (tarefaId: string, tipoExclusao: TipoExclusaoTarefa) => {
       const hoje = obterDataHojeLocal();
 
       if (dataSelecionada < hoje) {
@@ -549,19 +584,63 @@ export default function MeuDiaPage() {
         return;
       }
 
+      const tarefaAtual = tarefas.find((item) => item.id === tarefaId);
+
+      if (!tarefaAtual) {
+        throw new Error("Tarefa não encontrada.");
+      }
+
+      const tipoExclusaoSeguro = tarefaAtual.recorrente
+        ? tipoExclusao
+        : "apenas_esta";
+
       setDeletingIds((prev) =>
         prev.includes(tarefaId) ? prev : [...prev, tarefaId]
       );
 
       try {
-        const { error } = await supabase
-          .from("next_meu_dia_tarefas")
-          .delete()
-          .eq("id", tarefaId)
-          .eq("usuario_id", idUsuario);
+        if (tipoExclusaoSeguro === "apenas_esta") {
+          const { error } = await supabase
+            .from("next_meu_dia_tarefas_realizadas")
+            .upsert(
+              {
+                tarefa_id: tarefaId,
+                usuario_id: idUsuario,
+                data_referencia: dataSelecionada,
+                concluida: false,
+                concluida_em: null,
+                excluida: true,
+              },
+              {
+                onConflict: "tarefa_id,data_referencia",
+              }
+            );
 
-        if (error) {
-          throw error;
+          if (error) {
+            throw error;
+          }
+        } else {
+          const dataAnterior = formatIsoDateLocal(
+            addDays(parseIsoDateLocal(dataSelecionada), -1)
+          );
+
+          const encerrarAntesDoInicio =
+            tarefaAtual.dataInicio !== null &&
+            dataSelecionada <= tarefaAtual.dataInicio;
+
+          const atualizacao = encerrarAntesDoInicio
+            ? { ativa: false }
+            : { data_fim: dataAnterior };
+
+          const { error } = await supabase
+            .from("next_meu_dia_tarefas")
+            .update(atualizacao)
+            .eq("id", tarefaId)
+            .eq("usuario_id", idUsuario);
+
+          if (error) {
+            throw error;
+          }
         }
 
         const tarefasAtualizadas = tarefas.filter(
@@ -569,6 +648,7 @@ export default function MeuDiaPage() {
         );
 
         setTarefas(tarefasAtualizadas);
+        limparCacheMeuDiaUsuario(idUsuario);
 
         const resultadoJoia = await sincronizarJoiaMeuDiaPorConclusao(
           dataSelecionada
@@ -623,18 +703,30 @@ export default function MeuDiaPage() {
   ========================================================= */
 
   return (
-    <MeuDiaPageView
-      onLogout={handleLogout}
-      tarefasIniciais={carregando ? [] : tarefas}
-      onToggleTarefa={handleToggleTarefa}
-      onDeleteTarefa={handleDeleteTarefa}
-      salvandoIds={salvandoIds}
-      deletingIds={deletingIds}
-      dataSelecionada={dataSelecionada}
-      onSelecionarData={setDataSelecionada}
-      totalTopazios={totalTopazios}
-      diasSeguidos={diasSeguidos}
-      joiasSemana={joiasSemana}
-    />
+    <>
+      <MeuDiaPageView
+        onLogout={handleLogout}
+        tarefasIniciais={carregando ? [] : tarefas}
+        onToggleTarefa={handleToggleTarefa}
+        onDeleteTarefa={handleDeleteTarefa}
+        salvandoIds={salvandoIds}
+        deletingIds={deletingIds}
+        dataSelecionada={dataSelecionada}
+        onSelecionarData={setDataSelecionada}
+        totalTopazios={totalTopazios}
+        diasSeguidos={diasSeguidos}
+        joiasSemana={joiasSemana}
+      />
+
+      <JoiaConquistadaModal
+        aberto={joiaConquistada}
+        nomeJoia={JOIA_MEU_DIA.nome}
+        nomeMateria={JOIA_MEU_DIA.materia}
+        imagemJoia={JOIA_MEU_DIA.imagem}
+        cor="laranja"
+        mensagem="Parabéns! Você completou suas atividades e conquistou o Topázio da Minha Jornada."
+        onFechar={() => setJoiaConquistada(false)}
+      />
+    </>
   );
 }

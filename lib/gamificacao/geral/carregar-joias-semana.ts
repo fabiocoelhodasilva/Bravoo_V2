@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { obterIntervaloDiaBrasil } from "@/lib/utils/data-brasil";
+
 /* =========================================================
    Tipos
 ========================================================= */
@@ -35,13 +37,16 @@ export async function carregarJoiasSemana({
   dataFim,
   imagemJoia,
 }: CarregarJoiasSemanaParams): Promise<Record<string, string>> {
+  const intervaloPrimeiroDia = obterIntervaloDiaBrasil(dataInicio);
+  const intervaloUltimoDia = obterIntervaloDiaBrasil(dataFim);
+
   const { data, error } = await supabase
     .from("next_joias_usuario")
     .select("data_conquista")
     .eq("usuario_id", usuarioId)
     .eq("materia_id", materiaId)
-    .gte("data_conquista", `${dataInicio} 00:00:00`)
-    .lte("data_conquista", `${dataFim} 23:59:59`);
+    .gte("data_conquista", intervaloPrimeiroDia.inicio)
+    .lte("data_conquista", intervaloUltimoDia.fim);
 
   if (error) {
     console.error("Erro ao carregar joias da semana:", error);
