@@ -539,14 +539,15 @@ export default function VirtudeRespostaTexto({
           : "Enviar resposta"}
       </button>
 
-     <JoiaConquistadaModal
-  aberto={joiaConquistada}
-  nomeJoia="Ametista"
-  nomeMateria="Virtudes"
-  imagemJoia="/imagens/joias/joia_purple.png"
-  mensagem="Parabéns! Sua dedicação de hoje foi reconhecida."
-  onFechar={() => setJoiaConquistada(false)}
-/>
+      <JoiaConquistadaModal
+        aberto={joiaConquistada}
+        nomeJoia="Ametista"
+        nomeMateria="Virtudes"
+        imagemJoia="/imagens/joias/joia_purple.png"
+        cor="roxa"
+        mensagem="Parabéns! Sua dedicação de hoje foi reconhecida."
+        onFechar={() => setJoiaConquistada(false)}
+      />
     </section>
   );
 }
