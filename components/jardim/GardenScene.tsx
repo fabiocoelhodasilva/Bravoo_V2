@@ -165,7 +165,7 @@ function normalizarPercentualCrescimento(percentualEscala: number) {
 const ITEM_Y_OFFSETS: Partial<Record<JardimItemTipo, number>> = {
   flor_geranio_roxo: 0.7,
   arvore_japonesa: -0.5,
-  arvore_selva: 0,
+  arvore_selva: 0.9,
   japanese_maple: 0,
   jabami_sakura: 0,
   banana_tree: 0,

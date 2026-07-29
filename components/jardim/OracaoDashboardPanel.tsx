@@ -968,7 +968,7 @@ export default function OracaoDashboardPanel({
             </p>
 
             <p className="mx-auto mt-1 max-w-[260px] text-center text-[0.68rem] font-bold leading-snug text-[#5dc6a1] sm:text-xs">
-              🌱 Ore e ganhe até 10 itens para seu jardim por dia!
+              🌱 Ore e ganhe até 5 itens para seu jardim por dia!
             </p>
 
             <div className="mt-3 grid grid-cols-3 items-end divide-x divide-white/10">

@@ -28,6 +28,7 @@ const LABELS_DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 type AssuntoVirtude = {
   nome: string;
+  ordem_exibicao: number;
 };
 
 type Virtude = {
@@ -44,6 +45,11 @@ type Virtude = {
   criado_em: string;
   atualizado_em: string;
   assunto: AssuntoVirtude | AssuntoVirtude[] | null;
+};
+
+type RegistroVisualizacaoVirtude = {
+  virtude_id: string;
+  concluido_em: string | null;
 };
 
 /* =========================================================
@@ -96,6 +102,16 @@ function obterImagemVirtude(virtude: Virtude) {
   return `https://img.youtube.com/vi/${virtude.youtube_video_id}/maxresdefault.jpg`;
 }
 
+function formatarDataVisualizacao(dataIso: string) {
+  const [ano, mes, dia] = dataIso.slice(0, 10).split("-");
+
+  if (!ano || !mes || !dia) {
+    return dataIso;
+  }
+
+  return `${dia}/${mes}/${ano}`;
+}
+
 /* =========================================================
    Componente principal
 ========================================================= */
@@ -108,9 +124,9 @@ export default function VirtudesMenu() {
   const [erro, setErro] = useState("");
   const [dataSelecionada, setDataSelecionada] = useState(obterHojeLocalIso());
   const [joiasSemana, setJoiasSemana] = useState<Record<string, string>>({});
-  const [virtudesConcluidas, setVirtudesConcluidas] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [ultimasVisualizacoes, setUltimasVisualizacoes] = useState<
+    Record<string, string[]>
+  >({});
 
   const dataAtual = useMemo(
     () => parseIsoDateLocal(dataSelecionada),
@@ -164,7 +180,8 @@ export default function VirtudesMenu() {
           criado_em,
           atualizado_em,
           assunto:next_assuntos (
-            nome
+            nome,
+            ordem_exibicao
           )
         `,
         )
@@ -233,13 +250,16 @@ export default function VirtudesMenu() {
   }, [inicioSemana, fimSemana]);
 
   /* =========================================================
-     Busca as virtudes já concluídas pelo usuário
+     Busca as três últimas respostas de cada virtude
+
+     Para esta tela, uma resposta registrada indica que o
+     usuário assistiu ao vídeo e concluiu a reflexão.
   ========================================================= */
 
   useEffect(() => {
     let cancelado = false;
 
-    async function carregarVirtudesConcluidas() {
+    async function carregarUltimasVisualizacoes() {
       try {
         const {
           data: { user },
@@ -248,7 +268,7 @@ export default function VirtudesMenu() {
 
         if (erroUsuario || !user) {
           if (!cancelado) {
-            setVirtudesConcluidas(new Set());
+            setUltimasVisualizacoes({});
           }
 
           return;
@@ -256,35 +276,58 @@ export default function VirtudesMenu() {
 
         const { data, error } = await supabase
           .from("next_virtudes_respostas")
-          .select("virtude_id")
-          .eq("usuario_id", user.id);
+          .select("virtude_id, concluido_em")
+          .eq("usuario_id", user.id)
+          .not("concluido_em", "is", null)
+          .order("concluido_em", { ascending: false });
 
         if (error) {
           throw error;
         }
 
-        const idsConcluidos = new Set(
-          (data ?? [])
-            .map((registro) => registro.virtude_id)
-            .filter(
-              (virtudeId): virtudeId is string =>
-                typeof virtudeId === "string" && virtudeId.length > 0,
-            ),
-        );
+        const historico: Record<string, string[]> = {};
+
+        for (const registro of (data ?? []) as RegistroVisualizacaoVirtude[]) {
+          const virtudeId = registro.virtude_id;
+          const concluidoEm = registro.concluido_em;
+
+          if (
+            typeof virtudeId !== "string" ||
+            virtudeId.length === 0 ||
+            typeof concluidoEm !== "string"
+          ) {
+            continue;
+          }
+
+          const dataFormatada = formatarDataVisualizacao(concluidoEm);
+          const datasDaVirtude = historico[virtudeId] ?? [];
+
+          /*
+           * Mostra no máximo três dias diferentes.
+           * Assim, duas respostas no mesmo dia não repetem a data.
+           */
+          if (
+            datasDaVirtude.length < 3 &&
+            !datasDaVirtude.includes(dataFormatada)
+          ) {
+            datasDaVirtude.push(dataFormatada);
+            historico[virtudeId] = datasDaVirtude;
+          }
+        }
 
         if (!cancelado) {
-          setVirtudesConcluidas(idsConcluidos);
+          setUltimasVisualizacoes(historico);
         }
       } catch (error) {
-        console.error("Erro ao carregar virtudes concluídas:", error);
+        console.error("Erro ao carregar últimas visualizações:", error);
 
         if (!cancelado) {
-          setVirtudesConcluidas(new Set());
+          setUltimasVisualizacoes({});
         }
       }
     }
 
-    void carregarVirtudesConcluidas();
+    void carregarUltimasVisualizacoes();
 
     return () => {
       cancelado = true;
@@ -296,22 +339,46 @@ export default function VirtudesMenu() {
   ========================================================= */
 
   const gruposPorAssunto = useMemo(() => {
-    const grupos = new Map<string, Virtude[]>();
+    const grupos = new Map<
+      string,
+      {
+        ordem: number;
+        itens: Virtude[];
+      }
+    >();
 
     for (const virtude of virtudes) {
       const assunto = obterNomeAssunto(virtude);
 
+      const dadosAssunto = Array.isArray(virtude.assunto)
+        ? virtude.assunto[0]
+        : virtude.assunto;
+
+      const ordem = dadosAssunto?.ordem_exibicao ?? 999;
+
       if (!grupos.has(assunto)) {
-        grupos.set(assunto, []);
+        grupos.set(assunto, {
+          ordem,
+          itens: [],
+        });
       }
 
-      grupos.get(assunto)!.push(virtude);
+      grupos.get(assunto)!.itens.push(virtude);
     }
 
-    return Array.from(grupos.entries()).map(([assunto, itens]) => ({
-      assunto,
-      itens,
-    }));
+    return Array.from(grupos.entries())
+      .map(([assunto, dados]) => ({
+        assunto,
+        ordem: dados.ordem,
+        itens: dados.itens,
+      }))
+      .sort((grupoA, grupoB) => {
+        if (grupoA.ordem !== grupoB.ordem) {
+          return grupoA.ordem - grupoB.ordem;
+        }
+
+        return grupoA.assunto.localeCompare(grupoB.assunto, "pt-BR");
+      });
   }, [virtudes]);
 
   /* =========================================================
@@ -528,80 +595,79 @@ export default function VirtudesMenu() {
                 <div className="mx-auto w-full max-w-[1240px] overflow-x-auto px-4 pb-4 sm:px-6">
                   <div className="flex w-max items-start gap-3 sm:gap-5">
                     {grupo.itens.map((virtude) => {
-                      const concluida = virtudesConcluidas.has(virtude.id);
+                      const visualizacoes =
+                        ultimasVisualizacoes[virtude.id] ?? [];
+
+                      const jaAssistiu = visualizacoes.length > 0;
 
                       return (
                         <button
                           key={virtude.id}
                           type="button"
                           onClick={() => abrirVirtude(virtude.id)}
-                          className="group flex w-[155px] shrink-0 flex-col items-stretch self-start text-left sm:w-[210px]"
+                          className="group flex w-[182px] shrink-0 flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#111] text-left shadow-[0_14px_34px_rgba(0,0,0,0.42)] transition duration-300 active:scale-[0.98] sm:w-[235px] sm:hover:-translate-y-1 sm:hover:border-[var(--color-6)]/40"
                         >
-                          <div
-                            className={`relative aspect-[2/3] overflow-hidden rounded-[18px] border bg-[#111] shadow-[0_12px_30px_rgba(0,0,0,0.38)] transition duration-300 sm:group-hover:scale-[1.035] group-active:scale-[0.98] ${
-                              concluida
-                                ? "border-[#5dc6a1]/35 group-hover:border-[#5dc6a1]/60"
-                                : "border-white/10 group-hover:border-white/25"
-                            }`}
-                          >
+                          {/* Imagem sempre colorida */}
+                          <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#111]">
                             <img
                               src={obterImagemVirtude(virtude)}
                               alt={virtude.titulo}
-                              className={`h-full w-full object-cover transition duration-500 sm:group-hover:scale-[1.06] ${
-                                concluida
-                                  ? "grayscale brightness-[0.55] opacity-40"
-                                  : ""
-                              }`}
+                              className="h-full w-full object-cover transition duration-500 sm:group-hover:scale-[1.05]"
                               draggable={false}
                             />
 
-                            <div
-                              className={`absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent ${
-                                concluida ? "bg-black/35" : ""
-                              }`}
-                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
 
-                            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                              <span
-                                className={`text-[0.62rem] font-bold uppercase tracking-[0.1em] sm:text-[0.7rem] ${
-                                  concluida
-                                    ? "text-white/35"
-                                    : "text-[var(--color-6)]"
-                                }`}
-                              >
+                            <div className="absolute bottom-0 left-0 right-0 p-3.5 sm:p-4">
+                              <span className="text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--color-6)] sm:text-[0.7rem]">
                                 {obterNomeAssunto(virtude)}
                               </span>
 
-                              <h4
-                                className={`mt-1 line-clamp-2 text-[0.9rem] font-bold leading-tight sm:text-[1.05rem] ${
-                                  concluida ? "text-white/55" : "text-white"
-                                }`}
-                              >
+                              <h4 className="mt-1 line-clamp-2 text-[0.95rem] font-bold leading-tight text-white sm:text-[1.08rem]">
                                 {virtude.titulo}
                               </h4>
                             </div>
 
-                            <div
-                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-[0.8rem] text-white backdrop-blur-sm transition sm:group-hover:scale-110 ${
-                                concluida ? "opacity-35" : "opacity-90"
-                              }`}
-                            >
+                            <div className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/60 text-[0.8rem] text-white shadow-lg backdrop-blur-sm transition sm:group-hover:scale-110">
                               ▶
                             </div>
                           </div>
 
-                          <div
-                            className={`mt-2 flex h-6 w-full items-center justify-center gap-1.5 text-[0.72rem] font-bold sm:h-7 sm:text-sm ${
-                              concluida
-                                ? "text-[#5dc6a1]"
-                                : "pointer-events-none invisible"
-                            }`}
-                            aria-hidden={!concluida}
-                          >
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#5dc6a1]/70 bg-[#5dc6a1]/15 text-[0.72rem] shadow-[0_0_12px_rgba(93,198,161,0.22)]">
-                              ✓
-                            </span>
-                            <span>Concluído</span>
+                          {/* Histórico abaixo do vídeo */}
+                          <div className="flex min-h-[150px] w-full flex-1 flex-col p-3.5 sm:min-h-[166px] sm:p-4">
+                            <p className="text-[0.61rem] font-black uppercase tracking-[0.12em] text-white/48 sm:text-[0.68rem]">
+                              Últimas 3 visualizações
+                            </p>
+
+                            {jaAssistiu ? (
+                              <div className="mt-2.5 flex flex-col gap-1.5">
+                                {visualizacoes.map((dataVisualizacao) => (
+                                  <div
+                                    key={dataVisualizacao}
+                                    className="flex items-center gap-2 text-[0.76rem] font-semibold text-white/78 sm:text-[0.84rem]"
+                                  >
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-6)] shadow-[0_0_8px_rgba(163,91,220,0.65)]" />
+                                    <span>{dataVisualizacao}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-2.5 text-[0.76rem] font-semibold leading-relaxed text-white/38 sm:text-[0.84rem]">
+                                Você ainda não assistiu a esta jornada.
+                              </p>
+                            )}
+
+                            <div
+                              className={`mt-auto pt-3 text-[0.72rem] font-black sm:text-[0.8rem] ${
+                                jaAssistiu
+                                  ? "text-[#5dc6a1]"
+                                  : "text-[var(--color-6)]"
+                              }`}
+                            >
+                              {jaAssistiu
+                                ? "Assistir novamente →"
+                                : "Assistir agora →"}
+                            </div>
                           </div>
                         </button>
                       );

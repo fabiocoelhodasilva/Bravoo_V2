@@ -821,7 +821,10 @@ export default function MultiplicacaoPageView() {
     if (proximaTabuada) {
       setTabuadaSelecionada(proximaTabuada);
       limparEstadoDaTabuada(proximaTabuada);
+      return;
     }
+
+    limparEstadoDaTabuada(tabuadaSelecionada);
   }
 
   function trocarTabuada(numero: number) {

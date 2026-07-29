@@ -133,7 +133,7 @@ function calcularCreditosPorMinutos(minutos: number) {
     return 0;
   }
 
-  return Math.min(10, Math.floor(minutos));
+  return Math.min(5, Math.floor(minutos));
 }
 
 function adicionarDiasDataIso(dataIso: string, dias: number): string {
