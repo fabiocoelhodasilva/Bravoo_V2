@@ -12,6 +12,7 @@ import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
+import { tabuadaAtingiuPercentualMinimo } from "@/lib/gamificacao/matematica/tabuada-rules";
 
 /* =========================================================
    IDs fixos
@@ -100,6 +101,7 @@ type ResumoRevisao = {
   totalItens: number;
   tempoTotalSegundos: number;
   dataExecucao: string;
+  atingiuMinimoMandala: boolean;
 };
 
 /* =========================================================
@@ -122,7 +124,9 @@ export default function MultiplicacaoPageView() {
   const [questoesBanco, setQuestoesBanco] = useState<QuestaoBanco[]>([]);
   const [respostas, setRespostas] = useState<RespostasUsuario>({});
   const [camposValidados, setCamposValidados] = useState<CamposValidados>({});
-  const [tabuadasFeitasHoje, setTabuadasFeitasHoje] = useState<number[]>([]);
+  const [tabuadasTentadasHoje, setTabuadasTentadasHoje] = useState<number[]>([]);
+  const [tabuadasValidasMandalaHoje, setTabuadasValidasMandalaHoje] =
+    useState<number[]>([]);
   const [processandoRodada, setProcessandoRodada] = useState(false);
   const [resultadoConclusao, setResultadoConclusao] =
     useState<ResultadoConclusao | null>(null);
@@ -267,7 +271,7 @@ export default function MultiplicacaoPageView() {
     await buscarQuestoesTabuada();
 
     if (idUsuario) {
-      await buscarTabuadasFeitasHoje(idUsuario);
+      await buscarStatusTabuadasHoje(idUsuario);
     }
   }
 
@@ -292,7 +296,7 @@ export default function MultiplicacaoPageView() {
     }
   }
 
-  async function buscarTabuadasFeitasHoje(idUsuario: string) {
+  async function buscarStatusTabuadasHoje(idUsuario: string) {
     try {
       const inicioHoje = new Date();
       inicioHoje.setHours(0, 0, 0, 0);
@@ -302,7 +306,7 @@ export default function MultiplicacaoPageView() {
 
       const { data, error } = await supabase
         .from("next_sessoes_atividade")
-        .select("detalhe_id, total_itens")
+        .select("detalhe_id, total_itens, acertos")
         .eq("usuario_id", idUsuario)
         .eq("atividade_id", MULTIPLICACAO_ATIVIDADE_ID)
         .eq("materia_id", MATEMATICA_MATERIA_ID)
@@ -313,13 +317,15 @@ export default function MultiplicacaoPageView() {
         .gte("total_itens", MULTIPLICADORES.length);
 
       if (error) {
-        console.error("Erro ao buscar tabuadas feitas hoje:", error);
+        console.error("Erro ao buscar status das tabuadas de hoje:", error);
         return;
       }
 
-      const feitas = Array.from(
+      const sessoesHoje = data ?? [];
+
+      const tentadas = Array.from(
         new Set(
-          (data ?? [])
+          sessoesHoje
             .map((item) =>
               item.detalhe_id
                 ? TABUADA_POR_DETALHE_ID[item.detalhe_id]
@@ -329,9 +335,28 @@ export default function MultiplicacaoPageView() {
         )
       );
 
-      setTabuadasFeitasHoje(feitas);
+      const validasMandala = Array.from(
+        new Set(
+          sessoesHoje
+            .filter((item) =>
+              tabuadaAtingiuPercentualMinimo({
+                acertos: item.acertos,
+                totalItens: item.total_itens,
+              })
+            )
+            .map((item) =>
+              item.detalhe_id
+                ? TABUADA_POR_DETALHE_ID[item.detalhe_id]
+                : null
+            )
+            .filter((numero): numero is number => typeof numero === "number")
+        )
+      );
+
+      setTabuadasTentadasHoje(tentadas);
+      setTabuadasValidasMandalaHoje(validasMandala);
     } catch (error) {
-      console.error("Erro inesperado ao buscar tabuadas feitas hoje:", error);
+      console.error("Erro inesperado ao buscar status das tabuadas de hoje:", error);
     }
   }
 
@@ -470,11 +495,24 @@ export default function MultiplicacaoPageView() {
     const resultadoGravacao = await registrarRodadaEmbaralhadaNoBanco();
 
     if (resultadoGravacao.sucesso) {
-      setTabuadasFeitasHoje((atuais) =>
+      setTabuadasTentadasHoje((atuais) =>
         atuais.includes(tabuadaSelecionada)
           ? atuais
           : [...atuais, tabuadaSelecionada]
       );
+
+      if (
+        tabuadaAtingiuPercentualMinimo({
+          acertos: resultadoGravacao.acertos,
+          totalItens: resultadoGravacao.totalItens,
+        })
+      ) {
+        setTabuadasValidasMandalaHoje((atuais) =>
+          atuais.includes(tabuadaSelecionada)
+            ? atuais
+            : [...atuais, tabuadaSelecionada]
+        );
+      }
 
       setResultadoConclusao({
         tabuada: tabuadaSelecionada,
@@ -528,7 +566,7 @@ export default function MultiplicacaoPageView() {
       };
     }
 
-    if (tabuadasFeitasHoje.includes(tabuadaSelecionada)) {
+    if (tabuadasValidasMandalaHoje.includes(tabuadaSelecionada)) {
       return {
         sucesso: true,
         acertos,
@@ -751,12 +789,20 @@ export default function MultiplicacaoPageView() {
       );
       setModoRevisao(true);
       setRespostasRevisao(respostasPorChave);
+      const atingiuMinimoMandala =
+        tabuadasValidasMandalaHoje.includes(numero) ||
+        tabuadaAtingiuPercentualMinimo({
+          acertos: sessao.acertos,
+          totalItens: sessao.total_itens,
+        });
+
       setResumoRevisao({
         tabuada: numero,
         acertos: sessao.acertos ?? 0,
         totalItens: sessao.total_itens ?? 0,
         tempoTotalSegundos: sessao.tempo_total_segundos ?? 0,
         dataExecucao: sessao.data_execucao,
+        atingiuMinimoMandala,
       });
       rodadaProcessadaRef.current = "";
     } catch (error) {
@@ -798,9 +844,17 @@ export default function MultiplicacaoPageView() {
     });
   }
 
-  function selecionarTabuada(numero: number, feitaHoje: boolean) {
-    if (feitaHoje) {
+  function selecionarTabuada(numero: number, tentadaHoje: boolean) {
+    if (tentadaHoje) {
       carregarRevisaoTabuada(numero);
+      return;
+    }
+
+    trocarTabuada(numero);
+  }
+
+  function tentarNovamenteTabuada(numero: number) {
+    if (tabuadasValidasMandalaHoje.includes(numero)) {
       return;
     }
 
@@ -907,19 +961,23 @@ export default function MultiplicacaoPageView() {
         <div className="mb-5 flex w-full justify-center gap-1.5">
           {TABUADAS.map((numero) => {
             const selecionada = numero === tabuadaSelecionada;
-            const feitaHoje = tabuadasFeitasHoje.includes(numero);
+            const tentadaHoje = tabuadasTentadasHoje.includes(numero);
+            const validaMandalaHoje =
+              tabuadasValidasMandalaHoje.includes(numero);
 
             return (
               <button
                 key={numero}
                 type="button"
-                onClick={() => selecionarTabuada(numero, feitaHoje)}
+                onClick={() => selecionarTabuada(numero, tentadaHoje)}
                 className={[
                   "relative flex h-[40px] flex-1 items-center justify-center rounded-[10px] border text-xs font-extrabold transition-all duration-200",
                   "before:absolute before:inset-[3px] before:rounded-[7px] before:border before:border-white/15 before:content-['']",
-                  feitaHoje
+                  validaMandalaHoje
                     ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.28)] text-white shadow-[0_0_14px_rgba(93,198,161,0.18)]"
-                    : "border-[var(--color-1)]/55 bg-[rgba(201,74,74,0.22)] text-white/80 shadow-[0_0_14px_rgba(201,74,74,0.10)]",
+                    : tentadaHoje
+                      ? "border-[var(--color-2)]/70 bg-[rgba(233,137,29,0.20)] text-white shadow-[0_0_14px_rgba(233,137,29,0.16)]"
+                      : "border-[var(--color-1)]/55 bg-[rgba(201,74,74,0.22)] text-white/80 shadow-[0_0_14px_rgba(201,74,74,0.10)]",
                   selecionada
                     ? "ring-2 ring-[var(--color-2)] ring-offset-2 ring-offset-black shadow-[0_0_16px_rgba(233,137,29,0.45)]"
                     : "",
@@ -957,6 +1015,25 @@ export default function MultiplicacaoPageView() {
                 <span className="rounded-full border border-[var(--color-2)]/35 bg-[rgba(233,137,29,0.12)] px-3 py-1 text-[var(--color-2)]">
                   {formatarTempo(resumoRevisao.tempoTotalSegundos)}
                 </span>
+
+                {!resumoRevisao.atingiuMinimoMandala && (
+                  <div className="mt-3 w-full rounded-2xl border border-[var(--color-2)]/45 bg-[rgba(233,137,29,0.10)] px-3 py-3">
+                    <p className="text-xs font-extrabold leading-relaxed text-[var(--color-2)]">
+                      Mínimo para mandala não alcançado.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        tentarNovamenteTabuada(resumoRevisao.tabuada)
+                      }
+                      disabled={processandoRodada}
+                      className="mt-3 w-full rounded-full bg-[var(--color-4)] px-4 py-2.5 text-xs font-extrabold text-black transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
