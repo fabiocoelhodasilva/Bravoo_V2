@@ -32,7 +32,6 @@ const DIAS_SEMANA_OPCOES = [
 
 export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
   const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
   const [recorrente, setRecorrente] = useState(false);
   const [frequencia, setFrequencia] = useState<"diaria" | "semanal" | null>(
     null
@@ -70,7 +69,6 @@ export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
     e.preventDefault();
 
     const tituloLimpo = titulo.trim();
-    const descricaoLimpa = descricao.trim();
 
     if (!tituloLimpo) {
       setMensagem({ tipo: "erro", texto: "Informe um título para a tarefa." });
@@ -99,7 +97,7 @@ export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
 
       await onSubmit({
         titulo: tituloLimpo,
-        descricao: descricaoLimpa,
+        descricao: "",
         recorrente,
         frequencia,
         diasSemana,
@@ -140,31 +138,9 @@ export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
               placeholder="Ex: Ler 10 páginas"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
               style={{
-                borderColor: "rgba(255,255,255,0.12)",
-              }}
-            />
-          </div>
-
-          <div className="mb-4 flex flex-col gap-2">
-            <label
-              htmlFor="descricao"
-              className="text-[0.86rem] font-medium text-[#dddddd]"
-            >
-              Descrição
-            </label>
-
-            <textarea
-              id="descricao"
-              maxLength={500}
-              rows={3}
-              placeholder="Opcional"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              className="w-full resize-none rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
-              style={{
-                borderColor: "rgba(255,255,255,0.12)",
+                borderColor: "var(--color-2)",
               }}
             />
           </div>
