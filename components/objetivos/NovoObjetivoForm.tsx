@@ -104,9 +104,9 @@ export function NovoObjetivoForm({
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
               required
-              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
               style={{
-                borderColor: "rgba(255,255,255,0.12)",
+                border: "2px solid var(--color-4)",
               }}
             >
               {loadingCategorias ? (
@@ -157,9 +157,9 @@ export function NovoObjetivoForm({
               placeholder="Ex: Treinar 3x por semana"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
               style={{
-                borderColor: "rgba(255,255,255,0.12)",
+                border: "2px solid var(--color-4)",
               }}
             />
           </div>
@@ -177,9 +177,9 @@ export function NovoObjetivoForm({
               type="date"
               value={dataPrevistaConclusao}
               onChange={(e) => setDataPrevistaConclusao(e.target.value)}
-              className="w-full rounded-[12px] border bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
               style={{
-                borderColor: "rgba(255,255,255,0.12)",
+                border: "2px solid var(--color-4)",
               }}
             />
           </div>
