@@ -97,11 +97,10 @@ export function NovoLivroForm({
     <>
       <form
         onSubmit={handleSubmit}
-        className="rounded-[20px] border-2 px-4 py-5 sm:px-5 sm:py-6"
+        className="rounded-[20px] px-4 py-5 sm:px-5 sm:py-6"
         style={{
           background:
             "radial-gradient(700px 240px at 0% 0%, rgba(255,255,255,0.04), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)), #111",
-          borderColor: "var(--color-4)",
           boxShadow:
             "0 10px 26px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset",
         }}
@@ -120,8 +119,8 @@ export function NovoLivroForm({
                 setErro("");
               }}
               placeholder="Ex.: O Peregrino"
-              className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
-              style={{ borderColor: "var(--color-4)" }}
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ border: "2px solid var(--color-4)" }}
             />
           </div>
 
@@ -138,8 +137,8 @@ export function NovoLivroForm({
                 setErro("");
               }}
               placeholder="Ex.: John Bunyan"
-              className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
-              style={{ borderColor: "var(--color-4)" }}
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ border: "2px solid var(--color-4)" }}
             />
           </div>
 
@@ -159,8 +158,8 @@ export function NovoLivroForm({
                 setErro("");
               }}
               placeholder="Ex.: 250"
-              className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
-              style={{ borderColor: "var(--color-4)" }}
+              className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
+              style={{ border: "2px solid var(--color-4)" }}
             />
           </div>
 
@@ -177,8 +176,8 @@ export function NovoLivroForm({
                   setDtInicio(event.target.value);
                   setErro("");
                 }}
-                className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
-                style={{ borderColor: "var(--color-4)" }}
+                className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+                style={{ border: "2px solid var(--color-4)" }}
               />
             </div>
 
@@ -194,8 +193,8 @@ export function NovoLivroForm({
                   setDtFim(event.target.value);
                   setErro("");
                 }}
-                className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
-                style={{ borderColor: "var(--color-4)" }}
+                className="w-full rounded-[12px] bg-black px-3 py-[10px] text-[0.9rem] text-white focus:outline-none"
+                style={{ border: "2px solid var(--color-4)" }}
               />
             </div>
           </div>
@@ -206,8 +205,8 @@ export function NovoLivroForm({
             </span>
 
             <div
-              className="flex min-h-[43px] items-center gap-1 rounded-[12px] border-2 bg-black px-3"
-              style={{ borderColor: "var(--color-4)" }}
+              className="flex min-h-[43px] items-center gap-1 rounded-[12px] bg-black px-3"
+              style={{ border: "2px solid var(--color-4)" }}
             >
               {Array.from({ length: 5 }).map((_, index) => {
                 const nota = index + 1;
