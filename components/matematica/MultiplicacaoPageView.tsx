@@ -72,6 +72,13 @@ type QuestaoTela = {
 type RespostasUsuario = Record<string, string>;
 type CamposValidados = Record<string, boolean>;
 
+type ResultadoAquecimento = {
+  tabuada: number;
+  acertos: number;
+  totalItens: number;
+  tempoTotalSegundos: number;
+};
+
 type ResultadoConclusao = {
   tabuada: number;
   acertos: number;
@@ -112,7 +119,6 @@ export default function MultiplicacaoPageView() {
   const router = useRouter();
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const rodadaProcessadaRef = useRef("");
   const inicioRodadaRef = useRef<number>(Date.now());
 
   const [usuarioId, setUsuarioId] = useState<string | null>(null);
@@ -128,6 +134,8 @@ export default function MultiplicacaoPageView() {
   const [tabuadasValidasMandalaHoje, setTabuadasValidasMandalaHoje] =
     useState<number[]>([]);
   const [processandoRodada, setProcessandoRodada] = useState(false);
+  const [resultadoAquecimento, setResultadoAquecimento] =
+    useState<ResultadoAquecimento | null>(null);
   const [resultadoConclusao, setResultadoConclusao] =
     useState<ResultadoConclusao | null>(null);
 
@@ -256,6 +264,24 @@ export default function MultiplicacaoPageView() {
       };
     });
   }, [tabuadaSelecionada, ordemMultiplicadores, questoesBanco]);
+
+  const todasRespostasPreenchidas = useMemo(() => {
+    if (modoRevisao) return false;
+
+    return questoesDaTabuadaSelecionada.every((questao) => {
+      const chave = gerarChaveResposta(
+        questao.tabuada,
+        questao.multiplicador
+      );
+
+      return Boolean((respostas[chave] ?? "").trim());
+    });
+  }, [
+    modoRevisao,
+    questoesDaTabuadaSelecionada,
+    respostas,
+    rodada,
+  ]);
 
   /* =========================================================
      Carregamento inicial
@@ -426,52 +452,53 @@ export default function MultiplicacaoPageView() {
   }
 
   /* =========================================================
-     Correção principal:
-     só finaliza quando cada campo tem a quantidade
-     mínima de dígitos da resposta correta.
+     Conclusão manual das rodadas
+
+     Regra:
+     - qualquer resposta preenchida é aceita, certa ou errada;
+     - a primeira rodada é aquecimento e NÃO grava no banco;
+     - a segunda rodada é a rodada valendo e grava normalmente.
   ========================================================= */
 
-  function verificarPreenchimentoAutomatico() {
-    if (modoRevisao) return;
-    if (processandoRodada) return;
+  function calcularResultadoRodadaAtual() {
+    const totalItens = questoesDaTabuadaSelecionada.length;
 
-    const chaveRodadaAtual = `${tabuadaSelecionada}-${rodada}`;
+    const acertos = questoesDaTabuadaSelecionada.filter((questao) => {
+      const chave = gerarChaveResposta(
+        questao.tabuada,
+        questao.multiplicador
+      );
 
-    if (rodadaProcessadaRef.current === chaveRodadaAtual) return;
+      return respostas[chave] === questao.resposta_correta;
+    }).length;
 
-    const todasRespondidas = questoesDaTabuadaSelecionada.every((questao) => {
-      const chave = gerarChaveResposta(questao.tabuada, questao.multiplicador);
-      const respostaUsuario = respostas[chave] ?? "";
-      const respostaCorreta = questao.resposta_correta ?? "";
+    const tempoTotalSegundos = Math.max(
+      1,
+      Math.round((Date.now() - inicioRodadaRef.current) / 1000)
+    );
 
-      return respostaUsuario.length >= respostaCorreta.length;
-    });
-
-    if (!todasRespondidas) return;
-
-    rodadaProcessadaRef.current = chaveRodadaAtual;
-
-    setTimeout(() => {
-      finalizarRodadaAutomaticamente();
-    }, 700);
+    return {
+      acertos,
+      totalItens,
+      tempoTotalSegundos,
+    };
   }
 
+  async function concluirRodada() {
+    if (modoRevisao) return;
+    if (processandoRodada) return;
+    if (!todasRespostasPreenchidas) return;
 
-  /* =========================================================
-     Verificação automática da rodada
-  ========================================================= */
-
-  useEffect(() => {
-    verificarPreenchimentoAutomatico();
-  }, [respostas, questoesDaTabuadaSelecionada, rodada, modoRevisao]);
-
-  async function finalizarRodadaAutomaticamente() {
     setProcessandoRodada(true);
 
     const novosCamposValidados: CamposValidados = {};
 
     questoesDaTabuadaSelecionada.forEach((questao) => {
-      const chave = gerarChaveResposta(questao.tabuada, questao.multiplicador);
+      const chave = gerarChaveResposta(
+        questao.tabuada,
+        questao.multiplicador
+      );
+
       novosCamposValidados[chave] = true;
     });
 
@@ -480,18 +507,30 @@ export default function MultiplicacaoPageView() {
       ...novosCamposValidados,
     }));
 
+    /*
+     * PRIMEIRA RODADA
+     * Apenas aquecimento. Mostra resultado e tempo,
+     * mas não chama salvarSessaoAtividade.
+     */
     if (rodada === "ordem") {
-      setTimeout(() => {
-        setRodada("embaralhada");
-        setOrdemMultiplicadores(embaralharArray(MULTIPLICADORES));
-        inicioRodadaRef.current = Date.now();
-        rodadaProcessadaRef.current = "";
-        setProcessandoRodada(false);
-      }, 700);
+      const resultado = calcularResultadoRodadaAtual();
 
+      setResultadoAquecimento({
+        tabuada: tabuadaSelecionada,
+        acertos: resultado.acertos,
+        totalItens: resultado.totalItens,
+        tempoTotalSegundos: resultado.tempoTotalSegundos,
+      });
+
+      setProcessandoRodada(false);
       return;
     }
 
+    /*
+     * SEGUNDA RODADA
+     * Agora vale: grava a sessão e aplica as regras
+     * já existentes da Esmeralda/Mandala.
+     */
     const resultadoGravacao = await registrarRodadaEmbaralhadaNoBanco();
 
     if (resultadoGravacao.sucesso) {
@@ -524,7 +563,6 @@ export default function MultiplicacaoPageView() {
       setTimeout(() => {
         setResultadoConclusao(null);
         passarParaProximaTabuada();
-        rodadaProcessadaRef.current = "";
         setProcessandoRodada(false);
       }, 2200);
 
@@ -532,9 +570,19 @@ export default function MultiplicacaoPageView() {
     }
 
     setResultadoConclusao(null);
-    rodadaProcessadaRef.current = "";
     setProcessandoRodada(false);
   }
+
+  function iniciarRodadaValendo() {
+    if (!resultadoAquecimento) return;
+
+    setResultadoAquecimento(null);
+    setRodada("embaralhada");
+    setOrdemMultiplicadores(embaralharArray(MULTIPLICADORES));
+    inicioRodadaRef.current = Date.now();
+    setProcessandoRodada(false);
+  }
+
 
   /* =========================================================
      Registro no banco
@@ -804,7 +852,6 @@ export default function MultiplicacaoPageView() {
         dataExecucao: sessao.data_execucao,
         atingiuMinimoMandala,
       });
-      rodadaProcessadaRef.current = "";
     } catch (error) {
       console.error("Erro inesperado ao carregar revisão:", error);
     } finally {
@@ -862,6 +909,8 @@ export default function MultiplicacaoPageView() {
   }
 
   function passarParaProximaTabuada() {
+    setResultadoAquecimento(null);
+
     const indiceAtual = TABUADAS.indexOf(tabuadaSelecionada);
     const proximaTabuada = TABUADAS[indiceAtual + 1];
 
@@ -882,6 +931,7 @@ export default function MultiplicacaoPageView() {
   }
 
   function trocarTabuada(numero: number) {
+    setResultadoAquecimento(null);
     setModoRevisao(false);
     setResumoRevisao(null);
     setRespostasRevisao({});
@@ -890,7 +940,6 @@ export default function MultiplicacaoPageView() {
     setOrdemMultiplicadores(MULTIPLICADORES);
     limparEstadoDaTabuada(numero);
     inicioRodadaRef.current = Date.now();
-    rodadaProcessadaRef.current = "";
   }
 
   /* =========================================================
@@ -919,6 +968,45 @@ export default function MultiplicacaoPageView() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       <HeaderInterno onLogout={handleLogout} />
+
+      {resultadoAquecimento && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-[340px] rounded-[28px] border border-[var(--color-2)]/55 bg-[#111111] px-6 py-6 text-center shadow-[0_0_35px_rgba(233,137,29,0.24)]">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-2)]/60 bg-[rgba(233,137,29,0.16)] text-3xl">
+              🔥
+            </div>
+
+            <h2 className="text-2xl font-extrabold text-white">
+              Rodada de aquecimento concluída!
+            </h2>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 px-4 py-4">
+              <p className="text-sm font-extrabold text-[var(--color-4)]">
+                {formatarTextoAcertos(
+                  resultadoAquecimento.acertos,
+                  resultadoAquecimento.totalItens
+                )}
+              </p>
+
+              <p className="mt-2 text-sm font-extrabold text-[var(--color-2)]">
+                {formatarTempo(resultadoAquecimento.tempoTotalSegundos)}
+              </p>
+            </div>
+
+            <p className="mt-4 text-sm font-bold leading-relaxed text-white/70">
+              Essa foi a rodada de aquecimento. Agora sim é pra valer!
+            </p>
+
+            <button
+              type="button"
+              onClick={iniciarRodadaValendo}
+              className="mt-5 w-full rounded-full bg-[var(--color-4)] px-5 py-3 text-sm font-extrabold text-black shadow-md transition active:scale-[0.98]"
+            >
+              Começar rodada valendo
+            </button>
+          </div>
+        </div>
+      )}
 
       {resultadoConclusao && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
@@ -999,8 +1087,8 @@ export default function MultiplicacaoPageView() {
               {modoRevisao
                 ? "Revisão dos resultados"
                 : rodada === "ordem"
-                  ? "Primeira rodada: em ordem"
-                  : "Segunda rodada: embaralhada"}
+                  ? "Rodada de aquecimento: em ordem"
+                  : "Rodada valendo: embaralhada"}
             </p>
 
             {modoRevisao && resumoRevisao && (
@@ -1133,6 +1221,29 @@ export default function MultiplicacaoPageView() {
               );
             })}
           </div>
+
+          {!modoRevisao && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => void concluirRodada()}
+                disabled={!todasRespostasPreenchidas || processandoRodada}
+                className="w-full rounded-full bg-[var(--color-4)] px-5 py-3 text-sm font-extrabold text-black shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {processandoRodada
+                  ? "Processando..."
+                  : rodada === "ordem"
+                    ? "Concluir rodada"
+                    : "Concluir tabuada"}
+              </button>
+
+              {!todasRespostasPreenchidas && (
+                <p className="mt-2 text-center text-[11px] font-bold text-white/35">
+                  Preencha as 9 respostas para concluir.
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         <div className="mt-8 flex justify-center">
