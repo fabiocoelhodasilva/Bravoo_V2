@@ -140,7 +140,7 @@ export function NovaTarefaForm({ onSubmit, onCancel }: Props) {
               onChange={(e) => setTitulo(e.target.value)}
               className="w-full rounded-[12px] border-2 bg-black px-3 py-[10px] text-[0.9rem] text-white placeholder:text-white/30 focus:outline-none"
               style={{
-                borderColor: "var(--color-2)",
+                borderColor: "var(--color-4)",
               }}
             />
           </div>
