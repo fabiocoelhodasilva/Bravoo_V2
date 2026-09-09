@@ -97,10 +97,11 @@ export function NovoLivroForm({
     <>
       <form
         onSubmit={handleSubmit}
-        className="rounded-[20px] px-4 py-5 sm:px-5 sm:py-6"
+        className="rounded-[20px] border px-4 py-5 sm:px-5 sm:py-6"
         style={{
           background:
             "radial-gradient(700px 240px at 0% 0%, rgba(255,255,255,0.04), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)), #111",
+          borderColor: "rgba(255,255,255,0.10)",
           boxShadow:
             "0 10px 26px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset",
         }}
