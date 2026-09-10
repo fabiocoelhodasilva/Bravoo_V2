@@ -13,6 +13,11 @@ import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import { tabuadaAtingiuPercentualMinimo } from "@/lib/gamificacao/matematica/tabuada-rules";
+import {
+  alterarMetaTabuada,
+  buscarMetaTabuada,
+  META_TABUADA_PADRAO,
+} from "@/lib/gamificacao/matematica/tabuada-joias-actions";
 
 /* =========================================================
    IDs fixos
@@ -108,7 +113,7 @@ type ResumoRevisao = {
   totalItens: number;
   tempoTotalSegundos: number;
   dataExecucao: string;
-  atingiuMinimoMandala: boolean;
+  atingiuMinimo: boolean;
 };
 
 /* =========================================================
@@ -131,8 +136,20 @@ export default function MultiplicacaoPageView() {
   const [respostas, setRespostas] = useState<RespostasUsuario>({});
   const [camposValidados, setCamposValidados] = useState<CamposValidados>({});
   const [tabuadasTentadasHoje, setTabuadasTentadasHoje] = useState<number[]>([]);
-  const [tabuadasValidasMandalaHoje, setTabuadasValidasMandalaHoje] =
+  const [tabuadasConcluidasHoje, setTabuadasConcluidasHoje] =
     useState<number[]>([]);
+
+  const [tabuadasMetaHoje, setTabuadasMetaHoje] = useState<number[]>([
+    ...META_TABUADA_PADRAO,
+  ]);
+  const [metaTabuadaConfigurada, setMetaTabuadaConfigurada] = useState(false);
+  const [modalMetaAberto, setModalMetaAberto] = useState(false);
+  const [tabuadasMetaEdicao, setTabuadasMetaEdicao] = useState<number[]>([
+    ...META_TABUADA_PADRAO,
+  ]);
+  const [salvandoMeta, setSalvandoMeta] = useState(false);
+  const [mensagemMeta, setMensagemMeta] = useState("");
+
   const [processandoRodada, setProcessandoRodada] = useState(false);
   const [resultadoAquecimento, setResultadoAquecimento] =
     useState<ResultadoAquecimento | null>(null);
@@ -297,7 +314,28 @@ export default function MultiplicacaoPageView() {
     await buscarQuestoesTabuada();
 
     if (idUsuario) {
-      await buscarStatusTabuadasHoje(idUsuario);
+      const [statusHoje, metaAtual] = await Promise.all([
+        buscarStatusTabuadasHoje(idUsuario),
+        buscarMetaTabuada({
+          supabase,
+          usuarioId: idUsuario,
+        }),
+      ]);
+
+      const tabuadasMeta =
+        metaAtual.tabuadas.length > 0
+          ? metaAtual.tabuadas
+          : [...META_TABUADA_PADRAO];
+
+      setTabuadasMetaHoje(tabuadasMeta);
+      setTabuadasMetaEdicao(tabuadasMeta);
+      setMetaTabuadaConfigurada(metaAtual.configurada);
+
+      const primeiraPendente = tabuadasMeta.find(
+        (numero) => !statusHoje.concluidas.includes(numero)
+      );
+
+      setTabuadaSelecionada(primeiraPendente ?? tabuadasMeta[0] ?? 2);
     }
   }
 
@@ -344,7 +382,11 @@ export default function MultiplicacaoPageView() {
 
       if (error) {
         console.error("Erro ao buscar status das tabuadas de hoje:", error);
-        return;
+
+        return {
+          tentadas: [] as number[],
+          concluidas: [] as number[],
+        };
       }
 
       const sessoesHoje = data ?? [];
@@ -361,7 +403,7 @@ export default function MultiplicacaoPageView() {
         )
       );
 
-      const validasMandala = Array.from(
+      const concluidas = Array.from(
         new Set(
           sessoesHoje
             .filter((item) =>
@@ -380,9 +422,93 @@ export default function MultiplicacaoPageView() {
       );
 
       setTabuadasTentadasHoje(tentadas);
-      setTabuadasValidasMandalaHoje(validasMandala);
+      setTabuadasConcluidasHoje(concluidas);
+
+      return {
+        tentadas,
+        concluidas,
+      };
     } catch (error) {
       console.error("Erro inesperado ao buscar status das tabuadas de hoje:", error);
+
+      return {
+        tentadas: [] as number[],
+        concluidas: [] as number[],
+      };
+    }
+  }
+
+  /* =========================================================
+     Meta diária da Tabuada
+  ========================================================= */
+
+  function abrirModalMeta() {
+    setTabuadasMetaEdicao([...tabuadasMetaHoje]);
+    setMensagemMeta("");
+    setModalMetaAberto(true);
+  }
+
+  function alternarTabuadaNaMeta(numero: number) {
+    setTabuadasMetaEdicao((atuais) => {
+      if (atuais.includes(numero)) {
+        return atuais.filter((item) => item !== numero);
+      }
+
+      return [...atuais, numero].sort((a, b) => a - b);
+    });
+  }
+
+  async function salvarMetaTabuada() {
+    if (!usuarioId || salvandoMeta) return;
+
+    if (tabuadasMetaEdicao.length === 0) {
+      setMensagemMeta("Selecione pelo menos uma tabuada.");
+      return;
+    }
+
+    try {
+      setSalvandoMeta(true);
+      setMensagemMeta("");
+
+      const resultado = await alterarMetaTabuada({
+        supabase,
+        usuarioId,
+        tabuadas: tabuadasMetaEdicao,
+      });
+
+      const novasTabuadas =
+        resultado.tabuadasMeta.length > 0
+          ? resultado.tabuadasMeta
+          : [...tabuadasMetaEdicao].sort((a, b) => a - b);
+
+      setTabuadasMetaHoje(novasTabuadas);
+      setTabuadasMetaEdicao(novasTabuadas);
+      setMetaTabuadaConfigurada(true);
+      setTabuadasConcluidasHoje(resultado.tabuadasValidas);
+
+      const statusAtualizado = await buscarStatusTabuadasHoje(usuarioId);
+
+      const primeiraPendente = novasTabuadas.find(
+        (numero) => !statusAtualizado.concluidas.includes(numero)
+      );
+
+      const tabuadaDestino = primeiraPendente ?? novasTabuadas[0] ?? 2;
+
+      if (!novasTabuadas.includes(tabuadaSelecionada)) {
+        trocarTabuada(tabuadaDestino);
+      }
+
+      setModalMetaAberto(false);
+      setMensagemMeta("Meta atualizada.");
+
+      window.setTimeout(() => {
+        setMensagemMeta("");
+      }, 2200);
+    } catch (error) {
+      console.error("Erro ao salvar meta da Tabuada:", error);
+      setMensagemMeta("Não foi possível salvar a meta agora.");
+    } finally {
+      setSalvandoMeta(false);
     }
   }
 
@@ -546,7 +672,7 @@ export default function MultiplicacaoPageView() {
           totalItens: resultadoGravacao.totalItens,
         })
       ) {
-        setTabuadasValidasMandalaHoje((atuais) =>
+        setTabuadasConcluidasHoje((atuais) =>
           atuais.includes(tabuadaSelecionada)
             ? atuais
             : [...atuais, tabuadaSelecionada]
@@ -614,7 +740,7 @@ export default function MultiplicacaoPageView() {
       };
     }
 
-    if (tabuadasValidasMandalaHoje.includes(tabuadaSelecionada)) {
+    if (tabuadasConcluidasHoje.includes(tabuadaSelecionada)) {
       return {
         sucesso: true,
         acertos,
@@ -837,8 +963,8 @@ export default function MultiplicacaoPageView() {
       );
       setModoRevisao(true);
       setRespostasRevisao(respostasPorChave);
-      const atingiuMinimoMandala =
-        tabuadasValidasMandalaHoje.includes(numero) ||
+      const atingiuMinimo =
+        tabuadasConcluidasHoje.includes(numero) ||
         tabuadaAtingiuPercentualMinimo({
           acertos: sessao.acertos,
           totalItens: sessao.total_itens,
@@ -850,7 +976,7 @@ export default function MultiplicacaoPageView() {
         totalItens: sessao.total_itens ?? 0,
         tempoTotalSegundos: sessao.tempo_total_segundos ?? 0,
         dataExecucao: sessao.data_execucao,
-        atingiuMinimoMandala,
+        atingiuMinimo,
       });
     } catch (error) {
       console.error("Erro inesperado ao carregar revisão:", error);
@@ -901,7 +1027,7 @@ export default function MultiplicacaoPageView() {
   }
 
   function tentarNovamenteTabuada(numero: number) {
-    if (tabuadasValidasMandalaHoje.includes(numero)) {
+    if (tabuadasConcluidasHoje.includes(numero)) {
       return;
     }
 
@@ -911,8 +1037,9 @@ export default function MultiplicacaoPageView() {
   function passarParaProximaTabuada() {
     setResultadoAquecimento(null);
 
-    const indiceAtual = TABUADAS.indexOf(tabuadaSelecionada);
-    const proximaTabuada = TABUADAS[indiceAtual + 1];
+    const indiceAtual = tabuadasMetaHoje.indexOf(tabuadaSelecionada);
+    const proximaTabuada =
+      indiceAtual >= 0 ? tabuadasMetaHoje[indiceAtual + 1] : tabuadasMetaHoje[0];
 
     setModoRevisao(false);
     setResumoRevisao(null);
@@ -968,6 +1095,75 @@ export default function MultiplicacaoPageView() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       <HeaderInterno onLogout={handleLogout} />
+
+      {modalMetaAberto && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-[340px] rounded-[28px] border border-white/10 bg-[#111111] px-5 py-5 shadow-[0_0_40px_rgba(0,0,0,0.55)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+                  Minha meta de hoje
+                </p>
+                <h2 className="mt-1 text-xl font-extrabold text-white">
+                  Escolha as tabuadas
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setModalMetaAberto(false)}
+                disabled={salvandoMeta}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-base font-bold text-white/80 transition hover:bg-white/15 disabled:opacity-50"
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs font-bold leading-relaxed text-white/50">
+              Selecione somente as tabuadas que fazem parte da meta diária.
+            </p>
+
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {TABUADAS.map((numero) => {
+                const marcada = tabuadasMetaEdicao.includes(numero);
+
+                return (
+                  <button
+                    key={numero}
+                    type="button"
+                    onClick={() => alternarTabuadaNaMeta(numero)}
+                    disabled={salvandoMeta}
+                    className={[
+                      "h-[48px] rounded-[12px] border text-sm font-extrabold transition active:scale-[0.97] disabled:opacity-50",
+                      marcada
+                        ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.20)] text-[var(--color-4)]"
+                        : "border-white/15 bg-white/[0.04] text-white/65",
+                    ].join(" ")}
+                  >
+                    {numero}x
+                  </button>
+                );
+              })}
+            </div>
+
+            {mensagemMeta && (
+              <p className="mt-3 text-center text-xs font-bold text-[var(--color-1)]">
+                {mensagemMeta}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={salvarMetaTabuada}
+              disabled={salvandoMeta || tabuadasMetaEdicao.length === 0}
+              className="mt-5 w-full rounded-full bg-[var(--color-4)] px-5 py-3 text-sm font-extrabold text-black transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {salvandoMeta ? "Salvando..." : "Salvar meta"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {resultadoAquecimento && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
@@ -1046,36 +1242,64 @@ export default function MultiplicacaoPageView() {
           <h1 className="text-3xl font-bold gradient-text">Multiplicação</h1>
         </header>
 
-        <div className="mb-5 flex w-full justify-center gap-1.5">
-          {TABUADAS.map((numero) => {
-            const selecionada = numero === tabuadaSelecionada;
-            const tentadaHoje = tabuadasTentadasHoje.includes(numero);
-            const validaMandalaHoje =
-              tabuadasValidasMandalaHoje.includes(numero);
+        <section className="mb-5 w-full rounded-[22px] border border-white/10 bg-[#101010] px-3 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
+                Minha meta de hoje
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-white/45">
+                {tabuadasMetaHoje.filter((numero) =>
+                  tabuadasConcluidasHoje.includes(numero)
+                ).length} de {tabuadasMetaHoje.length} concluídas
+              </p>
+            </div>
 
-            return (
-              <button
-                key={numero}
-                type="button"
-                onClick={() => selecionarTabuada(numero, tentadaHoje)}
-                className={[
-                  "relative flex h-[40px] flex-1 items-center justify-center rounded-[10px] border text-xs font-extrabold transition-all duration-200",
-                  "before:absolute before:inset-[3px] before:rounded-[7px] before:border before:border-white/15 before:content-['']",
-                  validaMandalaHoje
-                    ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.28)] text-white shadow-[0_0_14px_rgba(93,198,161,0.18)]"
-                    : tentadaHoje
-                      ? "border-[var(--color-2)]/70 bg-[rgba(233,137,29,0.20)] text-white shadow-[0_0_14px_rgba(233,137,29,0.16)]"
-                      : "border-[var(--color-1)]/55 bg-[rgba(201,74,74,0.22)] text-white/80 shadow-[0_0_14px_rgba(201,74,74,0.10)]",
-                  selecionada
-                    ? "ring-2 ring-[var(--color-2)] ring-offset-2 ring-offset-black shadow-[0_0_16px_rgba(233,137,29,0.45)]"
-                    : "",
-                ].join(" ")}
-              >
-                <span className="relative z-10">{numero}x</span>
-              </button>
-            );
-          })}
-        </div>
+            <button
+              type="button"
+              onClick={abrirModalMeta}
+              disabled={!usuarioId || salvandoMeta}
+              className="shrink-0 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5 text-[11px] font-extrabold text-white/75 transition hover:bg-white/[0.09] active:scale-[0.98] disabled:opacity-50"
+            >
+              {metaTabuadaConfigurada ? "Alterar meta" : "Definir meta"}
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {tabuadasMetaHoje.map((numero) => {
+              const selecionada = numero === tabuadaSelecionada;
+              const tentadaHoje = tabuadasTentadasHoje.includes(numero);
+              const concluidaHoje = tabuadasConcluidasHoje.includes(numero);
+
+              return (
+                <button
+                  key={numero}
+                  type="button"
+                  onClick={() => selecionarTabuada(numero, tentadaHoje)}
+                  className={[
+                    "relative flex h-[42px] min-w-[48px] items-center justify-center rounded-[11px] border px-3 text-sm font-extrabold transition-all duration-200",
+                    concluidaHoje
+                      ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.22)] text-[var(--color-4)] shadow-[0_0_14px_rgba(93,198,161,0.15)]"
+                      : tentadaHoje
+                        ? "border-[var(--color-1)]/70 bg-[rgba(201,74,74,0.20)] text-[#f58f8f] shadow-[0_0_14px_rgba(201,74,74,0.12)]"
+                        : "border-white/15 bg-white/[0.04] text-white/75",
+                    selecionada
+                      ? "ring-2 ring-white/65 ring-offset-2 ring-offset-black"
+                      : "",
+                  ].join(" ")}
+                >
+                  {numero}x
+                </button>
+              );
+            })}
+          </div>
+
+          {mensagemMeta && !modalMetaAberto && (
+            <p className="mt-3 text-center text-[11px] font-bold text-white/55">
+              {mensagemMeta}
+            </p>
+          )}
+        </section>
 
         <section className="w-full rounded-[28px] border border-white/10 bg-[#111111] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:p-4">
           <div className="mb-4 rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-center">
@@ -1104,10 +1328,10 @@ export default function MultiplicacaoPageView() {
                   {formatarTempo(resumoRevisao.tempoTotalSegundos)}
                 </span>
 
-                {!resumoRevisao.atingiuMinimoMandala && (
+                {!resumoRevisao.atingiuMinimo && (
                   <div className="mt-3 w-full rounded-2xl border border-[var(--color-2)]/45 bg-[rgba(233,137,29,0.10)] px-3 py-3">
                     <p className="text-xs font-extrabold leading-relaxed text-[var(--color-2)]">
-                      Mínimo para mandala não alcançado.
+                      Você precisa de pelo menos 6 acertos em 9 para concluir esta tabuada.
                     </p>
 
                     <button
