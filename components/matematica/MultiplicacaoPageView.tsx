@@ -1244,16 +1244,9 @@ export default function MultiplicacaoPageView() {
 
         <section className="mb-5 w-full rounded-[22px] border border-white/10 bg-[#101010] px-3 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
-                Minha meta de hoje
-              </p>
-              <p className="mt-1 text-[11px] font-bold text-white/45">
-                {tabuadasMetaHoje.filter((numero) =>
-                  tabuadasConcluidasHoje.includes(numero)
-                ).length} de {tabuadasMetaHoje.length} concluídas
-              </p>
-            </div>
+            <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#f1e6a7]">
+              Meta de Hoje
+            </p>
 
             <button
               type="button"
@@ -1261,11 +1254,11 @@ export default function MultiplicacaoPageView() {
               disabled={!usuarioId || salvandoMeta}
               className="shrink-0 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5 text-[11px] font-extrabold text-white/75 transition hover:bg-white/[0.09] active:scale-[0.98] disabled:opacity-50"
             >
-              {metaTabuadaConfigurada ? "Alterar meta" : "Definir meta"}
+              Alterar Meta
             </button>
           </div>
 
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <div className="mt-3 grid grid-cols-8 gap-1.5">
             {tabuadasMetaHoje.map((numero) => {
               const selecionada = numero === tabuadaSelecionada;
               const tentadaHoje = tabuadasTentadasHoje.includes(numero);
@@ -1277,14 +1270,14 @@ export default function MultiplicacaoPageView() {
                   type="button"
                   onClick={() => selecionarTabuada(numero, tentadaHoje)}
                   className={[
-                    "relative flex h-[42px] min-w-[48px] items-center justify-center rounded-[11px] border px-3 text-sm font-extrabold transition-all duration-200",
+                    "relative flex h-[40px] w-full items-center justify-center rounded-[10px] border px-0 text-[13px] font-extrabold transition-all duration-200",
                     concluidaHoje
                       ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.22)] text-[var(--color-4)] shadow-[0_0_14px_rgba(93,198,161,0.15)]"
                       : tentadaHoje
                         ? "border-[var(--color-1)]/70 bg-[rgba(201,74,74,0.20)] text-[#f58f8f] shadow-[0_0_14px_rgba(201,74,74,0.12)]"
                         : "border-white/15 bg-white/[0.04] text-white/75",
                     selecionada
-                      ? "ring-2 ring-white/65 ring-offset-2 ring-offset-black"
+                      ? "ring-2 ring-white/65 ring-offset-1 ring-offset-black"
                       : "",
                   ].join(" ")}
                 >
