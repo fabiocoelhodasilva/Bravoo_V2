@@ -5,7 +5,10 @@
 ========================================================= */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { registrarMomentoOracao } from "@/lib/gamificacao/oracao/oracao-actions";
+import {
+  alterarMetaOracao,
+  registrarMomentoOracao,
+} from "@/lib/gamificacao/oracao/oracao-actions";
 import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
 import { supabase } from "@/lib/supabase/client";
 import { carregarJoiasSemana } from "@/lib/gamificacao/geral/carregar-joias-semana";
@@ -466,48 +469,103 @@ export default function OracaoDashboardPanel({
       return;
     }
 
+    if (novaMeta === metaDiaria) {
+      setModalMetaAberto(false);
+      setMostrarOutroValorMeta(false);
+      setMetaPersonalizadaInput("");
+      setMensagem(`Sua meta atual já é de ${metaDiaria} minutos.`);
+
+      window.setTimeout(() => {
+        if (montadoRef.current) setMensagem("");
+      }, 2500);
+
+      return;
+    }
+
     try {
       setSalvandoMeta(true);
 
-      const user = await getUsuarioAtual();
+      /*
+       * A Server Action:
+       * 1. altera a meta imediatamente;
+       * 2. grava o histórico no Supabase;
+       * 3. compara a nova meta com os minutos de hoje;
+       * 4. concede ou remove o Diamante;
+       * 5. sincroniza a Mandala diária.
+       */
+      const resultado = await alterarMetaOracao(novaMeta);
 
-      const { error } = await supabase.from("next_metas_usuario").upsert(
-        {
-          usuario_id: user.id,
-          materia_id: MATERIA_ESPIRITUAL_ID,
-          meta_diaria: novaMeta,
-          meta_personalizada: true,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "usuario_id,materia_id",
-        }
-      );
-
-      if (error) throw error;
-
-      const metaConfirmada = await carregarMetaOracao();
+      const [metaConfirmada, totalJoias] = await Promise.all([
+        carregarMetaOracao(),
+        carregarTotalJoiasEspiritual(),
+      ]);
 
       if (!montadoRef.current) return;
 
       setMetaDiaria(metaConfirmada);
+      setMinutosHoje(resultado.minutosHoje);
+      setTotalJoiasEspiritual(totalJoias);
 
       onResumoAtualizado?.({
-        minutosHoje,
+        minutosHoje: resultado.minutosHoje,
         minutosAno,
         metaDiaria: metaConfirmada,
         persistenciaDias,
-        totalJoiasEspiritual: totalJoiasEspiritual ?? undefined,
+        totalJoiasEspiritual: totalJoias,
       });
 
       setModalMetaAberto(false);
       setMostrarOutroValorMeta(false);
       setMetaPersonalizadaInput("");
-      setMensagem(`Meta diária atualizada para ${metaConfirmada} minutos.`);
 
-      setTimeout(() => {
+      // Atualiza calendário e demais áreas do dashboard quando a joia mudou.
+      if (resultado.joiaConquistada || resultado.joiaRemovida) {
+        notificarDashboardSobreJoia();
+        void carregarJoiasOracaoSemana();
+      }
+
+      if (resultado.joiaConquistada) {
+        setMandalaConquistadaPendente(
+          Boolean(resultado.mandalaConquistada),
+        );
+        setModalJoiaConquistadaAberto(true);
+        return;
+      }
+
+      if (resultado.mandalaConquistada) {
+        setModalMandalaConquistadaAberto(true);
+        return;
+      }
+
+      if (resultado.joiaRemovida) {
+        const faltam = Math.max(
+          0,
+          metaConfirmada - Number(resultado.minutosHoje ?? 0),
+        );
+
+        setMensagem(
+          faltam > 0
+            ? `Meta atualizada para ${metaConfirmada} min. O Diamante de hoje foi retirado porque ainda faltam ${faltam} min para atingir a nova meta.`
+            : `Meta atualizada para ${metaConfirmada} min. O Diamante de hoje foi recalculado.`
+        );
+      } else if (resultado.metaAtingida) {
+        setMensagem(
+          `Meta atualizada para ${metaConfirmada} min. Você já atingiu a nova meta hoje.`
+        );
+      } else {
+        const faltam = Math.max(
+          0,
+          metaConfirmada - Number(resultado.minutosHoje ?? 0),
+        );
+
+        setMensagem(
+          `Meta atualizada para ${metaConfirmada} min. Faltam ${faltam} min para conquistar o Diamante de hoje.`
+        );
+      }
+
+      window.setTimeout(() => {
         if (montadoRef.current) setMensagem("");
-      }, 2500);
+      }, 3800);
     } catch (error) {
       registrarErroDev("Erro ao salvar meta de oração:", error);
       alert("Não foi possível alterar a meta agora.");
@@ -1148,8 +1206,12 @@ export default function OracaoDashboardPanel({
 
               <h3 className="text-lg font-bold">Alterar meta</h3>
 
-              <p className="mb-4 text-sm text-white/60">
+              <p className="mb-2 text-sm text-white/60">
                 Escolha sua meta diária de oração.
+              </p>
+
+              <p className="mb-4 text-xs font-bold leading-relaxed text-[#f1e6a7]">
+                A nova meta passa a valer imediatamente e recalcula o Diamante de hoje.
               </p>
 
               <div className="grid grid-cols-2 gap-3">

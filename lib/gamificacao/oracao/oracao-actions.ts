@@ -6,7 +6,10 @@
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { aplicarCrescimentoJardimAposOracao } from "@/lib/gamificacao/jardim/jardim-crescimento-actions";
-import { concederJoiaMateria } from "@/lib/gamificacao/geral/joia-actions";
+import {
+  concederJoiaMateria,
+  removerJoiaMateriaDaData,
+} from "@/lib/gamificacao/geral/joia-actions";
 
 /* =========================================================
    Constantes fixas
@@ -437,45 +440,132 @@ export async function garantirSincronizacaoJardim() {
    Joia espiritual
 ========================================================= */
 
-async function concederJoiaEspiritualSeMetaAtingida(params: {
+async function sincronizarMandalaDiaria(
+  supabase: SupabaseServerClient,
+  usuarioId: string,
+) {
+  const { data, error } = await (supabase as any).rpc(
+    "fn_sincronizar_mandala_diaria",
+    {
+      p_usuario_id: usuarioId,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Erro ao sincronizar mandala diária: ${error.message}`);
+  }
+
+  const linha = Array.isArray(data) ? data[0] : data;
+
+  return {
+    totalJoias: Number(linha?.total_joias ?? 0),
+    mandalaAtiva: Boolean(linha?.mandala_ativa),
+    mandalaCriada: Boolean(linha?.mandala_criada),
+    mandalaRemovida: Boolean(linha?.mandala_removida),
+  };
+}
+
+async function sincronizarJoiaEspiritualComMeta(params: {
   supabase: SupabaseServerClient;
   usuarioId: string;
   minutosHoje: number;
+  metaDiariaForcada?: number;
 }) {
-  const { supabase, usuarioId, minutosHoje } = params;
+  const {
+    supabase,
+    usuarioId,
+    minutosHoje,
+    metaDiariaForcada,
+  } = params;
 
-  const { data: meta, error: metaError } = await supabase
-    .from("next_metas_usuario")
-    .select("meta_diaria")
-    .eq("usuario_id", usuarioId)
-    .eq("materia_id", MATERIA_ESPIRITUAL_ID)
-    .maybeSingle();
+  let metaDiaria = metaDiariaForcada;
 
-  if (metaError) {
-    registrarErroDev("Erro ao buscar meta espiritual:", metaError);
+  if (!Number.isFinite(metaDiaria) || Number(metaDiaria) <= 0) {
+    const { data: meta, error: metaError } = await supabase
+      .from("next_metas_usuario")
+      .select("meta_diaria")
+      .eq("usuario_id", usuarioId)
+      .eq("materia_id", MATERIA_ESPIRITUAL_ID)
+      .maybeSingle();
 
-    return {
-      joiaConquistada: false,
-      mandalaConquistada: false,
-    };
+    if (metaError) {
+      registrarErroDev("Erro ao buscar meta espiritual:", metaError);
+
+      return {
+        joiaConquistada: false,
+        joiaRemovida: false,
+        mandalaConquistada: false,
+        mandalaRemovida: false,
+        metaDiaria: META_PADRAO_ORACAO_MINUTOS,
+        metaAtingida: false,
+      };
+    }
+
+    metaDiaria = Number(
+      meta?.meta_diaria ?? META_PADRAO_ORACAO_MINUTOS,
+    );
   }
 
-  const metaDiaria = Number(meta?.meta_diaria ?? META_PADRAO_ORACAO_MINUTOS);
-  const metaAtingida = minutosHoje >= metaDiaria;
+  const metaSegura =
+    Number.isFinite(metaDiaria) && Number(metaDiaria) > 0
+      ? Number(metaDiaria)
+      : META_PADRAO_ORACAO_MINUTOS;
 
-  registrarInfoDev("[JOIA ESPIRITUAL] Verificação de meta", {
+  const metaAtingida = minutosHoje >= metaSegura;
+
+  registrarInfoDev("[JOIA ESPIRITUAL] Sincronização com a meta", {
     usuarioId,
     materiaId: MATERIA_ESPIRITUAL_ID,
     minutosHoje,
-    metaDiaria,
-    metaOrigem: meta?.meta_diaria ? "next_metas_usuario" : "fallback_codigo",
+    metaDiaria: metaSegura,
     metaAtingida,
   });
 
+  /*
+   * A joia espiritual precisa refletir a meta vigente no mesmo dia.
+   *
+   * - Se atingiu a meta: garante a joia.
+   * - Se não atingiu: remove eventual joia de hoje.
+   *
+   * Depois disso, a Mandala diária também é sincronizada para que
+   * ela exista somente quando as 5 joias necessárias estiverem válidas.
+   */
   if (!metaAtingida) {
+    let joiaRemovida = false;
+    let mandalaRemovida = false;
+
+    try {
+      joiaRemovida = await removerJoiaMateriaDaData({
+        supabase,
+        usuarioId,
+        materiaId: MATERIA_ESPIRITUAL_ID,
+        dataReferencia: obterDataSaoPaulo(),
+      });
+    } catch (error) {
+      registrarErroDev("Erro ao remover joia espiritual do dia:", error);
+    }
+
+    try {
+      const resultadoMandala = await sincronizarMandalaDiaria(
+        supabase,
+        usuarioId,
+      );
+
+      mandalaRemovida = resultadoMandala.mandalaRemovida;
+    } catch (error) {
+      registrarErroDev(
+        "Erro ao sincronizar mandala após remover joia espiritual:",
+        error,
+      );
+    }
+
     return {
       joiaConquistada: false,
+      joiaRemovida,
       mandalaConquistada: false,
+      mandalaRemovida,
+      metaDiaria: metaSegura,
+      metaAtingida: false,
     };
   }
 
@@ -486,14 +576,41 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
       materiaId: MATERIA_ESPIRITUAL_ID,
     });
 
-    registrarInfoDev("[JOIA ESPIRITUAL] Resultado da concessão", {
+    let mandalaConquistada = resultadoConquista.mandalaConquistada;
+    let mandalaRemovida = false;
+
+    try {
+      const resultadoMandala = await sincronizarMandalaDiaria(
+        supabase,
+        usuarioId,
+      );
+
+      mandalaConquistada =
+        mandalaConquistada || resultadoMandala.mandalaCriada;
+      mandalaRemovida = resultadoMandala.mandalaRemovida;
+    } catch (error) {
+      registrarErroDev(
+        "Erro ao sincronizar mandala após conceder joia espiritual:",
+        error,
+      );
+    }
+
+    registrarInfoDev("[JOIA ESPIRITUAL] Resultado da sincronização", {
       usuarioId,
       materiaId: MATERIA_ESPIRITUAL_ID,
       joiaConquistada: resultadoConquista.joiaConquistada,
-      mandalaConquistada: resultadoConquista.mandalaConquistada,
+      mandalaConquistada,
+      mandalaRemovida,
     });
 
-    return resultadoConquista;
+    return {
+      joiaConquistada: resultadoConquista.joiaConquistada,
+      joiaRemovida: false,
+      mandalaConquistada,
+      mandalaRemovida,
+      metaDiaria: metaSegura,
+      metaAtingida: true,
+    };
   } catch (error) {
     registrarErroDev(
       "Erro ao conceder joia espiritual ou verificar mandala:",
@@ -501,14 +618,105 @@ async function concederJoiaEspiritualSeMetaAtingida(params: {
     );
 
     /*
-     * A oração já foi registrada. Uma falha isolada na gamificação não deve
-     * apagar nem invalidar esse registro. Uma nova sincronização poderá
-     * tentar conceder a recompensa novamente.
+     * A oração ou a alteração da meta já pode ter sido registrada.
+     * Uma falha isolada na gamificação não deve apagar nem invalidar
+     * esse registro.
      */
     return {
       joiaConquistada: false,
+      joiaRemovida: false,
       mandalaConquistada: false,
+      mandalaRemovida: false,
+      metaDiaria: metaSegura,
+      metaAtingida: true,
     };
+  }
+}
+
+/* =========================================================
+   Alteração da meta de oração
+========================================================= */
+
+export async function alterarMetaOracao(novaMeta: number) {
+  if (!Number.isFinite(novaMeta) || novaMeta < 1 || novaMeta > 180) {
+    throw new Error("A meta deve estar entre 1 e 180 minutos.");
+  }
+
+  try {
+    const { supabase, user } = await getUsuarioLogado();
+
+    /*
+     * A RPC:
+     * 1. altera a meta imediatamente;
+     * 2. grava a mudança no histórico;
+     * 3. usa o mesmo dia como data de vigência.
+     */
+    const { data, error } = await (supabase as any).rpc(
+      "fn_alterar_meta_usuario",
+      {
+        p_materia_id: MATERIA_ESPIRITUAL_ID,
+        p_nova_meta: novaMeta,
+      },
+    );
+
+    if (error) {
+      throw new Error(`Erro ao alterar meta de oração: ${error.message}`);
+    }
+
+    const linha = Array.isArray(data) ? data[0] : data;
+
+    const metaConfirmada = Number(linha?.meta_nova ?? novaMeta);
+    const metaAnterior = Number(
+      linha?.meta_anterior ?? META_PADRAO_ORACAO_MINUTOS,
+    );
+
+    const minutosHoje = await buscarMinutosOracaoHojeInterno(
+      supabase,
+      user.id,
+    );
+
+    /*
+     * A nova meta passa a valer imediatamente para o dia atual.
+     * Por isso a joia e a Mandala são recalculadas logo após a alteração.
+     */
+    const resultadoGamificacao =
+      await sincronizarJoiaEspiritualComMeta({
+        supabase,
+        usuarioId: user.id,
+        minutosHoje,
+        metaDiariaForcada: metaConfirmada,
+      });
+
+    registrarInfoDev("[ORAÇÃO] Meta alterada", {
+      usuarioId: user.id,
+      metaAnterior,
+      metaNova: metaConfirmada,
+      minutosHoje,
+      metaAtingida: resultadoGamificacao.metaAtingida,
+      joiaConquistada: resultadoGamificacao.joiaConquistada,
+      joiaRemovida: resultadoGamificacao.joiaRemovida,
+      mandalaConquistada: resultadoGamificacao.mandalaConquistada,
+      mandalaRemovida: resultadoGamificacao.mandalaRemovida,
+    });
+
+    return {
+      metaAnterior,
+      metaDiaria: metaConfirmada,
+      minutosHoje,
+      metaAtingida: resultadoGamificacao.metaAtingida,
+      joiaConquistada: resultadoGamificacao.joiaConquistada,
+      joiaRemovida: resultadoGamificacao.joiaRemovida,
+      mandalaConquistada: resultadoGamificacao.mandalaConquistada,
+      mandalaRemovida: resultadoGamificacao.mandalaRemovida,
+    };
+  } catch (error) {
+    registrarErroDev("Erro ao alterar meta de oração:", error);
+
+    if (error instanceof Error) {
+      throw new Error(`FALHA_META_ORACAO: ${error.message}`);
+    }
+
+    throw new Error("FALHA_META_ORACAO: erro desconhecido.");
   }
 }
 
@@ -697,7 +905,7 @@ export async function registrarMomentoOracao(minutos: number) {
     );
 
     const resultadoConquista =
-      await concederJoiaEspiritualSeMetaAtingida({
+      await sincronizarJoiaEspiritualComMeta({
         supabase,
         usuarioId: user.id,
         minutosHoje,
@@ -726,7 +934,9 @@ export async function registrarMomentoOracao(minutos: number) {
 
       // Nomes padronizados consumidos pelo front-end.
       joiaConquistada: resultadoConquista.joiaConquistada,
+      joiaRemovida: resultadoConquista.joiaRemovida,
       mandalaConquistada: resultadoConquista.mandalaConquistada,
+      mandalaRemovida: resultadoConquista.mandalaRemovida,
     };
   } catch (error) {
     registrarErroDev("Erro ao registrar momento de oração:", error);
