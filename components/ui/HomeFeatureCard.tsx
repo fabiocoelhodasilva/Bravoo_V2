@@ -18,6 +18,8 @@ type Props = {
   disabled?: boolean;
   joiaCor?: CorJoia;
   prefetch?: boolean;
+  /** Usa uma versão menor somente no celular. Desktop permanece igual. */
+  compactMobile?: boolean;
 };
 
 const imagensJoias: Record<CorJoia, string> = {
@@ -36,6 +38,7 @@ export default function HomeFeatureCard({
   disabled = false,
   joiaCor,
   prefetch,
+  compactMobile = false,
 }: Props) {
   const imagemJoia = joiaCor ? imagensJoias[joiaCor] : null;
 
@@ -43,19 +46,16 @@ export default function HomeFeatureCard({
     relative
     overflow-hidden
     w-full
-    h-[56px]
+    ${compactMobile ? "h-[44px] rounded-[14px] text-[0.72rem] px-2" : "h-[56px] rounded-[18px] text-[0.92rem] px-3"}
     sm:h-[72px]
-    rounded-[18px]
     sm:rounded-2xl
+    sm:text-[1rem]
+    sm:px-4
     text-white
     font-semibold
-    text-[0.92rem]
-    sm:text-[1rem]
     flex
     items-center
     justify-center
-    px-3
-    sm:px-4
     transition-all
     duration-200
     active:scale-[0.99]
@@ -76,34 +76,31 @@ export default function HomeFeatureCard({
 
       {imagemJoia && (
         <div
-          className="
+          className={`
             absolute
-            left-2
+            ${compactMobile ? "left-1 h-[36px] w-[36px]" : "left-2 h-[64px] w-[64px]"}
             sm:left-3
             top-1/2
             z-10
             flex
-            h-[64px]
-            w-[64px]
             sm:h-[82px]
             sm:w-[82px]
             -translate-y-1/2
             items-center
             justify-center
             pointer-events-none
-          "
+          `}
         >
           <div
-            className="
+            className={`
               absolute
-              h-[44px]
-              w-[44px]
+              ${compactMobile ? "h-[28px] w-[28px]" : "h-[44px] w-[44px]"}
               sm:h-[58px]
               sm:w-[58px]
               rounded-full
               bg-white/10
               blur-3xl
-            "
+            `}
           />
 
           <Image
@@ -112,27 +109,27 @@ export default function HomeFeatureCard({
             width={105}
             height={105}
             priority
-            className="
-              h-[72px]
-              w-[72px]
+            className={`
+              ${compactMobile ? "h-[42px] w-[42px]" : "h-[72px] w-[72px]"}
               sm:h-[105px]
               sm:w-[105px]
               object-contain
               bg-transparent
               drop-shadow-[0_0_22px_rgba(255,255,255,0.35)]
-            "
+            `}
           />
         </div>
       )}
 
       <span
-        className="
+        className={`
           relative
           z-10
           w-full
           text-center
           leading-tight
-        "
+          ${compactMobile && imagemJoia ? "pl-7 pr-1 sm:px-0" : ""}
+        `}
       >
         {title}
       </span>
@@ -140,7 +137,11 @@ export default function HomeFeatureCard({
   );
 
   if (disabled || !href) {
-    return <div className={`${baseClasses} cursor-default`}>{content}</div>;
+    return (
+      <div className={`${baseClasses} cursor-default hover:scale-100`}>
+        {content}
+      </div>
+    );
   }
 
   return (

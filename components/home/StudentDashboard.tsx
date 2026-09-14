@@ -779,11 +779,18 @@ export default function StudentDashboard() {
         <StudentDashboard_Resumo />
       </div>
 
-      <div className="flex flex-col gap-5 w-full max-w-sm px-4">
+      {/* =====================================================
+          Matérias
+          Mobile: 2 colunas x 3 linhas
+          Desktop: preserva o layout atual em coluna
+      ===================================================== */}
+
+      <div className="grid w-full max-w-sm grid-cols-2 gap-2 px-4 sm:flex sm:flex-col sm:gap-5">
         <HomeFeatureCard
           title="Minha Jornada"
           href="/meu-dia"
           prefetch={false}
+          compactMobile
           colorClass="bg-[var(--color-2)] hover:brightness-110"
           joiaCor={
             temJoiaMeuDiaHoje
@@ -796,6 +803,7 @@ export default function StudentDashboard() {
           title="Espiritual"
           href="/jardim"
           prefetch={false}
+          compactMobile
           colorClass="bg-[var(--color-1)] hover:brightness-110"
           joiaCor={
             temJoiaEspiritualHoje
@@ -808,6 +816,7 @@ export default function StudentDashboard() {
           title="Geografia"
           href="/geografia"
           prefetch={false}
+          compactMobile
           colorClass="bg-[var(--color-5)] hover:brightness-110"
           joiaCor={
             temJoiaGeografiaHoje
@@ -820,6 +829,7 @@ export default function StudentDashboard() {
           title="Matemática"
           href="/matematica"
           prefetch={false}
+          compactMobile
           colorClass="bg-[var(--color-4)] hover:brightness-110"
           joiaCor={
             temJoiaMatematicaHoje
@@ -832,6 +842,7 @@ export default function StudentDashboard() {
           title="Virtudes"
           href="/virtudes"
           prefetch={false}
+          compactMobile
           colorClass="bg-[var(--color-6)] hover:brightness-110"
           joiaCor={
             temJoiaVirtudesHoje
@@ -839,6 +850,16 @@ export default function StudentDashboard() {
               : undefined
           }
         />
+
+        {/* Placeholder somente no celular. Sem rota e sem função por enquanto. */}
+        <div className="sm:hidden">
+          <HomeFeatureCard
+            title="Meu Progresso"
+            compactMobile
+            disabled
+            colorClass="bg-[#c89b16]"
+          />
+        </div>
       </div>
 
       {carregarResumo && (

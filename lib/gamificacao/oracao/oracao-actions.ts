@@ -5,7 +5,6 @@
 ========================================================= */
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { aplicarCrescimentoJardimAposOracao } from "@/lib/gamificacao/jardim/jardim-crescimento-actions";
 import {
   concederJoiaMateria,
   removerJoiaMateriaDaData,
@@ -192,14 +191,6 @@ export async function buscarMinutosOracaoHoje() {
     registrarErroDev("Erro ao identificar usuário nas orações:", error);
     return 0;
   }
-}
-
-async function usuarioJaOrouHoje(
-  supabase: SupabaseServerClient,
-  usuarioId: string,
-) {
-  const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, usuarioId);
-  return minutosHoje > 0;
 }
 
 /* =========================================================
@@ -865,8 +856,6 @@ export async function registrarMomentoOracao(minutos: number) {
   try {
     const { supabase, user } = await getUsuarioLogado();
 
-    const jaTinhaOracaoHoje = await usuarioJaOrouHoje(supabase, user.id);
-
     const { data: sessao, error } = await supabase
       .from("next_sessoes_atividade")
       .insert({
@@ -894,15 +883,7 @@ export async function registrarMomentoOracao(minutos: number) {
       user.id,
     );
 
-    if (!jaTinhaOracaoHoje) {
-      await aplicarCrescimentoJardimAposOracao();
-    }
 
-    const resumoJardim = await sincronizarCreditosJardimHojeInterno(
-      supabase,
-      user.id,
-      minutosHoje,
-    );
 
     const resultadoConquista =
       await sincronizarJoiaEspiritualComMeta({
@@ -916,18 +897,13 @@ export async function registrarMomentoOracao(minutos: number) {
       sessaoId: sessao.id,
       minutosInformados: minutos,
       minutosHoje,
-      creditosNovos: resumoJardim.creditosNovos,
-      saldoAtualJardim: resumoJardim.saldoAtual,
-      crescimentoAplicado: !jaTinhaOracaoHoje,
       joiaEspiritualConquistada: resultadoConquista.joiaConquistada,
       mandalaConquistada: resultadoConquista.mandalaConquistada,
     });
 
     return {
       sessao,
-      resumoJardim,
       sequenciaEspiritual,
-      crescimentoAplicado: !jaTinhaOracaoHoje,
 
       // Mantém compatibilidade com o que você já usa hoje.
       joiaEspiritualConquistada: resultadoConquista.joiaConquistada,
