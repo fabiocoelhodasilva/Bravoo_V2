@@ -198,7 +198,8 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
   }
 
   // Assim como em Espiritual, reconcilia a Mandala caso a concessao
-  // inicial nao a tenha criado. Mandala ja existente nao e nova conquista.
+  // inicial nao a tenha criado. O Topazio novo tambem pode completar uma
+  // Mandala que a RPC ja considera ativa (por exemplo, apos reconquista).
   if (!mandalaConquistada) {
     try {
       const { data: mandala, error: erroMandala } = await supabase.rpc(
@@ -207,7 +208,11 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
       );
       if (erroMandala) throw erroMandala;
       const linha = Array.isArray(mandala) ? mandala[0] : mandala;
-      mandalaConquistada = linha?.mandala_criada === true;
+      mandalaConquistada =
+        linha?.mandala_criada === true ||
+        (joiaConquistada &&
+          linha?.mandala_ativa === true &&
+          Number(linha?.total_joias) === 5);
     } catch (erroMandala) {
       console.error("Erro ao sincronizar Mandala da Minha Jornada:", erroMandala);
     }
