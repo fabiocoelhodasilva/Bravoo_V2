@@ -13,6 +13,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 
+import MandalaVooCalendario from "../gamification/MandalaVooCalendario";
 import Header from "../ui/Header";
 import HomeFeatureCard from "../ui/HomeFeatureCard";
 import StudentDashboard_Resumo from "../gamification/StudentDashboard_Resumo";
@@ -618,6 +619,7 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-black text-white flex flex-col items-center font-sans pb-8">
       <Header />
 
+      <MandalaVooCalendario />
       {mostrarPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-5 bg-black/70 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111] px-6 py-8 text-center shadow-2xl">
@@ -739,7 +741,7 @@ export default function StudentDashboard() {
                       {dia.diaNumero}
                     </span>
 
-                    <span className="mt-0.5 flex h-5 items-center justify-center sm:h-6">
+                    <span data-mandala-dia={dia.iso} className="mt-0.5 flex h-5 items-center justify-center sm:h-6">
                       {imagemMandalaDia && (
                         <img
                           src="/imagens/joias/mandala_5.png"

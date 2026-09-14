@@ -152,6 +152,7 @@ export default function MandalaResumo({
           ================================================= */}
 
           <img
+            data-mandala-origem={mandalaConquistada ? "completa" : "parcial"}
             src="/imagens/joias/mandala_5.png"
             alt={
               mandalaConquistada

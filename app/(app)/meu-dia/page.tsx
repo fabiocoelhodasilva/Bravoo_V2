@@ -11,6 +11,7 @@ import {
   MeuDiaPageView,
   type TipoExclusaoTarefa,
 } from "@/components/meu-dia/MeuDiaPageView";
+import MandalaConquistadaModal from "@/components/gamification/MandalaConquistadaModal";
 import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
 import { JOIAS } from "@/components/gamification/JoiaIcon";
 import { supabase } from "@/lib/supabase/client";
@@ -241,6 +242,8 @@ export default function MeuDiaPage() {
   const [diasSeguidos, setDiasSeguidos] = useState(0);
   const [joiasSemana, setJoiasSemana] = useState<Record<string, string>>({});
   const [joiaConquistada, setJoiaConquistada] = useState(false);
+  const [mandalaPendente, setMandalaPendente] = useState(false);
+  const [mandalaAberta, setMandalaAberta] = useState(false);
 
   const [dataSelecionada, setDataSelecionada] = useState<string>(
     obterDataHojeLocal()
@@ -500,6 +503,7 @@ export default function MeuDiaPage() {
           dataSelecionada
         );
 
+        setMandalaPendente(resultadoJoia.mandalaConquistada);
         if (resultadoJoia.joiaConquistada) {
           setJoiaConquistada(true);
         }
@@ -718,6 +722,10 @@ export default function MeuDiaPage() {
         joiasSemana={joiasSemana}
       />
 
+      <MandalaConquistadaModal
+        aberto={mandalaAberta}
+        onFechar={() => setMandalaAberta(false)}
+      />
       <JoiaConquistadaModal
         aberto={joiaConquistada}
         nomeJoia={JOIA_MEU_DIA.nome}
@@ -725,7 +733,13 @@ export default function MeuDiaPage() {
         imagemJoia={JOIA_MEU_DIA.imagem}
         cor="laranja"
         mensagem="Parabéns! Você completou suas atividades e conquistou o Topázio da Minha Jornada."
-        onFechar={() => setJoiaConquistada(false)}
+        onFechar={() => {
+          setJoiaConquistada(false);
+          if (mandalaPendente) {
+            setMandalaPendente(false);
+            setMandalaAberta(true);
+          }
+        }}
       />
     </>
   );

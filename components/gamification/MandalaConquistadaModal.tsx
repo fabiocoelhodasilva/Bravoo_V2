@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { MANDALA_ANIMACAO_PENDENTE } from "./MandalaVooCalendario";
+
 /* =========================================================
    Tipos
 ========================================================= */
@@ -17,6 +21,31 @@ export default function MandalaConquistadaModal({
   aberto,
   onFechar,
 }: MandalaConquistadaModalProps) {
+  const router = useRouter();
+  const onFecharRef = useRef(onFechar);
+
+  useEffect(() => {
+    onFecharRef.current = onFechar;
+  }, [onFechar]);
+
+  useEffect(() => {
+    if (!aberto) return;
+
+    const agora = new Date();
+    const data = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+    const timer = window.setTimeout(() => {
+      try {
+        sessionStorage.setItem(MANDALA_ANIMACAO_PENDENTE, data);
+      } catch {
+        // O redirecionamento continua mesmo com armazenamento indisponivel.
+      }
+      onFecharRef.current();
+      router.replace("/aluno");
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [aberto, router]);
+
   if (!aberto) {
     return null;
   }
@@ -27,7 +56,6 @@ export default function MandalaConquistadaModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="titulo-mandala-conquistada"
-      onClick={onFechar}
     >
       <div
         className="w-full max-w-[420px] rounded-[28px] border border-white/15 bg-[#111318] p-6 text-center shadow-[0_25px_90px_rgba(0,0,0,0.65)]"
@@ -73,7 +101,7 @@ export default function MandalaConquistadaModal({
           id="titulo-mandala-conquistada"
           className="mt-2 bg-gradient-to-r from-[#e9891d] via-[#5dc6a1] to-[#a35bdc] bg-clip-text text-3xl font-black text-transparent"
         >
-          Mandala completa!
+          Mandala conquistada!
         </h2>
 
         <p className="mt-5 text-[0.95rem] leading-relaxed text-white/80">
@@ -81,13 +109,9 @@ export default function MandalaConquistadaModal({
           Mandala.
         </p>
 
-        <button
-          type="button"
-          onClick={onFechar}
-          className="mt-6 flex min-h-[48px] w-full items-center justify-center rounded-full bg-gradient-to-r from-[#e9891d] via-[#5dc6a1] to-[#a35bdc] px-6 py-3 text-sm font-black text-white shadow-[0_10px_30px_rgba(93,198,161,0.24)] transition hover:brightness-110 active:scale-[0.98]"
-        >
-          Continuar
-        </button>
+        <p className="mt-6 text-sm text-white/60" role="status">
+          Sua Mandala vai para o calendário em instantes...
+        </p>
       </div>
     </div>
   );

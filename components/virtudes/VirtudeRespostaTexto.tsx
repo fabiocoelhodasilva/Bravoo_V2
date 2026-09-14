@@ -6,6 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { concederMandalaDiaria } from "@/lib/gamificacao/geral/mandala-actions";
+import MandalaConquistadaModal from "@/components/gamification/MandalaConquistadaModal";
 import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
 import { supabase } from "@/lib/supabase/client";
 import { processarGamificacaoAposAtividade } from "@/lib/gamificacao/geral/gamificacao-actions";
@@ -89,6 +91,8 @@ export default function VirtudeRespostaTexto({
   const [erroResposta, setErroResposta] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [joiaConquistada, setJoiaConquistada] = useState(false);
+  const [mandalaPendente, setMandalaPendente] = useState(false);
+  const [mandalaAberta, setMandalaAberta] = useState(false);
 
   const [suportaVoz, setSuportaVoz] = useState(false);
   const [gravandoVoz, setGravandoVoz] = useState(false);
@@ -404,6 +408,13 @@ export default function VirtudeRespostaTexto({
         });
 
         if (ganhouNovaJoia) {
+          try {
+            setMandalaPendente(
+              await concederMandalaDiaria({ supabase, usuarioId: user.id })
+            );
+          } catch (erroMandala) {
+            console.error("Erro ao verificar a Mandala de Virtudes:", erroMandala);
+          }
           setJoiaConquistada(true);
         }
       } catch (erroJoia) {
@@ -539,6 +550,10 @@ export default function VirtudeRespostaTexto({
           : "Enviar resposta"}
       </button>
 
+      <MandalaConquistadaModal
+        aberto={mandalaAberta}
+        onFechar={() => setMandalaAberta(false)}
+      />
       <JoiaConquistadaModal
         aberto={joiaConquistada}
         nomeJoia="Ametista"
@@ -546,7 +561,13 @@ export default function VirtudeRespostaTexto({
         imagemJoia="/imagens/joias/joia_purple.png"
         cor="roxa"
         mensagem="Parabéns! Sua dedicação de hoje foi reconhecida."
-        onFechar={() => setJoiaConquistada(false)}
+        onFechar={() => {
+          setJoiaConquistada(false);
+          if (mandalaPendente) {
+            setMandalaPendente(false);
+            setMandalaAberta(true);
+          }
+        }}
       />
     </section>
   );

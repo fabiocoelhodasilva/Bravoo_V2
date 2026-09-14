@@ -214,28 +214,13 @@ export default function OracaoDashboardPanel({
       setMostrarOutroValorMeta(false);
       setMetaPersonalizadaInput("");
 
-      // A mudança da meta pode conceder/remover a joia de hoje e,
-      // consequentemente, alterar a pontuação/imagem do jardim.
-      if (onOracaoRegistrada) {
-        await Promise.resolve(onOracaoRegistrada());
-      }
+      const joiaConquistadaAgora = resultado.joiaConquistada === true;
+      const mandalaConquistadaAgora = resultado.mandalaConquistada === true;
+      mostrarConquista(joiaConquistadaAgora, mandalaConquistadaAgora);
 
-      const joiaConquistadaAgora = Boolean(resultado?.joiaConquistada);
-      const mandalaConquistadaAgora = Boolean(resultado?.mandalaConquistada);
-
-      if (joiaConquistadaAgora) {
-        setMensagem("");
-        notificarDashboardSobreJoia();
-        setMandalaConquistadaPendente(mandalaConquistadaAgora);
-        setModalJoiaConquistadaAberto(true);
-        return;
-      }
-
-      if (mandalaConquistadaAgora) {
-        setMensagem("");
-        setModalMandalaConquistadaAberto(true);
-        return;
-      }
+      // Atualizar o jardim nao bloqueia a comemoracao ja confirmada.
+      void atualizarJardimAposConquista();
+      if (joiaConquistadaAgora || mandalaConquistadaAgora) return;
 
       setMensagem(`Meta diária atualizada para ${metaConfirmada} minutos.`);
 
@@ -407,6 +392,26 @@ export default function OracaoDashboardPanel({
     onResumoAtualizado?.(resumoAtualizado);
   }
 
+  function mostrarConquista(joia: boolean, mandala: boolean) {
+    if (joia) {
+      setMensagem("");
+      setMandalaConquistadaPendente(mandala);
+      setModalJoiaConquistadaAberto(true);
+      notificarDashboardSobreJoia();
+    } else if (mandala) {
+      setMensagem("");
+      setModalMandalaConquistadaAberto(true);
+    }
+  }
+
+  async function atualizarJardimAposConquista() {
+    try {
+      await onOracaoRegistrada?.();
+    } catch (error) {
+      console.error("Erro ao atualizar jardim apos registro salvo:", error);
+    }
+  }
+
   async function registrarOracao(minutos: number) {
     if (salvando) return;
 
@@ -421,29 +426,18 @@ export default function OracaoDashboardPanel({
 
       const resultado = await registrarMomentoOracao(minutos);
 
-      const joiaConquistadaAgora = Boolean(resultado?.joiaConquistada);
-      const mandalaConquistadaAgora = Boolean(resultado?.mandalaConquistada);
+      if (!montadoRef.current) return;
 
-      if (joiaConquistadaAgora) {
-        notificarDashboardSobreJoia();
-      }
+      const joiaConquistadaAgora = resultado.joiaConquistada === true;
+      const mandalaConquistadaAgora = resultado.mandalaConquistada === true;
+      mostrarConquista(joiaConquistadaAgora, mandalaConquistadaAgora);
 
-      await atualizarResumoAposRegistro(minutosOtimista);
-
-      if (onOracaoRegistrada) {
-        await Promise.resolve(onOracaoRegistrada());
-      }
-
-      if (joiaConquistadaAgora) {
-        setMandalaConquistadaPendente(mandalaConquistadaAgora);
-        setModalJoiaConquistadaAberto(true);
-        return;
-      }
-
-      if (mandalaConquistadaAgora) {
-        setModalMandalaConquistadaAberto(true);
-        return;
-      }
+      // Falhas de leitura apos salvar nao desfazem a oracao nem a conquista.
+      void atualizarResumoAposRegistro(minutosOtimista).catch((error) => {
+        console.error("Erro ao atualizar resumo apos oracao salva:", error);
+      });
+      void atualizarJardimAposConquista();
+      if (joiaConquistadaAgora || mandalaConquistadaAgora) return;
 
       setMensagem(`Oração registrada! +${minutos} minuto(s). 🙏`);
 

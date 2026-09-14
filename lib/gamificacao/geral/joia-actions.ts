@@ -54,10 +54,17 @@ export async function concederJoiaMateria({
     };
   }
 
-  const mandalaConquistada = await concederMandalaDiaria({
-    supabase,
-    usuarioId,
-  });
+  // A joia ja foi gravada. Uma falha na Mandala nao pode apagar
+  // essa confirmacao e impedir o modal da joia no cliente.
+  let mandalaConquistada = false;
+  try {
+    mandalaConquistada = await concederMandalaDiaria({
+      supabase,
+      usuarioId,
+    });
+  } catch (error) {
+    console.error("Erro ao verificar Mandala apos conceder joia:", error);
+  }
 
   return {
     joiaConquistada: true,
