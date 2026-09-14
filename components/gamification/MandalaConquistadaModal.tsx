@@ -41,7 +41,7 @@ export default function MandalaConquistadaModal({
       }
       onFecharRef.current();
       router.replace("/aluno");
-    }, 3000);
+    }, 2000);
 
     return () => window.clearTimeout(timer);
   }, [aberto, router]);
