@@ -503,9 +503,14 @@ export default function MeuDiaPage() {
           dataSelecionada
         );
 
-        setMandalaPendente(resultadoJoia.mandalaConquistada);
+        // Uma resposta sem nova conquista nao apaga a comemoracao pendente.
         if (resultadoJoia.joiaConquistada) {
+          setMandalaPendente((pendente) =>
+            pendente || resultadoJoia.mandalaConquistada
+          );
           setJoiaConquistada(true);
+        } else if (resultadoJoia.mandalaConquistada) {
+          setMandalaAberta(true);
         }
 
         if (resultadoJoia.joiaConquistada || resultadoJoia.joiaRemovida) {
@@ -657,6 +662,16 @@ export default function MeuDiaPage() {
         const resultadoJoia = await sincronizarJoiaMeuDiaPorConclusao(
           dataSelecionada
         );
+
+        // Uma resposta sem nova conquista nao apaga a comemoracao pendente.
+        if (resultadoJoia.joiaConquistada) {
+          setMandalaPendente((pendente) =>
+            pendente || resultadoJoia.mandalaConquistada
+          );
+          setJoiaConquistada(true);
+        } else if (resultadoJoia.mandalaConquistada) {
+          setMandalaAberta(true);
+        }
 
         if (resultadoJoia.joiaConquistada || resultadoJoia.joiaRemovida) {
           notificarAtualizacaoJoias();

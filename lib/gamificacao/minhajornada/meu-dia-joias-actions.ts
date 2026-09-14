@@ -197,6 +197,22 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
     };
   }
 
+  // Assim como em Espiritual, reconcilia a Mandala caso a concessao
+  // inicial nao a tenha criado. Mandala ja existente nao e nova conquista.
+  if (!mandalaConquistada) {
+    try {
+      const { data: mandala, error: erroMandala } = await supabase.rpc(
+        "fn_sincronizar_mandala_diaria",
+        { p_usuario_id: user.id }
+      );
+      if (erroMandala) throw erroMandala;
+      const linha = Array.isArray(mandala) ? mandala[0] : mandala;
+      mandalaConquistada = linha?.mandala_criada === true;
+    } catch (erroMandala) {
+      console.error("Erro ao sincronizar Mandala da Minha Jornada:", erroMandala);
+    }
+  }
+
   /* =======================================================
      Atualização da consistência
   ======================================================= */
