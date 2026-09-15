@@ -768,7 +768,7 @@ function Indicador({
           <div
             className={`flex shrink-0 items-center justify-center leading-none ${
               icone === "⏱"
-                ? "h-[40px] w-[40px] text-[1.7rem]"
+                ? "h-[50px] w-[50px] text-[2.55rem]"
                 : "h-[50px] w-[50px] text-[2.3rem]"
             }`}
           >
