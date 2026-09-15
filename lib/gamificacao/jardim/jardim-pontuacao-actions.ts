@@ -7,15 +7,48 @@ const MATERIA_ESPIRITUAL_ID =
 
 /**
  * Início oficial da nova mecânica do Jardim.
- * Tudo que aconteceu antes desta data é ignorado pelo novo sistema.
+ * Nenhum dia anterior a esta data participa do cálculo.
  */
 const DATA_INICIO_NOVA_REGRA_JARDIM = "2026-09-14";
 
+/**
+ * Quantidade máxima de dias COMPLETOS anteriores a hoje
+ * considerados no histórico do Jardim.
+ */
+const DIAS_JANELA_JARDIM = 11;
+
+export type DiaHistoricoJardim = {
+  data: string;
+  metaCumprida: boolean;
+  variacao: 1 | -1;
+  pontuacaoAposDia: number;
+};
+
 export type ResumoPontuacaoJardim = {
+  /** Pontuação final usada para escolher a imagem do Jardim. */
   pontuacao: number;
+
+  /** Pontuação calculada apenas com os dias completos anteriores a hoje. */
+  pontuacaoHistorica: number;
+
+  /** Hoje nunca perde ponto. Se houver joia hoje, soma +1. */
   metaCumpridaHoje: boolean;
+  bonusHoje: 0 | 1;
+
+  /** Início efetivo da janela histórica. Mantido também por compatibilidade. */
   dataInicio: string;
+
+  /** Último dia completo analisado. É sempre ontem quando houver histórico. */
+  dataFimHistorico: string | null;
+
+  /** Data de hoje em America/Sao_Paulo. */
   hoje: string;
+
+  /**
+   * Diagnóstico do que o algoritmo enxergou em cada dia completo.
+   * No máximo 11 dias e nunca inclui hoje.
+   */
+  diasHistoricos: DiaHistoricoJardim[];
 };
 
 function obterDataSaoPaulo(data: Date): string {
@@ -41,27 +74,32 @@ function adicionarDiasDataIso(dataIso: string, dias: number): string {
   return data.toISOString().slice(0, 10);
 }
 
-function maiorDataIso(a: string, b: string) {
-  return a >= b ? a : b;
+function maiorDataIso(...datas: string[]) {
+  return datas.reduce((maior, atual) => (atual > maior ? atual : maior));
 }
 
 /**
- * Calcula a pontuação atual do jardim.
+ * Calcula a pontuação atual do Jardim.
  *
  * Fonte de verdade: a joia espiritual diária.
- * Ela já representa que a meta de oração daquele dia foi cumprida.
- * Assim, uma futura alteração da meta não reescreve o passado do jardim.
+ * Ela representa que a meta de oração daquele dia foi cumprida.
  *
- * Regras:
- * - começa em 0;
- * - dia anterior com meta cumprida: +1;
- * - dia anterior sem meta cumprida: -1;
- * - nunca fica abaixo de 0;
- * - não existe teto máximo;
- * - hoje, se a meta foi cumprida: +1 imediatamente;
- * - hoje, se ainda não cumpriu: não perde ponto enquanto o dia não acabou.
+ * REGRAS DO HISTÓRICO
+ * - considera no máximo os 11 dias completos anteriores a hoje;
+ * - nunca considera datas anteriores a 14/09/2026;
+ * - nunca considera datas anteriores ao cadastro do usuário;
+ * - dia completo com joia espiritual: +1;
+ * - dia completo sem joia espiritual: -1;
+ * - a pontuação nunca fica abaixo de 0;
+ * - a ordem dos dias importa porque o piso zero é aplicado dia a dia.
  *
- * A ordem dos dias importa porque o piso zero é aplicado dia a dia.
+ * REGRA DE HOJE
+ * - hoje não faz parte dos 11 dias históricos;
+ * - se ainda não ganhou a joia hoje: +0 e nenhuma punição;
+ * - se ganhou a joia hoje: +1 imediatamente.
+ *
+ * Assim, amanhã o dia de hoje deixa de ser "bônus de hoje" e passa
+ * naturalmente a fazer parte da janela de dias completos.
  */
 export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
   const supabase = await getSupabaseServerClient();
@@ -76,19 +114,46 @@ export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
   }
 
   const hoje = obterDataSaoPaulo(new Date());
+  const ontem = adicionarDiasDataIso(hoje, -1);
+  const inicioJanelaMovel = adicionarDiasDataIso(hoje, -DIAS_JANELA_JARDIM);
   const dataCadastro = obterDataSaoPaulo(new Date(user.created_at));
-  const dataInicio = maiorDataIso(DATA_INICIO_NOVA_REGRA_JARDIM, dataCadastro);
 
+  /**
+   * A janela começa na data MAIS RECENTE entre:
+   * - hoje - 11 dias;
+   * - 14/09/2026;
+   * - data de cadastro do usuário.
+   */
+  const dataInicio = maiorDataIso(
+    inicioJanelaMovel,
+    DATA_INICIO_NOVA_REGRA_JARDIM,
+    dataCadastro,
+  );
+
+  /**
+   * Se a mecânica ainda não começou para este usuário, não há histórico
+   * nem bônus de hoje a calcular.
+   */
   if (dataInicio > hoje) {
     return {
       pontuacao: 0,
+      pontuacaoHistorica: 0,
       metaCumpridaHoje: false,
+      bonusHoje: 0,
       dataInicio,
+      dataFimHistorico: null,
       hoje,
+      diasHistoricos: [],
     };
   }
 
+  /**
+   * Consultamos desde o início efetivo até o fim de hoje.
+   * Amanhã fica como limite exclusivo para evitar trazer registros futuros.
+   */
   const inicioConsulta = `${dataInicio}T00:00:00-03:00`;
+  const amanha = adicionarDiasDataIso(hoje, 1);
+  const fimConsultaExclusivo = `${amanha}T00:00:00-03:00`;
 
   const { data: joias, error } = await supabase
     .from("next_joias_usuario")
@@ -96,6 +161,7 @@ export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
     .eq("usuario_id", user.id)
     .eq("materia_id", MATERIA_ESPIRITUAL_ID)
     .gte("data_conquista", inicioConsulta)
+    .lt("data_conquista", fimConsultaExclusivo)
     .order("data_conquista", { ascending: true });
 
   if (error) {
@@ -115,31 +181,51 @@ export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
     }
   }
 
-  let pontuacao = 0;
+  let pontuacaoHistorica = 0;
+  const diasHistoricos: DiaHistoricoJardim[] = [];
+
+  /**
+   * Histórico: somente dias já encerrados.
+   * Se dataInicio === hoje, o laço não executa e o histórico fica vazio.
+   */
   let cursor = dataInicio;
 
-  // Processa somente dias já encerrados.
-  while (cursor < hoje) {
-    if (diasComMetaCumprida.has(cursor)) {
-      pontuacao += 1;
+  while (cursor <= ontem && cursor < hoje) {
+    const metaCumprida = diasComMetaCumprida.has(cursor);
+    const variacao: 1 | -1 = metaCumprida ? 1 : -1;
+
+    if (metaCumprida) {
+      pontuacaoHistorica += 1;
     } else {
-      pontuacao = Math.max(0, pontuacao - 1);
+      pontuacaoHistorica = Math.max(0, pontuacaoHistorica - 1);
     }
+
+    diasHistoricos.push({
+      data: cursor,
+      metaCumprida,
+      variacao,
+      pontuacaoAposDia: pontuacaoHistorica,
+    });
 
     cursor = adicionarDiasDataIso(cursor, 1);
   }
 
+  /**
+   * Hoje é tratado separadamente.
+   * Sem joia hoje = pendente, não perdido.
+   */
   const metaCumpridaHoje = diasComMetaCumprida.has(hoje);
-
-  // Hoje pode somar, mas nunca subtrai antes de terminar.
-  if (metaCumpridaHoje) {
-    pontuacao += 1;
-  }
+  const bonusHoje: 0 | 1 = metaCumpridaHoje ? 1 : 0;
+  const pontuacao = pontuacaoHistorica + bonusHoje;
 
   return {
     pontuacao,
+    pontuacaoHistorica,
     metaCumpridaHoje,
+    bonusHoje,
     dataInicio,
+    dataFimHistorico: diasHistoricos.length > 0 ? ontem : null,
     hoje,
+    diasHistoricos,
   };
 }
