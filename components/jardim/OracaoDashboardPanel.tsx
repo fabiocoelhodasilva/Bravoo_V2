@@ -479,18 +479,31 @@ export default function OracaoDashboardPanel({
           ×
         </button>
 
-        <div className="p-4 pr-12">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f1d27a]/25 bg-[#f1d27a]/10 text-xl shadow-[0_0_22px_rgba(241,210,122,0.12)]">
+        <div className="p-4">
+          {/* Título + Alterar meta na mesma linha */}
+          <div className="flex items-center justify-between gap-3 pr-9">
+            <div className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[#f1d27a]/80">
+              Meta de oração do dia
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setModalMetaAberto(true)}
+              disabled={carregando || salvandoMeta}
+              className="shrink-0 rounded-full border border-[#f1d27a]/30 bg-black/10 px-3 py-1 text-[10px] font-bold text-[#f1d27a] transition hover:bg-[#f1d27a]/10 disabled:cursor-wait disabled:opacity-50"
+            >
+              ⚙ Alterar meta
+            </button>
+          </div>
+
+          {/* Ícone um pouco mais baixo; o título começa alinhado à esquerda dele */}
+          <div className="mt-2 flex items-start gap-3">
+            <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f1d27a]/25 bg-[#f1d27a]/10 text-xl shadow-[0_0_22px_rgba(241,210,122,0.12)]">
               🎯
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[#f1d27a]/80">
-                Meta de oração do dia
-              </div>
-
-              <div className="mt-1 flex items-end justify-between gap-3">
+              <div className="flex items-end justify-between gap-3">
                 <div className="text-[1.35rem] font-black leading-none text-white">
                   {metaSegura} min
                 </div>
@@ -526,26 +539,18 @@ export default function OracaoDashboardPanel({
             </div>
           </div>
 
-          <div className="mt-4 flex justify-center">
+          {/* Botão principal centralizado horizontalmente */}
+          <div className="mt-3 flex w-full justify-center">
             <button
               type="button"
-              onClick={() => setModalMetaAberto(true)}
-              disabled={carregando || salvandoMeta}
-              className="rounded-full border border-[#f1d27a]/30 bg-black/10 px-4 py-1.5 text-[11px] font-bold text-[#f1d27a] transition hover:bg-[#f1d27a]/10 disabled:cursor-wait disabled:opacity-50"
+              onClick={() => setModalAberto(true)}
+              disabled={carregando || salvando}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5dc6a1]/35 bg-[#5dc6a1]/85 px-5 py-3.5 text-sm font-black text-white shadow-[0_8px_24px_rgba(93,198,161,0.20)] backdrop-blur-md transition hover:bg-[#5dc6a1] disabled:cursor-wait disabled:opacity-50"
             >
-              ⚙ Alterar meta
+              <span aria-hidden="true">🙏</span>
+              {salvando ? "Salvando..." : "Registrar oração"}
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setModalAberto(true)}
-            disabled={carregando || salvando}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5dc6a1]/35 bg-[#5dc6a1]/85 px-5 py-3.5 text-sm font-black text-white shadow-[0_8px_24px_rgba(93,198,161,0.20)] backdrop-blur-md transition hover:bg-[#5dc6a1] disabled:cursor-wait disabled:opacity-50"
-          >
-            <span aria-hidden="true">🙏</span>
-            {salvando ? "Salvando..." : "Registrar oração"}
-          </button>
         </div>
       </div>
 
