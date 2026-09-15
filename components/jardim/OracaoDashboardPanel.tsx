@@ -529,11 +529,11 @@ export default function OracaoDashboardPanel({
                   }`}
                 >
                   {minutosHoje >= metaSegura
-                    ? "✨ Meta cumprida hoje."
+                    ? "✨ Meta alcançada hoje."
                     : `Faltam ${Math.max(
                         0,
                         metaSegura - minutosHoje,
-                      )} min para cumprir a meta.`}
+                      )} min para alcançar a meta.`}
                 </p>
               )}
             </div>
@@ -715,7 +715,7 @@ export default function OracaoDashboardPanel({
         nomeMateria="Espiritual"
         imagemJoia={IMAGEM_JOIA_ESPIRITUAL}
         cor="vermelha"
-        mensagem="Parabéns! Você cumpriu sua meta de oração e conquistou o Diamante da área Espiritual."
+        mensagem="Parabéns! Você alcançou sua meta de oração e conquistou o Diamante da área Espiritual."
         onFechar={fecharModalJoiaConquistada}
       />
 
