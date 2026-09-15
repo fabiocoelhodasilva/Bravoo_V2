@@ -22,7 +22,7 @@ type ProgressoJardimPanelProps = {
   carregando?: boolean;
 };
 
-type PeriodoFiltro = "mes" | "ano" | "acumulado";
+type PeriodoFiltro = "mes" | "ano";
 
 /* =========================================================
    Constantes
@@ -103,7 +103,6 @@ function compararMeses(a: Date, b: Date) {
 export default function ProgressoJardimPanel({
   onClose,
   dados,
-  totalJoias,
   carregando = false,
 }: ProgressoJardimPanelProps) {
   const hoje = useMemo(() => new Date(), []);
@@ -184,11 +183,7 @@ export default function ProgressoJardimPanel({
       }).format(mesReferencia);
     }
 
-    if (periodo === "ano") {
-      return `em ${mesReferencia.getFullYear()}`;
-    }
-
-    return "histórico completo";
+    return `em ${mesReferencia.getFullYear()}`;
   }, [periodo, mesReferencia]);
 
   /* ---------------------------------------------------------
@@ -203,28 +198,11 @@ export default function ProgressoJardimPanel({
       };
     }
 
-    if (periodo === "ano") {
-      return {
-        inicio: obterInicioAnoIso(mesReferencia),
-        fimExclusivo: obterInicioProximoAnoIso(mesReferencia),
-      };
-    }
-
-    const amanha = new Date(
-      hoje.getFullYear(),
-      hoje.getMonth(),
-      hoje.getDate() + 1,
-    );
-
     return {
-      inicio: null as string | null,
-      fimExclusivo: formatarDataIso(
-        amanha.getFullYear(),
-        amanha.getMonth(),
-        amanha.getDate(),
-      ),
+      inicio: obterInicioAnoIso(mesReferencia),
+      fimExclusivo: obterInicioProximoAnoIso(mesReferencia),
     };
-  }, [periodo, mesReferencia, hoje]);
+  }, [periodo, mesReferencia]);
 
   /* ---------------------------------------------------------
      Histórico mensal para o calendário
@@ -310,7 +288,7 @@ export default function ProgressoJardimPanel({
   }, [mesReferencia]);
 
   /* ---------------------------------------------------------
-     Totais alinhados com Mês / Ano / Acumulado
+     Totais alinhados com Mês / Ano
   --------------------------------------------------------- */
 
   useEffect(() => {
@@ -409,10 +387,7 @@ export default function ProgressoJardimPanel({
         if (ativo) {
           setTempoPeriodoMinutos(0);
 
-          // Em acumulado, mantemos o total já conhecido como fallback visual.
-          setDiamantesPeriodo(
-            periodo === "acumulado" ? totalJoias : 0,
-          );
+          setDiamantesPeriodo(0);
         }
       } finally {
         if (ativo) {
@@ -426,11 +401,7 @@ export default function ProgressoJardimPanel({
     return () => {
       ativo = false;
     };
-  }, [
-    intervaloPeriodo,
-    periodo,
-    totalJoias,
-  ]);
+  }, [intervaloPeriodo]);
 
   /* ---------------------------------------------------------
      Navegação mensal
@@ -476,7 +447,8 @@ export default function ProgressoJardimPanel({
       <section
         className="
           relative w-full max-w-[390px]
-          overflow-hidden rounded-[26px]
+          max-h-[calc(100dvh-118px)] overflow-y-auto
+          rounded-[26px]
           border border-[#f2cf7a]/25
           bg-gradient-to-br
           from-[#302719]/68 via-[#1d1a14]/58 to-[#201915]/64
@@ -590,10 +562,10 @@ export default function ProgressoJardimPanel({
                     text-[0.6rem] font-bold
                     ${
                       !item.disponivel || item.futuro
-                        ? "text-white/18"
+                        ? "border border-white/[0.035] text-white/18"
                         : conquistou
-                        ? "border border-red-300/18 bg-red-500/[0.07] text-white"
-                        : "bg-white/[0.025] text-white/62"
+                        ? "border border-red-300/30 bg-red-500/[0.09] text-white"
+                        : "border border-white/[0.09] bg-white/[0.025] text-white/62"
                     }
                     ${
                       hojeCelula
@@ -629,7 +601,7 @@ export default function ProgressoJardimPanel({
         {/* Abas */}
         <div
           className="
-            mt-3 grid grid-cols-3 gap-1
+            mt-3 grid grid-cols-2 gap-1
             rounded-[16px] border border-white/10
             bg-black/18 p-1
           "
@@ -647,26 +619,20 @@ export default function ProgressoJardimPanel({
           >
             Ano
           </AbaPeriodo>
-
-          <AbaPeriodo
-            ativa={periodo === "acumulado"}
-            onClick={() => setPeriodo("acumulado")}
-          >
-            Acumulado
-          </AbaPeriodo>
         </div>
 
         {/* Indicadores alinhados ao filtro */}
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           <Indicador
-            icone="⏱"
-            titulo="Tempo total"
+            icone="🔥"
+            titulo="Persistência"
             valor={
-              carregandoPeriodo
+              carregando
                 ? "..."
-                : `${tempoPeriodoMinutos} min`
+                : `${dados.persistenciaDias} dias`
             }
-            descricao={descricaoPeriodo}
+            descricao="sequência atual"
+            destaque
           />
 
           <Indicador
@@ -678,18 +644,6 @@ export default function ProgressoJardimPanel({
                 : diamantesPeriodo
             }
             descricao={descricaoPeriodo}
-          />
-
-          <Indicador
-            icone="🔥"
-            titulo="Persistência"
-            valor={
-              carregando
-                ? "..."
-                : `${dados.persistenciaDias} dias`
-            }
-            descricao="sequência atual"
-            destaque
           />
 
           <Indicador
@@ -705,36 +659,19 @@ export default function ProgressoJardimPanel({
             }
             descricao="oração por dia"
           />
+
+          <Indicador
+            icone="⏱"
+            titulo="Tempo de oração"
+            valor={
+              carregandoPeriodo
+                ? "..."
+                : `${tempoPeriodoMinutos} min`
+            }
+            descricao={descricaoPeriodo}
+          />
         </div>
 
-        {/* Mensagem */}
-        <div
-          className="
-            mt-2.5 flex items-center gap-2.5
-            rounded-[18px] border border-[#f2cf7a]/16
-            bg-[#f2cf7a]/[0.07] px-3 py-2.5
-          "
-        >
-          <div
-            className="
-              flex h-8 w-8 shrink-0 items-center justify-center
-              rounded-full border border-[#f2cf7a]/20
-              bg-[#f2cf7a]/10 text-sm
-            "
-          >
-            ✨
-          </div>
-
-          <div className="min-w-0">
-            <div className="text-[0.68rem] font-black text-[#ffe49a]">
-              Continue cuidando do seu Jardim
-            </div>
-
-            <div className="mt-0.5 text-[0.56rem] leading-snug text-white/48">
-              Cada dia de oração fortalece sua caminhada.
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   );
@@ -794,8 +731,8 @@ function Indicador({
   return (
     <div
       className={`
-        rounded-[17px] border px-3 py-2.5
-        backdrop-blur-sm
+        relative min-h-[64px] rounded-[16px] border
+        px-3 py-1.5 backdrop-blur-sm
         ${
           destaque
             ? "border-orange-300/20 bg-orange-500/[0.08]"
@@ -803,7 +740,7 @@ function Indicador({
         }
       `}
     >
-      <div className="flex min-h-[52px] items-center justify-between gap-3">
+      <div className="flex min-h-[46px] items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[0.52rem] font-bold uppercase tracking-[0.08em] text-white/40">
             {titulo}
@@ -815,15 +752,15 @@ function Indicador({
         </div>
 
         {imagemIcone ? (
-          <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center">
+          <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center">
             <Image
               src={imagemIcone}
               alt=""
-              width={58}
-              height={58}
+              width={64}
+              height={64}
               className="
-                h-[58px] w-[58px] object-contain
-                drop-shadow-[0_0_14px_rgba(239,68,68,0.92)]
+                h-[64px] w-[64px] object-contain
+                drop-shadow-[0_0_15px_rgba(239,68,68,0.94)]
               "
             />
           </div>
@@ -840,7 +777,7 @@ function Indicador({
         )}
       </div>
 
-      <div className="mt-1.5 text-[0.5rem] font-medium text-white/35">
+      <div className="-mt-0.5 text-[0.48rem] font-medium text-white/35">
         {descricao}
       </div>
     </div>
