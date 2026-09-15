@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import BottomNavJardim from "./BottomNavJardim";
 import OracaoDashboardPanel from "./OracaoDashboardPanel";
+import ProgressoJardimPanel from "./ProgressoJardimPanel";
 
 import { supabase } from "@/lib/supabase/client";
 import { buscarResumoDashboardOracao } from "@/lib/gamificacao/oracao/oracao-dashboard-client";
@@ -28,10 +29,6 @@ const RESUMO_PADRAO: ResumoDashboardOracao = {
   persistenciaDias: 0,
 };
 
-function formatarPersistencia(dias: number) {
-  return `${dias} ${dias === 1 ? "dia" : "dias"}`;
-}
-
 export default function GardenScene() {
   const router = useRouter();
 
@@ -41,6 +38,7 @@ export default function GardenScene() {
   const [totalJoias, setTotalJoias] = useState(0);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
   const [oracaoDashboardOpen, setOracaoDashboardOpen] = useState(false);
+  const [progressoOpen, setProgressoOpen] = useState(false);
 
   /** Conta somente as joias espirituais do usuário. */
   const carregarTotalJoias = useCallback(async () => {
@@ -128,7 +126,13 @@ export default function GardenScene() {
   return (
     <section className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
       {/* CENÁRIO RESPONSIVO: imagens 0 a 10 */}
-      <picture className="absolute inset-0 block h-full w-full">
+      <picture
+        className="
+          absolute inset-x-0 top-0 bottom-[102px]
+          block w-full
+          md:bottom-0
+        "
+      >
         <source media="(max-width: 767px)" srcSet={imagensJardim.mobile} />
 
         <img
@@ -141,48 +145,17 @@ export default function GardenScene() {
 
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[125px] bg-gradient-to-b from-black/28 via-black/8 to-transparent" />
 
-      {/* CARDS SUPERIORES - compactos */}
-      <div
-        className="absolute inset-x-0 z-20 flex justify-center px-3"
-        style={{ top: "max(12px, env(safe-area-inset-top))" }}
-      >
-        <div className="grid w-full max-w-[370px] grid-cols-2 gap-2">
-          <div className="flex h-[54px] items-center rounded-[18px] border border-white/20 bg-[#2b211f]/70 px-3 shadow-[0_8px_22px_rgba(0,0,0,0.24)] backdrop-blur-lg">
-            <div className="mr-2.5 text-[1.45rem] leading-none">🔥</div>
-
-            <div className="min-w-0">
-              <div className="text-[0.96rem] font-semibold leading-none text-white">
-                {carregandoResumo
-                  ? "..."
-                  : formatarPersistencia(resumoOracao.persistenciaDias)}
-              </div>
-
-              <div className="mt-1 text-[0.62rem] font-medium text-white/60">
-                Persistência
-              </div>
-            </div>
-          </div>
-
-          <div className="flex h-[54px] items-center rounded-[18px] border border-white/20 bg-[#2b211f]/70 px-3 shadow-[0_8px_22px_rgba(0,0,0,0.24)] backdrop-blur-lg">
-            <div className="mr-2.5 text-[1.45rem] leading-none">💎</div>
-
-            <div className="min-w-0">
-              <div className="text-[0.96rem] font-semibold leading-none text-white">
-                {carregandoResumo ? "..." : totalJoias}
-              </div>
-
-              <div className="mt-1 text-[0.62rem] font-medium text-white/60">
-                Joias
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <BottomNavJardim
         oracaoConcluidaHoje={oracaoConcluidaHoje}
         onVoltar={() => router.back()}
-        onOracao={() => setOracaoDashboardOpen(true)}
+        onOracao={() => {
+          setProgressoOpen(false);
+          setOracaoDashboardOpen(true);
+        }}
+        onProgresso={() => {
+          setOracaoDashboardOpen(false);
+          setProgressoOpen(true);
+        }}
       />
 
       {oracaoDashboardOpen && (
@@ -192,6 +165,15 @@ export default function GardenScene() {
           dadosIniciaisCarregando={carregandoResumo}
           onResumoAtualizado={setResumoOracao}
           onOracaoRegistrada={atualizarAposOracaoRegistrada}
+        />
+      )}
+
+      {progressoOpen && (
+        <ProgressoJardimPanel
+          onClose={() => setProgressoOpen(false)}
+          dados={resumoOracao}
+          totalJoias={totalJoias}
+          carregando={carregandoResumo}
         />
       )}
     </section>
