@@ -853,15 +853,7 @@ export default function StudentDashboard() {
           }
         />
 
-        {/* Placeholder somente no celular. Sem rota e sem função por enquanto. */}
-        <div className="sm:hidden">
-          <HomeFeatureCard
-            title="Meu Progresso"
-            compactMobile
-            disabled
-            colorClass="bg-[#c89b16]"
-          />
-        </div>
+       
       </div>
 
       {carregarResumo && (
