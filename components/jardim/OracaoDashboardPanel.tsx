@@ -5,7 +5,6 @@ import {
   alterarMetaOracao,
   registrarMomentoOracao,
 } from "@/lib/gamificacao/oracao/oracao-actions";
-import { supabase } from "@/lib/supabase/client";
 import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
 import MandalaConquistadaModal from "@/components/gamification/MandalaConquistadaModal";
 
@@ -21,12 +20,12 @@ type OracaoDashboardPanelProps = {
   onAbrirMeuJardim?: () => void;
   dadosIniciais?: ResumoDashboardOracao | null;
   dadosIniciaisCarregando?: boolean;
+  erroCarregamento?: boolean;
+  onTentarNovamente?: () => void;
   onResumoAtualizado?: (resumo: ResumoDashboardOracao) => void;
   onOracaoRegistrada?: () => void | Promise<void>;
 };
 
-const MATERIA_ESPIRITUAL_ID = "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
-const ATIVIDADE_ORACAO_ID = "22222222-2222-2222-2222-222222222100";
 const META_PADRAO_ORACAO = 5;
 const OPCOES_META_ORACAO = [5, 10, 15];
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
@@ -37,35 +36,12 @@ function notificarDashboardSobreJoia() {
   window.dispatchEvent(new Event(EVENTO_JOIA_CONQUISTADA));
 }
 
-function formatarDataLocal(data: Date) {
-  const ano = data.getFullYear();
-  const mes = String(data.getMonth() + 1).padStart(2, "0");
-  const dia = String(data.getDate()).padStart(2, "0");
-
-  return `${ano}-${mes}-${dia}`;
-}
-
-function getIntervaloHojeLocal() {
-  const hoje = new Date();
-  const dataLocal = formatarDataLocal(hoje);
-
-  return {
-    inicio: `${dataLocal} 00:00:00`,
-    fim: `${dataLocal} 23:59:59.999`,
-  };
-}
-
-function getInicioAnoLocal() {
-  const hoje = new Date();
-  const ano = hoje.getFullYear();
-
-  return `${ano}-01-01 00:00:00`;
-}
-
 export default function OracaoDashboardPanel({
   onClose,
   dadosIniciais = null,
   dadosIniciaisCarregando = false,
+  erroCarregamento = false,
+  onTentarNovamente,
   onResumoAtualizado,
   onOracaoRegistrada,
 }: OracaoDashboardPanelProps) {
@@ -81,9 +57,7 @@ export default function OracaoDashboardPanel({
   const [minutosAno, setMinutosAno] = useState(
     dadosIniciais?.minutosAno ?? 0
   );
-  const [carregando, setCarregando] = useState(
-    dadosIniciaisCarregando || !dadosIniciais
-  );
+  const carregando = dadosIniciaisCarregando || !dadosIniciais || erroCarregamento;
   const [salvando, setSalvando] = useState(false);
   const [salvandoMeta, setSalvandoMeta] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -99,7 +73,6 @@ export default function OracaoDashboardPanel({
   const [metaPersonalizadaInput, setMetaPersonalizadaInput] = useState("");
 
   const montadoRef = useRef(true);
-  const dadosIniciaisAplicadosRef = useRef(false);
   const inputMetaPersonalizadaRef = useRef<HTMLInputElement>(null);
 
   const metaSegura = Math.max(1, metaDiaria || META_PADRAO_ORACAO);
@@ -108,77 +81,6 @@ export default function OracaoDashboardPanel({
     Math.round((minutosHoje / metaSegura) * 100)
   );
 
-
-  async function getUsuarioAtual() {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error || !user) {
-      throw error ?? new Error("Usuário não identificado.");
-    }
-
-    return user;
-  }
-
-  async function carregarMinutosOracaoHoje() {
-    try {
-      const user = await getUsuarioAtual();
-      const { inicio, fim } = getIntervaloHojeLocal();
-
-      const { data, error } = await supabase
-        .from("next_sessoes_atividade")
-        .select("tempo_total_segundos")
-        .eq("usuario_id", user.id)
-        .eq("atividade_id", ATIVIDADE_ORACAO_ID)
-        .gte("data_execucao", inicio)
-        .lte("data_execucao", fim);
-
-      if (error) {
-        console.error("Erro ao carregar minutos de oração hoje:", error);
-        return 0;
-      }
-
-      const totalSegundos = (data ?? []).reduce((total, item) => {
-        return total + Number(item.tempo_total_segundos ?? 0);
-      }, 0);
-
-      return Math.floor(totalSegundos / 60);
-    } catch (error) {
-      console.error("Erro inesperado ao carregar minutos de hoje:", error);
-      return 0;
-    }
-  }
-
-  async function carregarMetaOracao() {
-    try {
-      const user = await getUsuarioAtual();
-
-      const { data, error } = await supabase
-        .from("next_metas_usuario")
-        .select("meta_diaria")
-        .eq("usuario_id", user.id)
-        .eq("materia_id", MATERIA_ESPIRITUAL_ID)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Erro ao carregar meta de oração:", error);
-        return META_PADRAO_ORACAO;
-      }
-
-      const metaCarregada = Number(data?.meta_diaria ?? META_PADRAO_ORACAO);
-
-      if (!Number.isFinite(metaCarregada) || metaCarregada <= 0) {
-        return META_PADRAO_ORACAO;
-      }
-
-      return metaCarregada;
-    } catch (error) {
-      console.error("Erro inesperado ao carregar meta de oração:", error);
-      return META_PADRAO_ORACAO;
-    }
-  }
 
   async function salvarMetaOracao(novaMeta: number) {
     if (salvandoMeta) return;
@@ -194,6 +96,9 @@ export default function OracaoDashboardPanel({
       // Usa a action central porque ela também sincroniza a joia espiritual
       // e a Mandala caso a nova meta altere o resultado do dia atual.
       const resultado = await alterarMetaOracao(novaMeta);
+
+      // Atualiza também se o usuário trocou de painel durante a gravação.
+      void atualizarJardimAposConquista();
 
       if (!montadoRef.current) return;
 
@@ -218,8 +123,6 @@ export default function OracaoDashboardPanel({
       const mandalaConquistadaAgora = resultado.mandalaConquistada === true;
       mostrarConquista(joiaConquistadaAgora, mandalaConquistadaAgora);
 
-      // Atualizar o jardim nao bloqueia a comemoracao ja confirmada.
-      void atualizarJardimAposConquista();
       if (joiaConquistadaAgora || mandalaConquistadaAgora) return;
 
       setMensagem(`Meta diária atualizada para ${metaConfirmada} minutos.`);
@@ -257,140 +160,19 @@ export default function OracaoDashboardPanel({
     await salvarMetaOracao(novaMeta);
   }
 
-  async function carregarPersistenciaDias() {
-    try {
-      const user = await getUsuarioAtual();
-
-      const { data, error } = await supabase
-        .from("next_sequencia_dias_usuario")
-        .select("dias_seguidos")
-        .eq("usuario_id", user.id)
-        .eq("materia_id", MATERIA_ESPIRITUAL_ID)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Erro ao carregar persistência:", error);
-        return 0;
-      }
-
-      return Number(data?.dias_seguidos ?? 0);
-    } catch (error) {
-      console.error("Erro inesperado ao carregar persistência:", error);
-      return 0;
-    }
-  }
-
-  async function carregarMinutosOracaoAno() {
-    try {
-      const user = await getUsuarioAtual();
-      const inicioAno = getInicioAnoLocal();
-
-      const { data, error } = await supabase
-        .from("next_sessoes_atividade")
-        .select("tempo_total_segundos")
-        .eq("usuario_id", user.id)
-        .eq("atividade_id", ATIVIDADE_ORACAO_ID)
-        .gte("data_execucao", inicioAno);
-
-      if (error) {
-        console.error("Erro ao carregar minutos de oração no ano:", error);
-        return 0;
-      }
-
-      const totalSegundos = (data ?? []).reduce((total, item) => {
-        return total + Number(item.tempo_total_segundos ?? 0);
-      }, 0);
-
-      return Math.floor(totalSegundos / 60);
-    } catch (error) {
-      console.error("Erro inesperado ao carregar minutos do ano:", error);
-      return 0;
-    }
-  }
-
+  // O pai carrega e atualiza o resumo; abrir este painel não repete consultas.
   useEffect(() => {
     montadoRef.current = true;
-
-    if (dadosIniciais && !dadosIniciaisAplicadosRef.current) {
-      dadosIniciaisAplicadosRef.current = true;
-
-      setMinutosHoje(dadosIniciais.minutosHoje);
-      setPersistenciaDias(dadosIniciais.persistenciaDias);
-      setMinutosAno(dadosIniciais.minutosAno);
-      setMetaDiaria(dadosIniciais.metaDiaria);
-      setCarregando(false);
-    }
-
-    async function carregarDados() {
-      try {
-        if (!dadosIniciaisAplicadosRef.current) {
-          setCarregando(true);
-        }
-
-        const [
-          totalMinutosHoje,
-          totalPersistenciaDias,
-          totalMinutosAno,
-          metaOracao,
-        ] = await Promise.all([
-          carregarMinutosOracaoHoje(),
-          carregarPersistenciaDias(),
-          carregarMinutosOracaoAno(),
-          carregarMetaOracao(),
-        ]);
-
-        if (!montadoRef.current) return;
-
-        const resumoAtualizado = {
-          minutosHoje: totalMinutosHoje,
-          persistenciaDias: totalPersistenciaDias,
-          minutosAno: totalMinutosAno,
-          metaDiaria: metaOracao,
-        };
-
-        setMinutosHoje(resumoAtualizado.minutosHoje);
-        setPersistenciaDias(resumoAtualizado.persistenciaDias);
-        setMinutosAno(resumoAtualizado.minutosAno);
-        setMetaDiaria(resumoAtualizado.metaDiaria);
-        onResumoAtualizado?.(resumoAtualizado);
-      } catch (error) {
-        console.error("Erro ao carregar dados de oração:", error);
-      } finally {
-        if (montadoRef.current) setCarregando(false);
-      }
-    }
-
-    void carregarDados();
-
-    return () => {
-      montadoRef.current = false;
-    };
+    return () => { montadoRef.current = false; };
   }, []);
 
-  async function atualizarResumoAposRegistro(minutosOtimista: number) {
-    const [totalMinutosHoje, totalPersistenciaDias, totalMinutosAno, metaOracao] =
-      await Promise.all([
-        carregarMinutosOracaoHoje(),
-        carregarPersistenciaDias(),
-        carregarMinutosOracaoAno(),
-        carregarMetaOracao(),
-      ]);
-
-    if (!montadoRef.current) return;
-
-    const resumoAtualizado = {
-      minutosHoje: totalMinutosHoje > 0 ? totalMinutosHoje : minutosOtimista,
-      persistenciaDias: totalPersistenciaDias,
-      minutosAno: totalMinutosAno,
-      metaDiaria: metaOracao,
-    };
-
-    setMinutosHoje(resumoAtualizado.minutosHoje);
-    setPersistenciaDias(resumoAtualizado.persistenciaDias);
-    setMinutosAno(resumoAtualizado.minutosAno);
-    setMetaDiaria(resumoAtualizado.metaDiaria);
-    onResumoAtualizado?.(resumoAtualizado);
-  }
+  useEffect(() => {
+    if (!dadosIniciais) return;
+    setMinutosHoje(dadosIniciais.minutosHoje);
+    setPersistenciaDias(dadosIniciais.persistenciaDias);
+    setMinutosAno(dadosIniciais.minutosAno);
+    setMetaDiaria(dadosIniciais.metaDiaria);
+  }, [dadosIniciais]);
 
   function mostrarConquista(joia: boolean, mandala: boolean) {
     if (joia) {
@@ -426,17 +208,15 @@ export default function OracaoDashboardPanel({
 
       const resultado = await registrarMomentoOracao(minutos);
 
+      // A leitura em background não bloqueia a conquista nem depende do painel aberto.
+      void atualizarJardimAposConquista();
+
       if (!montadoRef.current) return;
 
       const joiaConquistadaAgora = resultado.joiaConquistada === true;
       const mandalaConquistadaAgora = resultado.mandalaConquistada === true;
       mostrarConquista(joiaConquistadaAgora, mandalaConquistadaAgora);
 
-      // Falhas de leitura apos salvar nao desfazem a oracao nem a conquista.
-      void atualizarResumoAposRegistro(minutosOtimista).catch((error) => {
-        console.error("Erro ao atualizar resumo apos oracao salva:", error);
-      });
-      void atualizarJardimAposConquista();
       if (joiaConquistadaAgora || mandalaConquistadaAgora) return;
 
       setMensagem(`Oração registrada! +${minutos} minuto(s). 🙏`);
@@ -468,6 +248,12 @@ export default function OracaoDashboardPanel({
 
   return (
     <div className="absolute inset-0 z-40 flex items-end justify-center bg-black/5 px-3 pb-[104px] pt-20 backdrop-blur-[1px] sm:items-center sm:pb-6 sm:pt-6">
+      {erroCarregamento && (
+        <button type="button" onClick={onTentarNovamente}
+          className="absolute top-4 rounded-xl bg-[#302719] px-4 py-2 text-sm" role="alert">
+          Não foi possível carregar sua oração. Tentar novamente
+        </button>
+      )}
       {/* Painel principal: compacto e translúcido para manter o Jardim visível */}
       <div className="relative w-full max-w-[370px] overflow-hidden rounded-[26px] border border-[#f1d27a]/25 bg-gradient-to-br from-[#2d2415]/65 via-[#181711]/58 to-[#172018]/58 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         <button
@@ -556,29 +342,69 @@ export default function OracaoDashboardPanel({
 
       {/* Modal para registrar o tempo da oração */}
       {modalAberto && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[2px]">
-          <div className="w-full max-w-[340px] rounded-3xl border border-white/15 bg-[#151712]/90 p-6 text-center text-white shadow-2xl backdrop-blur-xl">
-            <div className="mb-2 text-5xl">🙏</div>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/22 px-4 backdrop-blur-[2px]">
+          <div
+            className="
+              w-full max-w-[340px]
+              rounded-[26px]
+              border border-[#f1d27a]/25
+              bg-gradient-to-br
+              from-[#2d2415]/92
+              via-[#1b1711]/90
+              to-[#172018]/90
+              p-5 text-center text-white
+              shadow-[0_20px_55px_rgba(0,0,0,0.40)]
+              backdrop-blur-xl
+            "
+          >
+            <div
+              className="
+                mx-auto mb-3
+                flex h-14 w-14 items-center justify-center
+                rounded-full
+                border border-[#f1d27a]/25
+                bg-[#f1d27a]/10
+                text-3xl
+                shadow-[0_0_24px_rgba(241,210,122,0.10)]
+              "
+            >
+              🙏
+            </div>
 
-            <h3 className="text-lg font-bold">Oração realizada</h3>
+            <h3 className="text-[1.05rem] font-black text-white">
+              Oração realizada
+            </h3>
 
-            <p className="mb-4 text-sm text-white/60">
+            <p className="mb-4 mt-1 text-[0.78rem] font-medium text-white/58">
               Quanto tempo durou esta oração?
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {[1, 3, 5, 10].map((minuto) => (
                 <button
                   key={minuto}
                   type="button"
                   onClick={() => registrarOracao(minuto)}
                   disabled={salvando}
-                  className="rounded-xl bg-[#5dc6a1]/10 p-4 hover:bg-[#5dc6a1]/20 disabled:cursor-wait disabled:opacity-50"
+                  className="
+                    rounded-[16px]
+                    border border-[#f1d27a]/18
+                    bg-[#f1d27a]/[0.07]
+                    px-4 py-3
+                    transition
+                    hover:border-[#5dc6a1]/30
+                    hover:bg-[#5dc6a1]/12
+                    disabled:cursor-wait
+                    disabled:opacity-50
+                  "
                 >
-                  <div className="text-xl font-black text-[#5dc6a1]">
+                  <div className="text-[1.15rem] font-black leading-none text-[#f1d27a]">
                     {minuto}
                   </div>
-                  <div className="text-xs text-white/60">min</div>
+
+                  <div className="mt-1 text-[0.68rem] font-semibold text-white/48">
+                    min
+                  </div>
                 </button>
               ))}
             </div>
@@ -587,7 +413,18 @@ export default function OracaoDashboardPanel({
               type="button"
               onClick={() => setModalAberto(false)}
               disabled={salvando}
-              className="mt-4 w-full rounded-xl bg-white/10 py-2 text-sm font-semibold"
+              className="
+                mt-3 w-full
+                rounded-[14px]
+                border border-white/10
+                bg-black/18
+                py-2.5
+                text-[0.78rem] font-bold text-white/65
+                transition
+                hover:bg-white/[0.06]
+                disabled:cursor-wait
+                disabled:opacity-50
+              "
             >
               Cancelar
             </button>

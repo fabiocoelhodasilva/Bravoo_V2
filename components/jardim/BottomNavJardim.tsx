@@ -1,11 +1,12 @@
 "use client";
 
 type BottomNavJardimProps = {
+  ativo: "oracao" | "jardins" | "progresso";
   oracaoConcluidaHoje: boolean;
   onVoltar: () => void;
   onOracao: () => void;
 
-  // Deixamos prontos para conectar nas próximas etapas.
+  // A navegação é controlada pelo estado único da área Espiritual.
   onJardins?: () => void;
   onProgresso?: () => void;
 };
@@ -81,18 +82,24 @@ function ProgressIcon() {
 }
 
 export default function BottomNavJardim({
+  ativo,
   oracaoConcluidaHoje,
   onVoltar,
   onOracao,
   onJardins,
   onProgresso,
 }: BottomNavJardimProps) {
-  const itemClass =
-    "flex min-w-0 flex-col items-center justify-center gap-1 text-white/85 transition active:scale-[0.96]";
+  const itemClass = (item?: BottomNavJardimProps["ativo"]) =>
+    `flex h-[76px] min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-[20px] border transition active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-[#ffe49c] ${
+      ativo === item
+        ? "border-[#ffd36a]/45 bg-[#79501f]/40 text-[#ffe49c] shadow-[inset_0_0_14px_rgba(255,184,54,0.12)]"
+        : "border-transparent text-white/85 hover:bg-white/5"
+    }`;
 
   return (
     <nav
-      className="absolute inset-x-0 z-40 flex justify-center px-3"
+      className="absolute inset-x-0 z-50 flex justify-center px-3"
+      aria-label="Navegação do jardim"
       style={{
         bottom: "max(10px, env(safe-area-inset-bottom))",
       }}
@@ -103,37 +110,31 @@ export default function BottomNavJardim({
         <button
           type="button"
           onClick={onVoltar}
-          className={itemClass}
+          className={itemClass()}
           aria-label="Voltar"
         >
           <BackIcon />
           <span className="text-[0.72rem] font-medium">Voltar</span>
         </button>
 
-        {/* ORAR - botão principal */}
-        <div className="relative flex h-full items-center justify-center">
+        {/* Todos os itens permanecem dentro da barra, inclusive Orar. */}
           <button
             type="button"
             onClick={onOracao}
-            className="absolute -top-[20px] flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full border border-[#ffd36a]/75 bg-[#5b3518]/95 text-white shadow-[0_0_26px_rgba(255,184,54,0.48),0_12px_30px_rgba(0,0,0,0.38)] transition active:scale-[0.96]"
-            aria-label="Orar"
+            className={itemClass("oracao")}
+            aria-label={oracaoConcluidaHoje ? "Orar. Meta de hoje concluída" : "Orar"}
+            aria-current={ativo === "oracao" ? "page" : undefined}
           >
             <span className="text-[2rem] leading-none">🙏</span>
-            <span className="mt-1 text-[0.72rem] font-semibold">Orar</span>
+            <span className="text-[0.72rem] font-medium">Orar{oracaoConcluidaHoje ? " ✓" : ""}</span>
           </button>
 
-          {oracaoConcluidaHoje && (
-            <div className="absolute bottom-[3px] rounded-full border border-emerald-300/45 bg-emerald-700/95 px-3 py-[3px] text-[0.65rem] font-semibold text-white shadow-lg">
-              Hoje ✓
-            </div>
-          )}
-        </div>
-
-        {/* JARDINS - visual pronto, sem navegação por enquanto */}
+        {/* JARDINS */}
         <button
           type="button"
           onClick={() => onJardins?.()}
-          className={itemClass}
+          className={itemClass("jardins")}
+          aria-current={ativo === "jardins" ? "page" : undefined}
           aria-label="Jardins"
           title="Jardins"
         >
@@ -141,11 +142,12 @@ export default function BottomNavJardim({
           <span className="text-[0.72rem] font-medium">Jardins</span>
         </button>
 
-        {/* PROGRESSO - visual pronto, sem navegação por enquanto */}
+        {/* PROGRESSO */}
         <button
           type="button"
           onClick={() => onProgresso?.()}
-          className={itemClass}
+          className={itemClass("progresso")}
+          aria-current={ativo === "progresso" ? "page" : undefined}
           aria-label="Progresso"
           title="Progresso"
         >

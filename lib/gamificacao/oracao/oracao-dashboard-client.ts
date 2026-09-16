@@ -31,14 +31,17 @@ function getInicioAnoLocal() {
   return `${ano}-01-01 00:00:00`;
 }
 
-export async function buscarResumoDashboardOracao() {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+export async function buscarResumoDashboardOracao(usuarioId?: string) {
+  if (!usuarioId) {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    throw error ?? new Error("Usuário não identificado.");
+    if (error || !user) {
+      throw error ?? new Error("Usuário não identificado.");
+    }
+    usuarioId = user.id;
   }
 
   const { inicio, fim } = getIntervaloHojeLocal();
@@ -48,7 +51,7 @@ export async function buscarResumoDashboardOracao() {
       supabase
         .from("next_sessoes_atividade")
         .select("tempo_total_segundos")
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", usuarioId)
         .eq("atividade_id", ATIVIDADE_ORACAO_ID)
         .gte("data_execucao", inicio)
         .lte("data_execucao", fim),
@@ -56,30 +59,35 @@ export async function buscarResumoDashboardOracao() {
       supabase
         .from("next_sessoes_atividade")
         .select("tempo_total_segundos")
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", usuarioId)
         .eq("atividade_id", ATIVIDADE_ORACAO_ID)
         .gte("data_execucao", getInicioAnoLocal()),
 
       supabase
         .from("next_metas_usuario")
         .select("meta_diaria")
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", usuarioId)
         .eq("materia_id", MATERIA_ESPIRITUAL_ID)
         .maybeSingle(),
 
       supabase
         .from("next_sequencia_dias_usuario")
         .select("dias_seguidos")
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", usuarioId)
         .eq("materia_id", MATERIA_ESPIRITUAL_ID)
         .maybeSingle(),
 
       supabase
         .from("next_joias_usuario")
         .select("id", { count: "exact", head: true })
-        .eq("usuario_id", user.id)
+        .eq("usuario_id", usuarioId)
         .eq("materia_id", MATERIA_ESPIRITUAL_ID),
     ]);
+
+  // Leituras incompletas não podem virar um resumo válido no preload.
+  for (const resultado of [sessoesHoje, sessoesAno, meta, persistencia, joiasEspiritual]) {
+    if (resultado.error) throw resultado.error;
+  }
 
   const minutosHoje = Math.floor(
     (sessoesHoje.data ?? []).reduce(

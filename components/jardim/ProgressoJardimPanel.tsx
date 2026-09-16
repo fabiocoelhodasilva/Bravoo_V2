@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import type { CarregadorJardim } from "@/lib/gamificacao/jardim/jardim-dados-client";
 
 /* =========================================================
    Tipos
@@ -20,6 +20,10 @@ type ProgressoJardimPanelProps = {
   dados: ResumoDashboardOracao;
   totalJoias: number;
   carregando?: boolean;
+  carregador: CarregadorJardim;
+  revisao: number;
+  erroResumo?: boolean;
+  onTentarResumo?: () => void;
 };
 
 type PeriodoFiltro = "mes" | "ano";
@@ -27,12 +31,6 @@ type PeriodoFiltro = "mes" | "ano";
 /* =========================================================
    Constantes
 ========================================================= */
-
-const MATERIA_ESPIRITUAL_ID =
-  "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
-
-const ATIVIDADE_ORACAO_ID =
-  "22222222-2222-2222-2222-222222222100";
 
 const IMAGEM_JOIA_ESPIRITUAL = "/imagens/joias/joia_red.png";
 
@@ -104,6 +102,10 @@ export default function ProgressoJardimPanel({
   onClose,
   dados,
   carregando = false,
+  carregador,
+  revisao,
+  erroResumo = false,
+  onTentarResumo,
 }: ProgressoJardimPanelProps) {
   const hoje = useMemo(() => new Date(), []);
   const hojeIso = useMemo(() => obterDataSaoPaulo(hoje), [hoje]);
@@ -129,6 +131,8 @@ export default function ProgressoJardimPanel({
 
   const [carregandoCalendario, setCarregandoCalendario] = useState(true);
   const [carregandoPeriodo, setCarregandoPeriodo] = useState(true);
+  const [erroProgresso, setErroProgresso] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
   const tituloMes = useMemo(() => {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -208,205 +212,45 @@ export default function ProgressoJardimPanel({
      Histórico mensal para o calendário
   --------------------------------------------------------- */
 
+  // Calendário e totais mensais compartilham o mesmo preload, inclusive em andamento.
   useEffect(() => {
     let ativo = true;
+    // Sincroniza o estado de carregamento no início da tarefa assíncrona.
+    queueMicrotask(() => {
+      if (!ativo) return;
+      setCarregandoCalendario(true);
+      setCarregandoPeriodo(true);
+      setErroProgresso(false);
+    });
 
-    async function carregarDiamantesMes() {
-      try {
-        setCarregandoCalendario(true);
+    const calendario = carregador.progresso(
+      obterInicioMesIso(mesReferencia), obterInicioProximoMesIso(mesReferencia),
+    ).then((resultado) => {
+      if (ativo) setDiasComDiamante(resultado.diasComDiamante);
+    }).catch((error) => {
+      console.error("Erro ao carregar calendário espiritual:", error);
+      if (ativo) { setDiasComDiamante(new Set()); setErroProgresso(true); }
+    }).finally(() => { if (ativo) setCarregandoCalendario(false); });
 
-        const {
-          data: { user },
-          error: erroUsuario,
-        } = await supabase.auth.getUser();
-
-        if (erroUsuario || !user) {
-          throw erroUsuario ?? new Error("Usuário não identificado.");
-        }
-
-        const inicioMes = obterInicioMesIso(mesReferencia);
-        const proximoMes = obterInicioProximoMesIso(mesReferencia);
-
-        const { data, error } = await supabase
-          .from("next_joias_usuario")
-          .select("data_conquista")
-          .eq("usuario_id", user.id)
-          .eq("materia_id", MATERIA_ESPIRITUAL_ID)
-          .gte(
-            "data_conquista",
-            `${inicioMes}T00:00:00-03:00`,
-          )
-          .lt(
-            "data_conquista",
-            `${proximoMes}T00:00:00-03:00`,
-          )
-          .order("data_conquista", { ascending: true });
-
-        if (error) throw error;
-
-        const dias = new Set<string>();
-
-        for (const item of data ?? []) {
-          if (!item.data_conquista) continue;
-
-          const dataLocal = obterDataSaoPaulo(
-            new Date(item.data_conquista),
-          );
-
-          if (
-            dataLocal >= inicioMes &&
-            dataLocal < proximoMes
-          ) {
-            dias.add(dataLocal);
-          }
-        }
-
-        if (ativo) {
-          setDiasComDiamante(dias);
-        }
-      } catch (error) {
-        console.error(
-          "Erro ao carregar calendário espiritual:",
-          error,
-        );
-
-        if (ativo) {
-          setDiasComDiamante(new Set());
-        }
-      } finally {
-        if (ativo) {
-          setCarregandoCalendario(false);
-        }
-      }
-    }
-
-    void carregarDiamantesMes();
-
-    return () => {
-      ativo = false;
-    };
-  }, [mesReferencia]);
-
-  /* ---------------------------------------------------------
-     Totais alinhados com Mês / Ano
-  --------------------------------------------------------- */
-
-  useEffect(() => {
-    let ativo = true;
-
-    async function carregarTotaisPeriodo() {
-      try {
-        setCarregandoPeriodo(true);
-
-        const {
-          data: { user },
-          error: erroUsuario,
-        } = await supabase.auth.getUser();
-
-        if (erroUsuario || !user) {
-          throw erroUsuario ?? new Error("Usuário não identificado.");
-        }
-
-        const fimComHora =
-          `${intervaloPeriodo.fimExclusivo}T00:00:00-03:00`;
-
-        let consultaSessoes = supabase
-          .from("next_sessoes_atividade")
-          .select("tempo_total_segundos")
-          .eq("usuario_id", user.id)
-          .eq("atividade_id", ATIVIDADE_ORACAO_ID)
-          .lt("data_execucao", fimComHora);
-
-        let consultaJoias = supabase
-          .from("next_joias_usuario")
-          .select("data_conquista")
-          .eq("usuario_id", user.id)
-          .eq("materia_id", MATERIA_ESPIRITUAL_ID)
-          .lt("data_conquista", fimComHora);
-
-        if (intervaloPeriodo.inicio) {
-          const inicioComHora =
-            `${intervaloPeriodo.inicio}T00:00:00-03:00`;
-
-          consultaSessoes = consultaSessoes.gte(
-            "data_execucao",
-            inicioComHora,
-          );
-
-          consultaJoias = consultaJoias.gte(
-            "data_conquista",
-            inicioComHora,
-          );
-        }
-
-        const [resultadoSessoes, resultadoJoias] =
-          await Promise.all([
-            consultaSessoes,
-            consultaJoias,
-          ]);
-
-        if (resultadoSessoes.error) {
-          throw resultadoSessoes.error;
-        }
-
-        if (resultadoJoias.error) {
-          throw resultadoJoias.error;
-        }
-
-        const totalSegundos = (
-          resultadoSessoes.data ?? []
-        ).reduce((total, item) => {
-          return (
-            total +
-            Number(item.tempo_total_segundos ?? 0)
-          );
-        }, 0);
-
-        const diasDiamante = new Set<string>();
-
-        for (const item of resultadoJoias.data ?? []) {
-          if (!item.data_conquista) continue;
-
-          diasDiamante.add(
-            obterDataSaoPaulo(new Date(item.data_conquista)),
-          );
-        }
-
-        if (ativo) {
-          setTempoPeriodoMinutos(
-            Math.floor(totalSegundos / 60),
-          );
-          setDiamantesPeriodo(diasDiamante.size);
-        }
-      } catch (error) {
-        console.error(
-          "Erro ao carregar totais do progresso espiritual:",
-          error,
-        );
-
+    const totais = carregador.progresso(intervaloPeriodo.inicio, intervaloPeriodo.fimExclusivo)
+      .then((resultado) => {
+        if (!ativo) return;
+        setTempoPeriodoMinutos(resultado.minutos);
+        setDiamantesPeriodo(resultado.diasComDiamante.size);
+      }).catch((error) => {
+        console.error("Erro ao carregar totais do progresso espiritual:", error);
         if (ativo) {
           setTempoPeriodoMinutos(0);
-
           setDiamantesPeriodo(0);
+          setErroProgresso(true);
         }
-      } finally {
-        if (ativo) {
-          setCarregandoPeriodo(false);
-        }
-      }
-    }
+      }).finally(() => { if (ativo) setCarregandoPeriodo(false); });
 
-    void carregarTotaisPeriodo();
+    void Promise.all([calendario, totais]);
+    return () => { ativo = false; };
+  }, [carregador, mesReferencia, intervaloPeriodo, tentativa, revisao]);
 
-    return () => {
-      ativo = false;
-    };
-  }, [intervaloPeriodo]);
-
-  /* ---------------------------------------------------------
-     Navegação mensal
-  --------------------------------------------------------- */
-
+  /* Navegação mensal: mantém os limites e os filtros existentes. */
   function voltarMes() {
     if (!podeVoltar) return;
 
@@ -457,6 +301,15 @@ export default function ProgressoJardimPanel({
           backdrop-blur-md
         "
       >
+        {(erroProgresso || erroResumo) && (
+          <button type="button" onClick={() => {
+            setTentativa((valor) => valor + 1);
+            if (erroResumo) onTentarResumo?.();
+          }}
+            className="mb-2 text-sm text-[#ffe4a8] underline" role="alert">
+            Não foi possível carregar o progresso. Tentar novamente
+          </button>
+        )}
         {/* Fechar */}
         <button
           type="button"
@@ -487,6 +340,7 @@ export default function ProgressoJardimPanel({
 
         {/* Calendário em largura total */}
         <div
+          aria-busy={carregandoCalendario}
           className="
             mt-2.5 w-full
             rounded-[20px] border border-white/10

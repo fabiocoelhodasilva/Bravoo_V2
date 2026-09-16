@@ -7,6 +7,12 @@
 
 export type JardimId = "deserto";
 
+/** Preload compartilhado pelo cenário e pelo painel de itens do jardim. */
+export function preloadImagem(src: string) {
+  const imagem = new Image();
+  imagem.src = src;
+}
+
 export type ImagensResponsivasJardim = {
   mobile: string;
   desktop: string;

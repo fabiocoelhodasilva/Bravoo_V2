@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { preloadImagem } from "@/lib/gamificacao/jardim/jardim-assets";
 import {
   buscarSaldoItensJardimHoje,
   buscarStatusSaudeJardim,
@@ -182,10 +183,6 @@ function salvarCacheDadosJardim(
   } catch {}
 }
 
-function preloadImagem(src: string) {
-  const imagem = new Image();
-  imagem.src = src;
-}
 
 function normalizarPercentual(valor: number) {
   if (!Number.isFinite(valor)) return 0;

@@ -1,179 +1,178 @@
-"use client";
+﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import JardinsMapaPanel from "./JardinsMapaPanel";
 import BottomNavJardim from "./BottomNavJardim";
 import OracaoDashboardPanel from "./OracaoDashboardPanel";
 import ProgressoJardimPanel from "./ProgressoJardimPanel";
+import { criarCarregadorJardim, type ResumoOracao } from "@/lib/gamificacao/jardim/jardim-dados-client";
+import { getImagensJardim, preloadImagem } from "@/lib/gamificacao/jardim/jardim-assets";
 
-import { supabase } from "@/lib/supabase/client";
-import { buscarResumoDashboardOracao } from "@/lib/gamificacao/oracao/oracao-dashboard-client";
-import { buscarPontuacaoJardim } from "@/lib/gamificacao/jardim/jardim-pontuacao-actions";
-import { getImagensJardim } from "@/lib/gamificacao/jardim/jardim-assets";
-
-type ResumoDashboardOracao = {
-  minutosHoje: number;
-  minutosAno: number;
-  metaDiaria: number;
-  persistenciaDias: number;
-};
-
-const MATERIA_ESPIRITUAL_ID =
-  "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
-
-const RESUMO_PADRAO: ResumoDashboardOracao = {
-  minutosHoje: 0,
-  minutosAno: 0,
-  metaDiaria: 5,
-  persistenciaDias: 0,
-};
+type Vista = "mapa" | "jardim" | "oracao" | "progresso";
+const RESUMO_PADRAO = { minutosHoje: 0, minutosAno: 0, metaDiaria: 5, persistenciaDias: 0 };
 
 export default function GardenScene() {
   const router = useRouter();
-
-  const [resumoOracao, setResumoOracao] =
-    useState<ResumoDashboardOracao>(RESUMO_PADRAO);
-  const [pontuacaoJardim, setPontuacaoJardim] = useState(0);
-  const [totalJoias, setTotalJoias] = useState(0);
+  // Uma única área, sem novas rotas nem entradas adicionais no histórico.
+  const [vista, setVista] = useState<Vista>("mapa");
+  const [carregador] = useState(criarCarregadorJardim);
+  const [resumoOracao, setResumoOracao] = useState<ResumoOracao | null>(null);
+  const [pontuacaoJardim, setPontuacaoJardim] = useState<number | null>(null);
+  const [usuarioJardimId, setUsuarioJardimId] = useState<string | null>(null);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
-  const [oracaoDashboardOpen, setOracaoDashboardOpen] = useState(false);
-  const [progressoOpen, setProgressoOpen] = useState(false);
+  const [carregandoPontuacao, setCarregandoPontuacao] = useState(true);
+  const [erroResumo, setErroResumo] = useState(false);
+  const [erroPontuacao, setErroPontuacao] = useState(false);
+  const [revisaoProgresso, setRevisaoProgresso] = useState(0);
+  const geracao = useRef(0);
 
-  /** Conta somente as joias espirituais do usuário. */
-  const carregarTotalJoias = useCallback(async () => {
+  // Pontuação e resumo publicam seus resultados independentemente do Progresso.
+  const carregarResumo = useCallback(async () => {
+    const versao = geracao.current;
+    setCarregandoResumo(true);
     try {
-      const {
-        data: { user },
-        error: erroUsuario,
-      } = await supabase.auth.getUser();
-
-      if (erroUsuario || !user) return 0;
-
-      const { count, error } = await supabase
-        .from("next_joias_usuario")
-        .select("id", { count: "exact", head: true })
-        .eq("usuario_id", user.id)
-        .eq("materia_id", MATERIA_ESPIRITUAL_ID);
-
-      if (error) {
-        console.error("Erro ao carregar joias espirituais:", error);
-        return 0;
-      }
-
-      return count ?? 0;
+      const resumo = await carregador.resumo();
+      if (versao !== geracao.current) return;
+      setResumoOracao(resumo);
+      setErroResumo(false);
     } catch (error) {
-      console.error("Erro inesperado ao carregar joias:", error);
-      return 0;
-    }
-  }, []);
-
-  /** Carrega os dados da Home do Jardim em paralelo. */
-  const carregarHomeJardim = useCallback(async () => {
-    try {
-      setCarregandoResumo(true);
-
-      const [resumoResultado, pontuacaoResultado, joiasResultado] =
-        await Promise.allSettled([
-          buscarResumoDashboardOracao(),
-          buscarPontuacaoJardim(),
-          carregarTotalJoias(),
-        ]);
-
-      if (resumoResultado.status === "fulfilled" && resumoResultado.value) {
-        setResumoOracao(resumoResultado.value);
-      }
-
-      if (pontuacaoResultado.status === "fulfilled") {
-        setPontuacaoJardim(pontuacaoResultado.value.pontuacao);
-      } else {
-        console.error(
-          "Erro ao carregar pontuação do jardim:",
-          pontuacaoResultado.reason,
-        );
-      }
-
-      if (joiasResultado.status === "fulfilled") {
-        setTotalJoias(joiasResultado.value);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar a Home do Jardim:", error);
+      if (versao === geracao.current) setErroResumo(true);
+      console.error("Erro ao carregar resumo do jardim:", error);
     } finally {
-      setCarregandoResumo(false);
+      if (versao === geracao.current) setCarregandoResumo(false);
     }
-  }, [carregarTotalJoias]);
+  }, [carregador]);
+
+  const carregarPontuacao = useCallback(async () => {
+    const versao = geracao.current;
+    setCarregandoPontuacao(true);
+    try {
+      const resultado = await carregador.pontuacao();
+      if (versao !== geracao.current) return;
+      setPontuacaoJardim(resultado.pontuacao);
+      setErroPontuacao(false);
+    } catch (error) {
+      if (versao === geracao.current) setErroPontuacao(true);
+      console.error("Erro ao carregar pontuação do jardim:", error);
+    } finally {
+      if (versao === geracao.current) setCarregandoPontuacao(false);
+    }
+  }, [carregador]);
 
   useEffect(() => {
-    void carregarHomeJardim();
-  }, [carregarHomeJardim]);
+    let ativo = true;
+    void carregador.usuario().then((id) => {
+      if (ativo) setUsuarioJardimId(id);
+    }).catch((error) => console.error("Erro ao identificar usuário do jardim:", error));
+    void carregarPontuacao();
+    void carregarResumo();
+    void carregador.preloadProgresso();
+    return () => { ativo = false; };
+  }, [carregador, carregarPontuacao, carregarResumo]);
 
-  /**
-   * A pontuação é ilimitada.
-   * O jardim-assets limita somente a imagem disponível (0 a 10 no Deserto).
-   */
-  const imagensJardim = useMemo(() => {
-    return getImagensJardim("deserto", pontuacaoJardim);
-  }, [pontuacaoJardim]);
+  // O catálogo continua responsável pela seleção e pelo limite visual do cenário.
+  const imagensJardim = useMemo(
+    () => getImagensJardim("deserto", pontuacaoJardim ?? 0),
+    [pontuacaoJardim],
+  );
 
-  const oracaoConcluidaHoje =
-    resumoOracao.minutosHoje >= Math.max(1, resumoOracao.metaDiaria);
+  useEffect(() => {
+    if (pontuacaoJardim === null) return;
+    // Carrega só a versão usada pelo dispositivo e acompanha mudanças de largura.
+    const media = window.matchMedia("(max-width: 767px)");
+    const preload = () => {
+      preloadImagem(media.matches ? imagensJardim.mobile : imagensJardim.desktop);
+    };
+    preload();
+    media.addEventListener("change", preload);
+    return () => media.removeEventListener("change", preload);
+  }, [imagensJardim, pontuacaoJardim]);
 
-  /** Recalcula tudo imediatamente depois de oração ou mudança de meta. */
-  async function atualizarAposOracaoRegistrada() {
-    await carregarHomeJardim();
+  function abrirVista(proxima: Vista) {
+    setVista(proxima);
+    if (erroResumo) void carregarResumo();
+    if (erroPontuacao) void carregarPontuacao();
+    if (proxima === "mapa") void carregador.preloadProgresso();
   }
+
+  // Uma única atualização após gravações, compartilhada com oração e progresso.
+  async function atualizarAposOracaoRegistrada() {
+    geracao.current += 1;
+    carregador.invalidar();
+    setRevisaoProgresso((valor) => valor + 1);
+    void carregador.preloadProgresso();
+    await Promise.all([carregarResumo(), carregarPontuacao()]);
+  }
+
+  const resumo = resumoOracao ?? RESUMO_PADRAO;
+  const oracaoConcluidaHoje = resumo.minutosHoje >= Math.max(1, resumo.metaDiaria);
 
   return (
     <section className="relative h-[100dvh] w-full overflow-hidden bg-black text-white">
-      {/* CENÁRIO RESPONSIVO: imagens 0 a 10 */}
-      <picture
-        className="
-          absolute inset-x-0 top-0 bottom-[102px]
-          block w-full
-          md:bottom-0
-        "
-      >
-        <source media="(max-width: 767px)" srcSet={imagensJardim.mobile} />
-
-        <img
-          src={imagensJardim.desktop}
-          alt="Jardim do Deserto"
-          className="h-full w-full select-none object-cover object-center"
-          draggable={false}
+      {/* O mapa aparece imediatamente, sem aguardar as consultas secundárias. */}
+      {vista === "mapa" ? (
+        <JardinsMapaPanel
+          pontuacao={pontuacaoJardim}
+          usuarioId={usuarioJardimId}
+          carregando={carregandoPontuacao && pontuacaoJardim === null}
+          erro={erroPontuacao}
+          onTentarNovamente={() => void carregarPontuacao()}
+          onClose={() => router.back()}
+          onEntrarJardim={() => abrirVista("jardim")}
         />
-      </picture>
+      ) : (
+        <>
+          {/* CENÁRIO RESPONSIVO: preserva as imagens e o enquadramento atuais. */}
+          {pontuacaoJardim !== null ? (
+            <picture className="absolute inset-x-0 top-0 bottom-[102px] block w-full md:bottom-0">
+              <source media="(max-width: 767px)" srcSet={imagensJardim.mobile} />
+              <img src={imagensJardim.desktop} alt="Jardim do Deserto"
+                className="h-full w-full select-none object-cover object-center" draggable={false} />
+            </picture>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center" role="status">
+              {erroPontuacao ? (
+                <button type="button" onClick={() => void carregarPontuacao()}>Tentar carregar o jardim novamente</button>
+              ) : "Carregando seu jardim..."}
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[125px] bg-gradient-to-b from-black/28 via-black/8 to-transparent" />
+        </>
+      )}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[125px] bg-gradient-to-b from-black/28 via-black/8 to-transparent" />
-
-      <BottomNavJardim
-        oracaoConcluidaHoje={oracaoConcluidaHoje}
-        onVoltar={() => router.back()}
-        onOracao={() => {
-          setProgressoOpen(false);
-          setOracaoDashboardOpen(true);
-        }}
-        onProgresso={() => {
-          setOracaoDashboardOpen(false);
-          setProgressoOpen(true);
-        }}
-      />
-
-      {oracaoDashboardOpen && (
-        <OracaoDashboardPanel
-          onClose={() => setOracaoDashboardOpen(false)}
-          dadosIniciais={resumoOracao}
-          dadosIniciaisCarregando={carregandoResumo}
-          onResumoAtualizado={setResumoOracao}
-          onOracaoRegistrada={atualizarAposOracaoRegistrada}
+      {/* No mapa a navegação inferior some: o mapa vira a tela principal da jornada. */}
+      {vista !== "mapa" && (
+        <BottomNavJardim
+          ativo={vista === "progresso" ? "progresso" : "oracao"}
+          oracaoConcluidaHoje={oracaoConcluidaHoje}
+          onVoltar={() => router.back()}
+          onOracao={() => abrirVista("oracao")}
+          onJardins={() => abrirVista("mapa")}
+          onProgresso={() => abrirVista("progresso")}
         />
       )}
 
-      {progressoOpen && (
+      {vista === "oracao" && (
+        <OracaoDashboardPanel
+          onClose={() => setVista("jardim")}
+          dadosIniciais={resumoOracao}
+          dadosIniciaisCarregando={carregandoResumo}
+          erroCarregamento={erroResumo}
+          onTentarNovamente={() => void carregarResumo()}
+          onOracaoRegistrada={atualizarAposOracaoRegistrada}
+        />
+      )}
+      {vista === "progresso" && (
         <ProgressoJardimPanel
-          onClose={() => setProgressoOpen(false)}
-          dados={resumoOracao}
-          totalJoias={totalJoias}
+          onClose={() => setVista("jardim")}
+          dados={resumo}
+          totalJoias={resumoOracao?.totalJoiasEspiritual ?? 0}
           carregando={carregandoResumo}
+          carregador={carregador}
+          revisao={revisaoProgresso}
+          erroResumo={erroResumo}
+          onTentarResumo={() => void carregarResumo()}
         />
       )}
     </section>
