@@ -6,7 +6,6 @@ import {
   ArrowRight,
   LogOut,
   Plus,
-  Sparkles,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
@@ -136,7 +135,7 @@ export default function PerfisPage() {
         <div className="absolute bottom-[-260px] right-[-180px] h-[500px] w-[500px] rounded-full bg-[#5dc6a1]/[0.04] blur-[140px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-5xl flex-col px-5 py-8 sm:px-8 sm:py-10">
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col px-5 py-5 sm:px-8 sm:py-7">
 
         {/* BRAVOO - MESMO GRADIENTE DO HEADER */}
         <header className="flex justify-center">
@@ -145,31 +144,19 @@ export default function PerfisPage() {
           </div>
         </header>
 
-        {/* Título */}
-        <section className="mx-auto mt-10 max-w-2xl text-center sm:mt-14">
-          <div className="mb-4 flex items-center justify-center gap-2 text-[#e9891d]">
-            <Sparkles size={17} />
-
-            <span className="text-xs font-bold uppercase tracking-[0.22em]">
-              Sua jornada começa aqui
-            </span>
-          </div>
-
-          <h1 className="text-[2rem] font-extrabold tracking-[-0.04em] sm:text-[2.8rem]">
-            Quem vai usar a Bravoo?
+        {/* Título compacto */}
+        <section className="mx-auto mt-7 max-w-2xl text-center sm:mt-9">
+          <h1 className="text-[1.35rem] font-bold tracking-[-0.025em] sm:text-[1.7rem]">
+            Selecione um perfil ou crie um novo
           </h1>
-
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-white/50 sm:text-base">
-            Escolha um perfil para continuar ou crie um novo
-          </p>
         </section>
 
         {/* Conteúdo */}
-        <section className="mx-auto mt-10 w-full max-w-4xl sm:mt-12">
+        <section className="mx-auto mt-6 w-full max-w-xl sm:mt-7">
 
           {/* Carregamento */}
           {carregando && (
-            <div className="flex min-h-[250px] items-center justify-center rounded-[28px] border border-white/[0.07] bg-white/[0.025]">
+            <div className="flex min-h-[96px] items-center justify-center rounded-[20px] border border-white/[0.07] bg-white/[0.025]">
               <p
                 role="status"
                 className="text-sm text-white/50"
@@ -184,26 +171,23 @@ export default function PerfisPage() {
             !erro &&
             !legado &&
             perfis.length === 0 && (
-              <div className="mx-auto max-w-md">
+              <div className="mx-auto max-w-xl">
                 <a
                   href="/perfis/novo"
-                  className="group flex min-h-[310px] flex-col items-center justify-center rounded-[30px] border border-white/[0.09] bg-white/[0.035] px-8 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.35)] transition duration-300 hover:-translate-y-1 hover:border-[#e9891d]/50 hover:bg-[#e9891d]/[0.045]"
+                  className="group flex w-full items-center gap-4 rounded-[18px] border border-dashed border-white/[0.12] bg-white/[0.025] px-4 py-3.5 text-left transition duration-200 hover:border-[#e9891d]/45 hover:bg-[#e9891d]/[0.04] active:scale-[0.99]"
                 >
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#e9891d]/30 bg-[#e9891d]/10 text-[#e9891d] shadow-[0_0_35px_rgba(233,137,29,0.08)] transition group-hover:scale-105">
-                    <Plus
-                      size={34}
-                      strokeWidth={1.8}
-                    />
-                  </div>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e9891d]/25 bg-[#e9891d]/10 text-[#e9891d] sm:h-12 sm:w-12">
+                    <Plus size={23} strokeWidth={1.7} />
+                  </span>
 
-                  <h2 className="mt-6 text-xl font-bold">
-                    Crie seu primeiro perfil
-                  </h2>
+                  <span className="min-w-0 flex-1 text-[0.98rem] font-semibold text-white/80 sm:text-base">
+                    Criar primeiro perfil
+                  </span>
 
-                  <p className="mt-2 max-w-[290px] text-sm leading-6 text-white/45">
-                    Cada pessoa terá sua própria jornada,
-                    conquistas, evolução e progresso.
-                  </p>
+                  <ArrowRight
+                    size={18}
+                    className="shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-[#e9891d]"
+                  />
                 </a>
               </div>
             )}
@@ -212,8 +196,7 @@ export default function PerfisPage() {
           {!carregando &&
             !erro &&
             perfis.length > 0 && (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-
+              <div className="space-y-2.5">
                 {perfis.map((perfil) => (
                   <button
                     key={perfil.id}
@@ -223,55 +206,53 @@ export default function PerfisPage() {
                     }
                     disabled={selecionando !== null}
                     aria-label={`Entrar como ${perfil.nome}`}
-                    className="group relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[26px] border border-white/[0.08] bg-white/[0.03] px-4 py-6 text-center shadow-[0_16px_45px_rgba(0,0,0,0.25)] transition duration-300 hover:-translate-y-1 hover:border-[#e9891d]/50 hover:bg-[#e9891d]/[0.045] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e9891d] disabled:cursor-wait disabled:opacity-60"
+                    className="group flex w-full items-center gap-4 rounded-[18px] border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-left shadow-[0_10px_28px_rgba(0,0,0,0.22)] transition duration-200 hover:border-[#e9891d]/45 hover:bg-[#e9891d]/[0.04] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#e9891d] disabled:cursor-wait disabled:opacity-60 sm:px-5"
                   >
-                    <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-                    <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full border border-[#e9891d]/20 bg-gradient-to-br from-[#e9891d]/20 to-[#3d7a99]/10 text-[#f0a33f] shadow-[0_0_30px_rgba(233,137,29,0.08)]">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e9891d]/25 bg-gradient-to-br from-[#e9891d]/20 to-[#3d7a99]/10 text-[#f0a33f] sm:h-12 sm:w-12">
                       <UserRound
-                        size={34}
+                        size={22}
                         strokeWidth={1.7}
                       />
-                    </div>
+                    </span>
 
-                    <span className="mt-5 max-w-full break-words text-lg font-bold">
+                    <span className="min-w-0 flex-1 truncate text-[0.98rem] font-bold text-white/92 sm:text-base">
                       {perfil.nome}
                     </span>
 
-                    <span className="mt-4 flex h-7 items-center justify-center text-xs font-medium text-white/35 transition group-hover:text-[#e9891d]">
-                      {selecionando === perfil.id ? (
-                        "Entrando..."
-                      ) : (
-                        <span className="flex items-center gap-1.5">
-                          Entrar
-                          <ArrowRight size={14} />
-                        </span>
-                      )}
-                    </span>
+                    {selecionando === perfil.id ? (
+                      <span className="shrink-0 text-xs font-medium text-[#e9891d]">
+                        Entrando...
+                      </span>
+                    ) : (
+                      <ArrowRight
+                        size={18}
+                        className="shrink-0 text-white/25 transition group-hover:translate-x-0.5 group-hover:text-[#e9891d]"
+                      />
+                    )}
                   </button>
                 ))}
 
-                {/* Adicionar perfil */}
                 {!legado &&
                   selecionando === null && (
                     <a
                       href="/perfis/novo"
-                      className="group flex min-h-[220px] flex-col items-center justify-center rounded-[26px] border border-dashed border-white/[0.13] bg-white/[0.015] px-4 py-6 text-center transition duration-300 hover:-translate-y-1 hover:border-[#e9891d]/45 hover:bg-[#e9891d]/[0.035]"
+                      className="group flex w-full items-center gap-4 rounded-[18px] border border-dashed border-white/[0.11] bg-white/[0.015] px-4 py-3 text-left transition duration-200 hover:border-[#e9891d]/40 hover:bg-[#e9891d]/[0.03] active:scale-[0.99] sm:px-5"
                     >
-                      <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/40 transition group-hover:border-[#e9891d]/30 group-hover:bg-[#e9891d]/10 group-hover:text-[#e9891d]">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.035] text-white/38 transition group-hover:border-[#e9891d]/35 group-hover:bg-[#e9891d]/10 group-hover:text-[#e9891d] sm:h-12 sm:w-12">
                         <Plus
-                          size={32}
-                          strokeWidth={1.6}
+                          size={23}
+                          strokeWidth={1.7}
                         />
-                      </div>
+                      </span>
 
-                      <span className="mt-5 text-base font-semibold text-white/60 transition group-hover:text-white">
+                      <span className="min-w-0 flex-1 text-[0.98rem] font-semibold text-white/62 transition group-hover:text-white sm:text-base">
                         Adicionar perfil
                       </span>
 
-                      <span className="mt-4 text-xs text-white/25">
-                        Novo jogador
-                      </span>
+                      <ArrowRight
+                        size={18}
+                        className="shrink-0 text-white/20 transition group-hover:translate-x-0.5 group-hover:text-[#e9891d]"
+                      />
                     </a>
                   )}
               </div>
@@ -305,7 +286,7 @@ export default function PerfisPage() {
         </section>
 
         {/* Rodapé */}
-        <footer className="mt-auto flex justify-center pt-12">
+        <footer className="mt-auto flex justify-center pt-6">
           <button
             type="button"
             onClick={() => void sair()}
