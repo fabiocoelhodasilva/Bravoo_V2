@@ -731,7 +731,7 @@ export default function StudentDashboard() {
         <HomeFeatureCard
           title="Minha Jornada"
           href="/meu-dia"
-          prefetch={false}
+          prefetch={true}
           compactMobile
           colorClass="bg-[var(--color-2)] hover:brightness-110"
           joiaCor={

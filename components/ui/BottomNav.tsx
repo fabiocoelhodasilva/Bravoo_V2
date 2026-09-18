@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BookOpen, Clock3, Target } from "lucide-react";
 
 type BottomNavProps = {
@@ -30,7 +29,6 @@ function BackIcon() {
 }
 
 export default function BottomNav({ active }: BottomNavProps) {
-  const router = useRouter();
 
   const itemBase =
     "flex flex-col items-center justify-center gap-[6px] transition-all";
@@ -68,17 +66,17 @@ export default function BottomNav({ active }: BottomNavProps) {
   return (
     <nav className="fixed bottom-4 left-0 z-50 flex w-full justify-center px-4">
       <div className="grid h-[92px] w-full max-w-[620px] grid-cols-4 items-center rounded-[30px] border border-white/10 bg-[#050706]/92 px-4 shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-        <button
-          type="button"
-          onClick={() => router.push("/aluno")}
+        <Link
+          href="/aluno"
+          prefetch={true}
           className="flex flex-col items-center justify-center gap-[6px] text-white/75 transition-all duration-300 hover:scale-110"
           aria-label="Voltar"
         >
           <BackIcon />
           <span className={labelClass}>Voltar</span>
-        </button>
+        </Link>
 
-        <Link href="/objetivos" className={itemBase} aria-label="Objetivos">
+        <Link href="/objetivos" prefetch={true} className={itemBase} aria-label="Objetivos">
           <div
             className={iconCircleClass("objetivos")}
             style={getIconCircleStyle("objetivos")}
@@ -92,7 +90,7 @@ export default function BottomNav({ active }: BottomNavProps) {
           <span className={labelClass}>Objetivos</span>
         </Link>
 
-        <Link href="/livros" className={itemBase} aria-label="Livros">
+        <Link href="/livros" prefetch={true} className={itemBase} aria-label="Livros">
           <div
             className={iconCircleClass("livros")}
             style={getIconCircleStyle("livros")}
@@ -106,7 +104,7 @@ export default function BottomNav({ active }: BottomNavProps) {
           <span className={labelClass}>Livros</span>
         </Link>
 
-        <Link href="/meu-dia" className={itemBase} aria-label="Meu dia">
+        <Link href="/meu-dia" prefetch={true} className={itemBase} aria-label="Meu dia">
           <div
             className={iconCircleClass("meu-dia")}
             style={getIconCircleStyle("meu-dia")}

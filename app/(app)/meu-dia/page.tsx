@@ -1,7 +1,7 @@
 "use client";
 
 import { encerrarSessao } from "@/lib/perfis/perfil-client";
-import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+import { useAuth } from "@/context/AuthContext";
 
 /* =========================================================
    Imports
@@ -229,6 +229,7 @@ function calcularDiasSeguidosParaExibicao(params: {
 
 export default function MeuDiaPage() {
   const router = useRouter();
+  const { perfilAtivo } = useAuth();
 
   const componenteAtivoRef = useRef(true);
   const carregandoMeuDiaRef = useRef(false);
@@ -336,13 +337,9 @@ export default function MeuDiaPage() {
       try {
         setCarregando(true);
 
-        const {
-          data: { perfil },
-          error: erroAuth,
-        } = await buscarPerfilAtivo();
+        const perfil = perfilAtivo;
 
-        if (erroAuth || !perfil) {
-          router.replace("/login");
+        if (!perfil) {
           return;
         }
 
@@ -420,7 +417,7 @@ export default function MeuDiaPage() {
         }
       }
     },
-    [router, carregarTotalTopazios, carregarDiasSeguidosMeuDia, carregarJoiasSemanaMeuDia]
+    [perfilAtivo, carregarTotalTopazios, carregarDiasSeguidosMeuDia, carregarJoiasSemanaMeuDia]
   );
 
   useEffect(() => {
