@@ -1,5 +1,6 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -14,11 +15,11 @@ const CACHE_PREFIX = "bravoo_livros_usuario_";
 
 export default function NovoLivroPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { perfilAtivo, loading } = useAuth();
 
   const handleLogout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await encerrarSessao();
     } catch (error) {
       console.error("Erro ao sair:", error);
     } finally {
@@ -29,7 +30,7 @@ export default function NovoLivroPage() {
 
   const handleSubmit = useCallback(
     async (values: NovoLivroFormValues) => {
-      if (!user?.id) {
+      if (!perfilAtivo?.id) {
         throw new Error("Usuário não autenticado.");
       }
 
@@ -38,7 +39,7 @@ export default function NovoLivroPage() {
         : null;
 
       const { error } = await supabase.from("next_livros_lidos").insert({
-        usuario_id: user.id,
+        usuario_id: perfilAtivo.id,
         titulo: values.titulo,
         autor: values.autor || null,
         total_paginas: totalPaginas,
@@ -52,7 +53,7 @@ export default function NovoLivroPage() {
       }
 
       try {
-        sessionStorage.removeItem(`${CACHE_PREFIX}${user.id}`);
+        sessionStorage.removeItem(`${CACHE_PREFIX}${perfilAtivo.id}`);
       } catch {
         // Evita quebrar o fluxo caso o sessionStorage esteja indisponível.
       }
@@ -60,7 +61,7 @@ export default function NovoLivroPage() {
       router.push("/livros");
       router.refresh();
     },
-    [router, user?.id]
+    [router, perfilAtivo?.id]
   );
 
   if (loading) {
@@ -71,7 +72,7 @@ export default function NovoLivroPage() {
     );
   }
 
-  if (!user) {
+  if (!perfilAtivo) {
     return null;
   }
 

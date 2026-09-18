@@ -18,6 +18,7 @@ import Header from "../ui/Header";
 import HomeFeatureCard from "../ui/HomeFeatureCard";
 import StudentDashboard_Resumo from "../gamification/StudentDashboard_Resumo";
 import { supabase } from "@/lib/supabase/client";
+import { obterPerfilAtivo, buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
 
 /* =========================================================
    Carregamento leve da mandala/resumo
@@ -81,15 +82,6 @@ const DEZ_DIAS_EM_MS =
 /* =========================================================
    Tipos
 ========================================================= */
-
-type DashboardResumo = {
-  primeiro_nome: string | null;
-  tem_joia_meu_dia: boolean;
-  tem_joia_espiritual: boolean;
-  tem_joia_geografia: boolean;
-  tem_joia_matematica: boolean;
-  tem_joia_virtudes: boolean;
-};
 
 type DashboardState = {
   nomeUsuario: string;
@@ -253,7 +245,7 @@ export default function StudentDashboard() {
   } = dashboard;
 
   /* =========================================================
-     Carrega dados mínimos do dashboard via RPC
+     Carrega dados mínimos do perfil ativo
   ========================================================= */
 
   const carregarDashboard = useCallback(async () => {
@@ -264,80 +256,26 @@ export default function StudentDashboard() {
     carregandoDashboardRef.current = true;
 
     try {
-      const { data, error } = await supabase.rpc(
-        "get_student_dashboard_resumo"
-      );
-
-      if (error) {
-        if (
-          process.env.NODE_ENV === "development"
-        ) {
-          console.error(
-            "Erro ao carregar dashboard:",
-            error
-          );
-        }
-
-        return;
-      }
-
-      if (!componenteAtivoRef.current) {
-        return;
-      }
-
-      const resumo = data?.[0] as
-        | DashboardResumo
-        | undefined;
-
-      if (!resumo) {
-        return;
-      }
-
+      // A RPC antiga não recebe perfil: a leitura explícita evita usar o responsável.
+      const perfil = await obterPerfilAtivo();
+      const hojePerfil = obterDataLocalHoje();
+      const { data: joias, error } = await supabase.from("next_joias_usuario")
+        .select("materia_id")
+        .eq("usuario_id", perfil.id)
+        .gte("data_conquista", `${hojePerfil}T00:00:00-03:00`)
+        .lte("data_conquista", `${hojePerfil}T23:59:59.999-03:00`);
+      if (error) throw error;
+      if (!componenteAtivoRef.current) return;
+      const materias = new Set((joias ?? []).map((joia) => joia.materia_id));
       setDashboard({
-        nomeUsuario: resumo.primeiro_nome ?? "",
-
-        temJoiaMeuDiaHoje: Boolean(
-          resumo.tem_joia_meu_dia
-        ),
-
-        temJoiaEspiritualHoje: Boolean(
-          resumo.tem_joia_espiritual
-        ),
-
-        temJoiaGeografiaHoje: Boolean(
-          resumo.tem_joia_geografia
-        ),
-
-        temJoiaMatematicaHoje: Boolean(
-          resumo.tem_joia_matematica
-        ),
-
-        temJoiaVirtudesHoje: Boolean(
-          resumo.tem_joia_virtudes
-        ),
+        nomeUsuario: perfil.nome?.trim().split(/\s+/)[0] ?? "",
+        temJoiaMeuDiaHoje: materias.has(MATERIA_MEU_DIA_ID),
+        temJoiaEspiritualHoje: materias.has(MATERIA_ESPIRITUAL_ID),
+        temJoiaGeografiaHoje: materias.has(MATERIA_GEOGRAFIA_ID),
+        temJoiaMatematicaHoje: materias.has(MATERIA_MATEMATICA_ID),
+        temJoiaVirtudesHoje: materias.has(MATERIA_VIRTUDES_ID),
       });
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        if (
-          process.env.NODE_ENV === "development"
-        ) {
-          console.error(
-            "Erro ao consultar usuário autenticado:",
-            userError
-          );
-        }
-
-        setMostrarPopup(false);
-        return;
-      }
-
-      const contaTemAteDezDias =
-        usuarioTemAteDezDias(user?.created_at);
+      const contaTemAteDezDias = usuarioTemAteDezDias(perfil.criado_em ?? undefined);
 
       if (!contaTemAteDezDias) {
         setMostrarPopup(false);
@@ -347,7 +285,7 @@ export default function StudentDashboard() {
       const hoje = obterDataLocalHoje();
 
       const chavePopup =
-        "student_dashboard_popup_mandala_data";
+        `student_dashboard_popup_mandala_data:${perfil.id}`;
 
       const ultimaDataPopup =
         localStorage.getItem(chavePopup);
@@ -358,6 +296,8 @@ export default function StudentDashboard() {
       } else {
         setMostrarPopup(false);
       }
+    } catch (error) {
+      console.error("Erro ao carregar dashboard do perfil:", error);
     } finally {
       carregandoDashboardRef.current = false;
     }
@@ -429,11 +369,11 @@ export default function StudentDashboard() {
     async function carregarMandalasSemana() {
       try {
         const {
-          data: { user },
+          data: { perfil },
           error: erroUsuario,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
-        if (erroUsuario || !user) {
+        if (erroUsuario || !perfil) {
           if (!cancelado) {
             setMandalasSemana({});
           }
@@ -450,7 +390,7 @@ export default function StudentDashboard() {
         const { data, error } = await supabase
           .from("next_joias_usuario")
           .select("materia_id, data_conquista")
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", perfil.id)
           .in(
             "materia_id",
             [...MATERIAS_MANDALA]

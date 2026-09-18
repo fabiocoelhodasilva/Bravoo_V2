@@ -62,7 +62,7 @@ function salvarObjetivosNoCache(userId: string, objetivos: Objetivo[]) {
 
 export default function ObjetivosPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { perfilAtivo, loading } = useAuth();
 
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
   const [loadingMessage, setLoadingMessage] = useState("Carregando objetivos...");
@@ -83,7 +83,7 @@ export default function ObjetivosPage() {
   ========================================================= */
 
   const reloadObjetivos = useCallback(async () => {
-    const userId = user?.id;
+    const userId = perfilAtivo?.id;
     if (!userId) return;
 
     const objetivosCache = carregarObjetivosDoCache(userId);
@@ -111,13 +111,13 @@ export default function ObjetivosPage() {
         setLoadingMessage("Erro ao carregar.");
       }
     }
-  }, [user?.id]);
+  }, [perfilAtivo?.id]);
 
   useEffect(() => {
-    if (loading || !user?.id) return;
+    if (loading || !perfilAtivo?.id) return;
 
     void reloadObjetivos();
-  }, [loading, user?.id, reloadObjetivos]);
+  }, [loading, perfilAtivo?.id, reloadObjetivos]);
 
   /* =========================================================
      Limpa mensagens temporárias
@@ -155,7 +155,7 @@ export default function ObjetivosPage() {
   const handleSaveProgress = useCallback(
     async (objetivoId: string, progresso: number) => {
       const safeProgress = clampProgress(progresso);
-      const userId = user?.id;
+      const userId = perfilAtivo?.id;
 
       let progressoAnterior = 0;
       let objetivosAtualizados: Objetivo[] = [];
@@ -221,7 +221,7 @@ export default function ObjetivosPage() {
         setSavingIds((prev) => prev.filter((id) => id !== objetivoId));
       }
     },
-    [user?.id]
+    [perfilAtivo?.id]
   );
 
   /* =========================================================
@@ -240,7 +240,7 @@ export default function ObjetivosPage() {
 
   const confirmDelete = useCallback(async () => {
     const objetivoId = objetivoParaExcluir;
-    const userId = user?.id;
+    const userId = perfilAtivo?.id;
 
     if (!objetivoId) return;
 
@@ -281,7 +281,7 @@ export default function ObjetivosPage() {
       setDeletingIds((prev) => prev.filter((id) => id !== objetivoId));
       closeDeleteModal();
     }
-  }, [objetivoParaExcluir, user?.id, closeDeleteModal]);
+  }, [objetivoParaExcluir, perfilAtivo?.id, closeDeleteModal]);
 
   /* =========================================================
      Estado de carregamento inicial
@@ -295,7 +295,7 @@ export default function ObjetivosPage() {
     );
   }
 
-  if (!user) {
+  if (!perfilAtivo) {
     return null;
   }
 

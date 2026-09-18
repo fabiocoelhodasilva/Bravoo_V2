@@ -11,6 +11,7 @@ export default function CadastroPage() {
   async function handleCadastro(values: {
     nome: string;
     email: string;
+    telefone: string;
     senha: string;
   }) {
     await cadastrarUsuario(values);
@@ -39,7 +40,7 @@ export default function CadastroPage() {
           onClick={() => router.push("/login")}
           className="block mx-auto mt-6 text-[#e9891d] text-[0.95rem] font-semibold bg-transparent border-none cursor-pointer"
         >
-          Voltar 
+          Voltar
         </button>
       </div>
     </main>

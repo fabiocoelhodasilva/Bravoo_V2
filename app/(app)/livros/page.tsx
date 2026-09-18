@@ -4,6 +4,7 @@
    Imports
 ========================================================= */
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -99,7 +100,7 @@ function formatarData(dataIso: string | null) {
 
 export default function LivrosPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { perfilAtivo, loading } = useAuth();
 
   const [livros, setLivros] = useState<LivroLido[]>([]);
   const [loadingMessage, setLoadingMessage] = useState("Carregando livros...");
@@ -116,7 +117,7 @@ export default function LivrosPage() {
   ========================================================= */
 
   const carregarLivros = useCallback(async () => {
-    const userId = user?.id;
+    const userId = perfilAtivo?.id;
     if (!userId) return;
 
     const livrosCache = carregarLivrosDoCache(userId);
@@ -160,13 +161,13 @@ export default function LivrosPage() {
         setLoadingMessage("Não foi possível carregar seus livros.");
       }
     }
-  }, [user?.id]);
+  }, [perfilAtivo?.id]);
 
   useEffect(() => {
-    if (loading || !user?.id) return;
+    if (loading || !perfilAtivo?.id) return;
 
     void carregarLivros();
-  }, [loading, user?.id, carregarLivros]);
+  }, [loading, perfilAtivo?.id, carregarLivros]);
 
   /* =========================================================
      Limpa mensagens temporárias
@@ -188,7 +189,7 @@ export default function LivrosPage() {
 
   const handleLogout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await encerrarSessao();
     } catch (error) {
       console.error("Erro ao sair:", error);
     } finally {
@@ -213,7 +214,7 @@ export default function LivrosPage() {
 
   const confirmDelete = useCallback(async () => {
     const livroId = livroParaExcluir;
-    const userId = user?.id;
+    const userId = perfilAtivo?.id;
 
     if (!livroId || !userId) return;
 
@@ -256,7 +257,7 @@ export default function LivrosPage() {
       setDeletingIds((prev) => prev.filter((id) => id !== livroId));
       closeDeleteModal();
     }
-  }, [closeDeleteModal, livroParaExcluir, user?.id]);
+  }, [closeDeleteModal, livroParaExcluir, perfilAtivo?.id]);
 
   /* =========================================================
      Agrupamento dos livros por ano
@@ -310,7 +311,7 @@ export default function LivrosPage() {
     );
   }
 
-  if (!user) {
+  if (!perfilAtivo) {
     return null;
   }
 

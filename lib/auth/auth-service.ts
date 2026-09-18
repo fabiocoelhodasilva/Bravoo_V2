@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase/client";
 export async function cadastrarUsuario(params: {
   nome: string;
   email: string;
+  telefone: string;
   senha: string;
 }) {
   const { data, error } = await supabase.auth.signUp({
@@ -11,6 +12,7 @@ export async function cadastrarUsuario(params: {
     options: {
       data: {
         nome: params.nome,
+        telefone: params.telefone,
       },
     },
   });

@@ -6,6 +6,7 @@ type Props = {
   onSubmit: (values: {
     nome: string;
     email: string;
+    telefone: string;
     senha: string;
   }) => Promise<void>;
 };
@@ -13,9 +14,11 @@ type Props = {
 export function CadastroForm({ onSubmit }: Props) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [saving, setSaving] = useState(false);
+
   const [mensagem, setMensagem] = useState<{
     tipo: "erro" | "sucesso";
     texto: string;
@@ -25,12 +28,31 @@ export function CadastroForm({ onSubmit }: Props) {
     e.preventDefault();
 
     if (!nome.trim()) {
-      setMensagem({ tipo: "erro", texto: "Informe seu nome." });
+      setMensagem({
+        tipo: "erro",
+        texto: "Informe seu nome.",
+      });
       return;
     }
 
     if (!email.trim()) {
-      setMensagem({ tipo: "erro", texto: "Informe seu e-mail." });
+      setMensagem({
+        tipo: "erro",
+        texto: "Informe seu e-mail.",
+      });
+      return;
+    }
+
+    const telefoneNumeros = telefone.replace(/\D/g, "");
+
+    if (
+      telefoneNumeros.length < 10 ||
+      telefoneNumeros.length > 11
+    ) {
+      setMensagem({
+        tipo: "erro",
+        texto: "Informe um telefone válido com DDD.",
+      });
       return;
     }
 
@@ -52,16 +74,22 @@ export function CadastroForm({ onSubmit }: Props) {
 
     try {
       setSaving(true);
-      setMensagem({ tipo: "sucesso", texto: "Criando conta..." });
+
+      setMensagem({
+        tipo: "sucesso",
+        texto: "Criando conta...",
+      });
 
       await onSubmit({
         nome: nome.trim(),
         email: email.trim(),
+        telefone: telefoneNumeros,
         senha,
       });
     } catch (error: any) {
       const texto =
-        error?.message || "Não foi possível concluir o cadastro.";
+        error?.message ||
+        "Não foi possível concluir o cadastro.";
 
       setMensagem({
         tipo: "erro",
@@ -75,51 +103,96 @@ export function CadastroForm({ onSubmit }: Props) {
   return (
     <section
       className="bg-[#111] border border-[#333] rounded-[20px] p-5"
-      style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.28)" }}
+      style={{
+        boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+      }}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-4"
+      >
+        {/* Nome */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="nome" className="text-[0.92rem] text-[#ddd]">
+          <label
+            htmlFor="nome"
+            className="text-[0.92rem] text-[#ddd]"
+          >
             Nome
           </label>
+
           <input
             id="nome"
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Seu nome"
+            autoComplete="name"
             className="w-full px-3 py-3 rounded-[12px] border border-[#444] bg-black text-white text-[0.95rem] outline-none"
           />
         </div>
 
+        {/* E-mail */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-[0.92rem] text-[#ddd]">
+          <label
+            htmlFor="email"
+            className="text-[0.92rem] text-[#ddd]"
+          >
             E-mail
           </label>
+
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seuemail@email.com"
+            autoComplete="email"
             className="w-full px-3 py-3 rounded-[12px] border border-[#444] bg-black text-white text-[0.95rem] outline-none"
           />
         </div>
 
+        {/* Telefone */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="senha" className="text-[0.92rem] text-[#ddd]">
+          <label
+            htmlFor="telefone"
+            className="text-[0.92rem] text-[#ddd]"
+          >
+            Telefone do responsável
+          </label>
+
+          <input
+            id="telefone"
+            type="tel"
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            placeholder="(61) 99999-9999"
+            autoComplete="tel"
+            inputMode="tel"
+            className="w-full px-3 py-3 rounded-[12px] border border-[#444] bg-black text-white text-[0.95rem] outline-none"
+          />
+        </div>
+
+        {/* Senha */}
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="senha"
+            className="text-[0.92rem] text-[#ddd]"
+          >
             Senha
           </label>
+
           <input
             id="senha"
             type="password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             placeholder="Mínimo 6 caracteres"
+            autoComplete="new-password"
             className="w-full px-3 py-3 rounded-[12px] border border-[#444] bg-black text-white text-[0.95rem] outline-none"
           />
         </div>
 
+        {/* Confirmar senha */}
         <div className="flex flex-col gap-2">
           <label
             htmlFor="confirmarSenha"
@@ -127,27 +200,36 @@ export function CadastroForm({ onSubmit }: Props) {
           >
             Confirmar senha
           </label>
+
           <input
             id="confirmarSenha"
             type="password"
             value={confirmarSenha}
-            onChange={(e) => setConfirmarSenha(e.target.value)}
+            onChange={(e) =>
+              setConfirmarSenha(e.target.value)
+            }
             placeholder="Digite a senha novamente"
+            autoComplete="new-password"
             className="w-full px-3 py-3 rounded-[12px] border border-[#444] bg-black text-white text-[0.95rem] outline-none"
           />
         </div>
 
+        {/* Mensagem */}
         {mensagem && (
           <div
             className="text-[0.88rem] font-medium"
             style={{
-              color: mensagem.tipo === "erro" ? "#ff7c7c" : "#5dc6a1",
+              color:
+                mensagem.tipo === "erro"
+                  ? "#ff7c7c"
+                  : "#5dc6a1",
             }}
           >
             {mensagem.texto}
           </div>
         )}
 
+        {/* Botão */}
         <button
           type="submit"
           disabled={saving}

@@ -1,5 +1,6 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -154,7 +155,7 @@ export default function TeacherDashboard() {
 
   async function handleLogout() {
     try {
-      await supabase.auth.signOut();
+      await encerrarSessao();
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     } finally {

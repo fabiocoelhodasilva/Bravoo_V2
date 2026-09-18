@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  alterarMetaOracao,
   registrarMomentoOracao,
 } from "@/lib/gamificacao/oracao/oracao-actions";
 import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
@@ -27,7 +26,6 @@ type OracaoDashboardPanelProps = {
 };
 
 const META_PADRAO_ORACAO = 5;
-const OPCOES_META_ORACAO = [5, 10, 15];
 const EVENTO_JOIA_CONQUISTADA = "bravoo:joia-conquistada";
 const IMAGEM_JOIA_ESPIRITUAL = "/imagens/joias/joia_red.png";
 
@@ -59,9 +57,7 @@ export default function OracaoDashboardPanel({
   );
   const carregando = dadosIniciaisCarregando || !dadosIniciais || erroCarregamento;
   const [salvando, setSalvando] = useState(false);
-  const [salvandoMeta, setSalvandoMeta] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
-  const [modalMetaAberto, setModalMetaAberto] = useState(false);
   const [modalJoiaConquistadaAberto, setModalJoiaConquistadaAberto] =
     useState(false);
   const [modalMandalaConquistadaAberto, setModalMandalaConquistadaAberto] =
@@ -69,11 +65,8 @@ export default function OracaoDashboardPanel({
   const [mandalaConquistadaPendente, setMandalaConquistadaPendente] =
     useState(false);
   const [mensagem, setMensagem] = useState("");
-  const [mostrarOutroValorMeta, setMostrarOutroValorMeta] = useState(false);
-  const [metaPersonalizadaInput, setMetaPersonalizadaInput] = useState("");
 
   const montadoRef = useRef(true);
-  const inputMetaPersonalizadaRef = useRef<HTMLInputElement>(null);
 
   const metaSegura = Math.max(1, metaDiaria || META_PADRAO_ORACAO);
   const progresso = Math.min(
@@ -81,84 +74,6 @@ export default function OracaoDashboardPanel({
     Math.round((minutosHoje / metaSegura) * 100)
   );
 
-
-  async function salvarMetaOracao(novaMeta: number) {
-    if (salvandoMeta) return;
-
-    if (!Number.isFinite(novaMeta) || novaMeta < 1 || novaMeta > 180) {
-      alert("Digite uma meta entre 1 e 180 minutos.");
-      return;
-    }
-
-    try {
-      setSalvandoMeta(true);
-
-      // Usa a action central porque ela também sincroniza a joia espiritual
-      // e a Mandala caso a nova meta altere o resultado do dia atual.
-      const resultado = await alterarMetaOracao(novaMeta);
-
-      // Atualiza também se o usuário trocou de painel durante a gravação.
-      void atualizarJardimAposConquista();
-
-      if (!montadoRef.current) return;
-
-      const metaConfirmada = Number(resultado.metaDiaria ?? novaMeta);
-      const minutosHojeConfirmados = Number(resultado.minutosHoje ?? minutosHoje);
-
-      setMetaDiaria(metaConfirmada);
-      setMinutosHoje(minutosHojeConfirmados);
-
-      onResumoAtualizado?.({
-        minutosHoje: minutosHojeConfirmados,
-        minutosAno,
-        metaDiaria: metaConfirmada,
-        persistenciaDias,
-      });
-
-      setModalMetaAberto(false);
-      setMostrarOutroValorMeta(false);
-      setMetaPersonalizadaInput("");
-
-      const joiaConquistadaAgora = resultado.joiaConquistada === true;
-      const mandalaConquistadaAgora = resultado.mandalaConquistada === true;
-      mostrarConquista(joiaConquistadaAgora, mandalaConquistadaAgora);
-
-      if (joiaConquistadaAgora || mandalaConquistadaAgora) return;
-
-      setMensagem(`Meta diária atualizada para ${metaConfirmada} minutos.`);
-
-      setTimeout(() => {
-        if (montadoRef.current) setMensagem("");
-      }, 2500);
-    } catch (error) {
-      console.error("Erro ao salvar meta de oração:", error);
-      alert("Não foi possível alterar a meta agora.");
-    } finally {
-      setSalvandoMeta(false);
-    }
-  }
-
-  function abrirOutroValorMeta() {
-    setMostrarOutroValorMeta(true);
-    setMetaPersonalizadaInput(String(metaDiaria));
-
-    setTimeout(() => {
-      inputMetaPersonalizadaRef.current?.focus();
-      inputMetaPersonalizadaRef.current?.select();
-    }, 80);
-  }
-
-  function handleMetaPersonalizadaChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const apenasNumeros = event.target.value.replace(/\D/g, "");
-    setMetaPersonalizadaInput(apenasNumeros);
-  }
-
-  async function salvarMetaPersonalizada() {
-    const novaMeta = Number(metaPersonalizadaInput);
-    await salvarMetaOracao(novaMeta);
-  }
 
   // O pai carrega e atualiza o resumo; abrir este painel não repete consultas.
   useEffect(() => {
@@ -272,14 +187,7 @@ export default function OracaoDashboardPanel({
               Meta de oração do dia
             </div>
 
-            <button
-              type="button"
-              onClick={() => setModalMetaAberto(true)}
-              disabled={carregando || salvandoMeta}
-              className="shrink-0 rounded-full border border-[#f1d27a]/30 bg-black/10 px-3 py-1 text-[10px] font-bold text-[#f1d27a] transition hover:bg-[#f1d27a]/10 disabled:cursor-wait disabled:opacity-50"
-            >
-              ⚙ Alterar meta
-            </button>
+            <span className="text-[10px] text-white/60">Meta definida pelo responsável</span>
           </div>
 
           {/* Ícone um pouco mais baixo; o título começa alinhado à esquerda dele */}
@@ -427,112 +335,6 @@ export default function OracaoDashboardPanel({
               "
             >
               Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para alterar a meta diária */}
-      {modalMetaAberto && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 px-4 backdrop-blur-[2px]">
-          <div className="w-full max-w-[340px] rounded-3xl border border-white/15 bg-[#151712]/90 p-6 text-center text-white shadow-2xl backdrop-blur-xl">
-            <div className="mb-2 text-5xl">🎯</div>
-
-            <h3 className="text-lg font-bold">Alterar meta</h3>
-
-            <p className="mb-4 text-sm text-white/60">
-              Escolha sua meta diária de oração.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              {OPCOES_META_ORACAO.map((meta) => {
-                const metaSelecionada =
-                  meta === metaDiaria && !mostrarOutroValorMeta;
-
-                return (
-                  <button
-                    key={meta}
-                    type="button"
-                    onClick={() => void salvarMetaOracao(meta)}
-                    disabled={salvandoMeta}
-                    className={`rounded-xl p-4 transition disabled:cursor-wait disabled:opacity-50 ${
-                      metaSelecionada
-                        ? "bg-[#5dc6a1] text-white"
-                        : "bg-[#5dc6a1]/10 text-[#5dc6a1] hover:bg-[#5dc6a1]/20"
-                    }`}
-                  >
-                    <div className="text-xl font-black">{meta}</div>
-                    <div
-                      className={`text-xs ${
-                        metaSelecionada ? "text-white/80" : "text-white/60"
-                      }`}
-                    >
-                      min por dia
-                    </div>
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={abrirOutroValorMeta}
-                disabled={salvandoMeta}
-                className={`rounded-xl p-4 transition disabled:cursor-wait disabled:opacity-50 ${
-                  mostrarOutroValorMeta
-                    ? "bg-[#5dc6a1] text-white"
-                    : "bg-[#5dc6a1]/10 text-[#5dc6a1] hover:bg-[#5dc6a1]/20"
-                }`}
-              >
-                <div className="text-xl font-black">Outros</div>
-                <div
-                  className={`text-xs ${
-                    mostrarOutroValorMeta ? "text-white/80" : "text-white/60"
-                  }`}
-                >
-                  digitar meta
-                </div>
-              </button>
-            </div>
-
-            {mostrarOutroValorMeta && (
-              <div className="mt-4 rounded-2xl border border-[#5dc6a1]/25 bg-black/20 p-3 text-left">
-                <label className="mb-2 block text-xs font-bold text-white/60">
-                  Digite a meta em minutos
-                </label>
-
-                <input
-                  ref={inputMetaPersonalizadaRef}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={metaPersonalizadaInput}
-                  onChange={handleMetaPersonalizadaChange}
-                  placeholder="Ex.: 25"
-                  className="w-full rounded-xl border border-white/10 bg-[#101514] px-4 py-3 text-center text-xl font-black text-white outline-none focus:border-[#5dc6a1]"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => void salvarMetaPersonalizada()}
-                  disabled={salvandoMeta || !metaPersonalizadaInput}
-                  className="mt-3 w-full rounded-xl bg-[#5dc6a1] py-3 text-sm font-black text-white disabled:cursor-wait disabled:opacity-50"
-                >
-                  {salvandoMeta ? "Salvando..." : "Salvar Meta"}
-                </button>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                setModalMetaAberto(false);
-                setMostrarOutroValorMeta(false);
-                setMetaPersonalizadaInput("");
-              }}
-              disabled={salvandoMeta}
-              className="mt-4 w-full rounded-xl bg-white/10 py-2 text-sm font-semibold"
-            >
-              {salvandoMeta ? "Salvando..." : "Cancelar"}
             </button>
           </div>
         </div>

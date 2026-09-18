@@ -1,5 +1,7 @@
 "use client";
 
+import { obterPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -239,16 +241,9 @@ export default function VirtudesResumoDashboard() {
             setCarregandoDashboard(true);
           }
 
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
+          const perfil = await obterPerfilAtivo();
 
-          if (sessionError) {
-            throw sessionError;
-          }
-
-          if (!session?.user) {
+          if (!perfil) {
             aplicarDadosDashboard({
               diasSeguidos: 0,
               totalJoias: 0,
@@ -257,7 +252,7 @@ export default function VirtudesResumoDashboard() {
             return;
           }
 
-          const usuarioId = session.user.id;
+          const usuarioId = perfil.id;
 
           const [sequenciaResult, joiasResult] =
             await Promise.all([

@@ -1,3 +1,4 @@
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { supabase } from "@/lib/supabase/client";
 import type { Objetivo, ObjetivoCategoria } from "@/types/objetivos";
 
@@ -130,7 +131,7 @@ export async function deleteObjetivo(params: {
 }
 
 export async function signOutObjetivos() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await encerrarSessao();
   if (error) throw error;
 }
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -103,11 +106,11 @@ export default function GeografiaMenu() {
     async function carregarJoiasGeografia() {
       try {
         const {
-          data: { user },
+          data: { perfil },
           error,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
-        if (error || !user) {
+        if (error || !perfil) {
           if (!cancelado) {
             setJoiasSemana({});
           }
@@ -117,7 +120,7 @@ export default function GeografiaMenu() {
 
         const resultado = await carregarJoiasSemana({
           supabase,
-          usuarioId: user.id,
+          usuarioId: perfil.id,
           materiaId: MATERIA_GEOGRAFIA_ID,
           dataInicio: formatIsoDateLocal(inicioSemana),
           dataFim: formatIsoDateLocal(fimSemana),
@@ -158,7 +161,7 @@ export default function GeografiaMenu() {
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);

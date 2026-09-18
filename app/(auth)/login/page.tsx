@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import BrandLogo from "@/components/ui/BrandLogo";
+import { limparPerfilAtivo } from "@/lib/perfis/perfil-client";
 
 /* =========================================================
    Configurações do bloqueio visual de tentativas
@@ -53,7 +53,6 @@ function traduzirErroLogin(message?: string) {
 ========================================================= */
 
 export default function LoginPage() {
-  const router = useRouter();
 
   /* -----------------------------
      Estados do formulário
@@ -145,6 +144,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      await limparPerfilAtivo();
       const { error } = await supabase.auth.signInWithPassword({
         email: em,
         password: pw,
@@ -176,8 +176,7 @@ export default function LoginPage() {
       setMensagem("Login realizado com sucesso! Redirecionando…");
 
       setTimeout(() => {
-        router.replace("/aluno");
-        router.refresh();
+        window.location.replace("/");
       }, 800);
     } catch (e) {
       if (process.env.NODE_ENV === "development") {

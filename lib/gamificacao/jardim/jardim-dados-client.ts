@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { obterPerfilAtivoId } from "@/lib/perfis/perfil-client";
 import { buscarResumoDashboardOracao } from "@/lib/gamificacao/oracao/oracao-dashboard-client";
 import { buscarPontuacaoJardim } from "./jardim-pontuacao-actions";
 
@@ -22,10 +23,7 @@ export function criarCarregadorJardim() {
 
   function usuario() {
     if (!usuarioPendente) {
-      usuarioPendente = supabase.auth.getUser().then(({ data, error }) => {
-        if (error || !data.user) throw error ?? new Error("Usuário não identificado.");
-        return data.user.id;
-      }).catch((error) => {
+      usuarioPendente = obterPerfilAtivoId().catch((error) => {
         usuarioPendente = undefined;
         throw error;
       });

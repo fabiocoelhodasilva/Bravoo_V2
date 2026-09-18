@@ -9,7 +9,7 @@ import {
   concederJoiaMateria,
   removerJoiaMateriaDaData,
 } from "@/lib/gamificacao/geral/joia-actions";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePerfil } from "@/lib/perfis/perfil-server";
 
 /* =========================================================
    Constantes
@@ -65,20 +65,7 @@ function calcularMinimoTarefasParaJoia(
 export async function sincronizarJoiaMeuDiaPorConclusao(
   dataReferencia: string
 ): Promise<ResultadoSincronizacaoJoiaMeuDia> {
-  const supabase = await getSupabaseServerClient();
-
-  /* =======================================================
-     Autenticação
-  ======================================================= */
-
-  const {
-    data: { user },
-    error: erroAuth,
-  } = await supabase.auth.getUser();
-
-  if (erroAuth || !user) {
-    throw erroAuth ?? new Error("Usuário não autenticado.");
-  }
+  const { supabase, perfilId } = await requirePerfil();
 
   /* =======================================================
      Busca das tarefas do dia
@@ -87,7 +74,7 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
   const { data, error } = await supabase.rpc(
     "fn_next_meu_dia_status",
     {
-      p_usuario_id: user.id,
+      p_usuario_id: perfilId,
       p_data: dataReferencia,
     }
   );
@@ -138,7 +125,7 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
     try {
       joiaRemovida = await removerJoiaMateriaDaData({
         supabase,
-        usuarioId: user.id,
+        usuarioId: perfilId,
         materiaId: MATERIA_MEU_DIA_ID,
         dataReferencia,
       });
@@ -171,7 +158,7 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
     const resultadoRecompensa =
       await concederJoiaMateria({
         supabase,
-        usuarioId: user.id,
+        usuarioId: perfilId,
         materiaId: MATERIA_MEU_DIA_ID,
       });
 
@@ -204,7 +191,7 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
     try {
       const { data: mandala, error: erroMandala } = await supabase.rpc(
         "fn_sincronizar_mandala_diaria",
-        { p_usuario_id: user.id }
+        { p_usuario_id: perfilId }
       );
       if (erroMandala) throw erroMandala;
       const linha = Array.isArray(mandala) ? mandala[0] : mandala;
@@ -225,7 +212,7 @@ export async function sincronizarJoiaMeuDiaPorConclusao(
   try {
     await processarGamificacaoAposAtividade({
       supabase,
-      usuarioId: user.id,
+      usuarioId: perfilId,
       materiaId: MATERIA_MEU_DIA_ID,
       atividadeId: null,
       sessaoAtividadeId: null,

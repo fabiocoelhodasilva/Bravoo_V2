@@ -1,5 +1,8 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -14,7 +17,6 @@ import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import { tabuadaAtingiuPercentualMinimo } from "@/lib/gamificacao/matematica/tabuada-rules";
 import {
-  alterarMetaTabuada,
   buscarMetaTabuada,
   META_TABUADA_PADRAO,
 } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
@@ -142,14 +144,6 @@ export default function MultiplicacaoPageView() {
   const [tabuadasMetaHoje, setTabuadasMetaHoje] = useState<number[]>([
     ...META_TABUADA_PADRAO,
   ]);
-  const [metaTabuadaConfigurada, setMetaTabuadaConfigurada] = useState(false);
-  const [modalMetaAberto, setModalMetaAberto] = useState(false);
-  const [tabuadasMetaEdicao, setTabuadasMetaEdicao] = useState<number[]>([
-    ...META_TABUADA_PADRAO,
-  ]);
-  const [salvandoMeta, setSalvandoMeta] = useState(false);
-  const [mensagemMeta, setMensagemMeta] = useState("");
-
   const [processandoRodada, setProcessandoRodada] = useState(false);
   const [resultadoAquecimento, setResultadoAquecimento] =
     useState<ResultadoAquecimento | null>(null);
@@ -305,8 +299,8 @@ export default function MultiplicacaoPageView() {
   ========================================================= */
 
   async function inicializarPagina() {
-    const { data } = await supabase.auth.getUser();
-    const idUsuario = data.user?.id ?? null;
+    const { data } = await buscarPerfilAtivo();
+    const idUsuario = data.perfil?.id ?? null;
 
     setUsuarioId(idUsuario);
     inicioRodadaRef.current = Date.now();
@@ -328,8 +322,6 @@ export default function MultiplicacaoPageView() {
           : [...META_TABUADA_PADRAO];
 
       setTabuadasMetaHoje(tabuadasMeta);
-      setTabuadasMetaEdicao(tabuadasMeta);
-      setMetaTabuadaConfigurada(metaAtual.configurada);
 
       const primeiraPendente = tabuadasMeta.find(
         (numero) => !statusHoje.concluidas.includes(numero)
@@ -435,80 +427,6 @@ export default function MultiplicacaoPageView() {
         tentadas: [] as number[],
         concluidas: [] as number[],
       };
-    }
-  }
-
-  /* =========================================================
-     Meta diária da Tabuada
-  ========================================================= */
-
-  function abrirModalMeta() {
-    setTabuadasMetaEdicao([...tabuadasMetaHoje]);
-    setMensagemMeta("");
-    setModalMetaAberto(true);
-  }
-
-  function alternarTabuadaNaMeta(numero: number) {
-    setTabuadasMetaEdicao((atuais) => {
-      if (atuais.includes(numero)) {
-        return atuais.filter((item) => item !== numero);
-      }
-
-      return [...atuais, numero].sort((a, b) => a - b);
-    });
-  }
-
-  async function salvarMetaTabuada() {
-    if (!usuarioId || salvandoMeta) return;
-
-    if (tabuadasMetaEdicao.length === 0) {
-      setMensagemMeta("Selecione pelo menos uma tabuada.");
-      return;
-    }
-
-    try {
-      setSalvandoMeta(true);
-      setMensagemMeta("");
-
-      const resultado = await alterarMetaTabuada({
-        supabase,
-        usuarioId,
-        tabuadas: tabuadasMetaEdicao,
-      });
-
-      const novasTabuadas =
-        resultado.tabuadasMeta.length > 0
-          ? resultado.tabuadasMeta
-          : [...tabuadasMetaEdicao].sort((a, b) => a - b);
-
-      setTabuadasMetaHoje(novasTabuadas);
-      setTabuadasMetaEdicao(novasTabuadas);
-      setMetaTabuadaConfigurada(true);
-      setTabuadasConcluidasHoje(resultado.tabuadasValidas);
-
-      const statusAtualizado = await buscarStatusTabuadasHoje(usuarioId);
-
-      const primeiraPendente = novasTabuadas.find(
-        (numero) => !statusAtualizado.concluidas.includes(numero)
-      );
-
-      const tabuadaDestino = primeiraPendente ?? novasTabuadas[0] ?? 2;
-
-      if (!novasTabuadas.includes(tabuadaSelecionada)) {
-        trocarTabuada(tabuadaDestino);
-      }
-
-      setModalMetaAberto(false);
-      setMensagemMeta("Meta atualizada.");
-
-      window.setTimeout(() => {
-        setMensagemMeta("");
-      }, 2200);
-    } catch (error) {
-      console.error("Erro ao salvar meta da Tabuada:", error);
-      setMensagemMeta("Não foi possível salvar a meta agora.");
-    } finally {
-      setSalvandoMeta(false);
     }
   }
 
@@ -1075,7 +993,7 @@ export default function MultiplicacaoPageView() {
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);
@@ -1095,75 +1013,6 @@ export default function MultiplicacaoPageView() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       <HeaderInterno onLogout={handleLogout} />
-
-      {modalMetaAberto && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-[340px] rounded-[28px] border border-white/10 bg-[#111111] px-5 py-5 shadow-[0_0_40px_rgba(0,0,0,0.55)]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f1e6a7]">
-                  Minha meta de hoje
-                </p>
-                <h2 className="mt-1 text-xl font-extrabold text-white">
-                  Escolha as tabuadas
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setModalMetaAberto(false)}
-                disabled={salvandoMeta}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-base font-bold text-white/80 transition hover:bg-white/15 disabled:opacity-50"
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </div>
-
-            <p className="mt-3 text-xs font-bold leading-relaxed text-white/50">
-              Selecione somente as tabuadas que fazem parte da meta diária.
-            </p>
-
-            <div className="mt-4 grid grid-cols-4 gap-2">
-              {TABUADAS.map((numero) => {
-                const marcada = tabuadasMetaEdicao.includes(numero);
-
-                return (
-                  <button
-                    key={numero}
-                    type="button"
-                    onClick={() => alternarTabuadaNaMeta(numero)}
-                    disabled={salvandoMeta}
-                    className={[
-                      "h-[48px] rounded-[12px] border text-sm font-extrabold transition active:scale-[0.97] disabled:opacity-50",
-                      marcada
-                        ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.20)] text-[var(--color-4)]"
-                        : "border-white/15 bg-white/[0.04] text-white/65",
-                    ].join(" ")}
-                  >
-                    {numero}x
-                  </button>
-                );
-              })}
-            </div>
-
-            {mensagemMeta && (
-              <p className="mt-3 text-center text-xs font-bold text-[var(--color-1)]">
-                {mensagemMeta}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={salvarMetaTabuada}
-              disabled={salvandoMeta || tabuadasMetaEdicao.length === 0}
-              className="mt-5 w-full rounded-full bg-[var(--color-4)] px-5 py-3 text-sm font-extrabold text-black transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {salvandoMeta ? "Salvando..." : "Salvar meta"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {resultadoAquecimento && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
@@ -1248,14 +1097,7 @@ export default function MultiplicacaoPageView() {
               Meta de Hoje
             </p>
 
-            <button
-              type="button"
-              onClick={abrirModalMeta}
-              disabled={!usuarioId || salvandoMeta}
-              className="shrink-0 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5 text-[11px] font-extrabold text-white/75 transition hover:bg-white/[0.09] active:scale-[0.98] disabled:opacity-50"
-            >
-              Alterar Meta
-            </button>
+            <span className="text-[11px] text-white/50">Meta definida pelo responsável</span>
           </div>
 
           <div className="mt-3 grid grid-cols-8 gap-1.5">
@@ -1287,11 +1129,7 @@ export default function MultiplicacaoPageView() {
             })}
           </div>
 
-          {mensagemMeta && !modalMetaAberto && (
-            <p className="mt-3 text-center text-[11px] font-bold text-white/55">
-              {mensagemMeta}
-            </p>
-          )}
+
         </section>
 
         <section className="w-full rounded-[28px] border border-white/10 bg-[#111111] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:p-4">

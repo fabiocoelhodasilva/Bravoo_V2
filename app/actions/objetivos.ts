@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePerfil } from "@/lib/perfis/perfil-server";
 
 type ActionResult =
   | { ok: true }
@@ -32,16 +32,7 @@ export async function createObjetivoAction(params: {
   dataPrevistaConclusao: string | null;
 }): Promise<ActionResult> {
   try {
-    const supabase = await getSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { ok: false, message: "Usuário não autenticado." };
-    }
+    const { supabase, perfilId } = await requirePerfil();
 
     const tituloNormalizado = params.titulo?.trim();
 
@@ -54,7 +45,7 @@ export async function createObjetivoAction(params: {
     }
 
     const payload = {
-      usuario_id: user.id,
+      usuario_id: perfilId,
       categoria_id: params.categoriaId,
       titulo: tituloNormalizado,
       data_inicio: hojeISO(),
@@ -87,16 +78,7 @@ export async function updateObjetivoProgressAction(params: {
   progresso: number;
 }): Promise<ActionResult> {
   try {
-    const supabase = await getSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { ok: false, message: "Usuário não autenticado." };
-    }
+    const { supabase, perfilId } = await requirePerfil();
 
     if (!params.objetivoId?.trim()) {
       return { ok: false, message: "Objetivo inválido." };
@@ -108,7 +90,7 @@ export async function updateObjetivoProgressAction(params: {
       .from("next_objetivos")
       .update({ progresso_percentual: progressoNormalizado })
       .eq("id", params.objetivoId)
-      .eq("usuario_id", user.id);
+      .eq("usuario_id", perfilId);
 
     if (error) {
       return {
@@ -131,16 +113,7 @@ export async function deleteObjetivoAction(params: {
   objetivoId: string;
 }): Promise<ActionResult> {
   try {
-    const supabase = await getSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { ok: false, message: "Usuário não autenticado." };
-    }
+    const { supabase, perfilId } = await requirePerfil();
 
     if (!params.objetivoId?.trim()) {
       return { ok: false, message: "Objetivo inválido." };
@@ -150,7 +123,7 @@ export async function deleteObjetivoAction(params: {
       .from("next_objetivos")
       .delete()
       .eq("id", params.objetivoId)
-      .eq("usuario_id", user.id);
+      .eq("usuario_id", perfilId);
 
     if (error) {
       return {

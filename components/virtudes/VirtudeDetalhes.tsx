@@ -4,6 +4,7 @@
    Imports
 ========================================================= */
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -148,7 +149,7 @@ export default function VirtudeDetalhes({
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);

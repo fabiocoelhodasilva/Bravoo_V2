@@ -1,5 +1,7 @@
 "use client";
 
+import { obterPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
@@ -137,11 +139,9 @@ export default function GeografiaResumoDashboard() {
             setCarregandoDashboard(true);
           }
 
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+          const perfil = await obterPerfilAtivo();
 
-          if (!session?.user) {
+          if (!perfil) {
             aplicarDadosDashboard({
               diasSeguidos: 0,
               totalJoias: 0,
@@ -150,7 +150,7 @@ export default function GeografiaResumoDashboard() {
             return;
           }
 
-          const usuarioId = session.user.id;
+          const usuarioId = perfil.id;
 
           const [sequenciaResult, joiasResult] = await Promise.all([
             supabase

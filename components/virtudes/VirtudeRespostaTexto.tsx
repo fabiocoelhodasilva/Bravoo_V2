@@ -1,5 +1,7 @@
 "use client";
 
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -338,15 +340,15 @@ export default function VirtudeRespostaTexto({
 
     try {
       const {
-        data: { user },
+        data: { perfil },
         error: erroUsuario,
-      } = await supabase.auth.getUser();
+      } = await buscarPerfilAtivo();
 
       if (erroUsuario) {
         throw erroUsuario;
       }
 
-      if (!user) {
+      if (!perfil) {
         setErroResposta(
           "Sua sessão não foi encontrada. Entre novamente na plataforma.",
         );
@@ -356,7 +358,7 @@ export default function VirtudeRespostaTexto({
       const { error: erroInsert } = await supabase
         .from("next_virtudes_respostas")
         .insert({
-          usuario_id: user.id,
+          usuario_id: perfil.id,
           virtude_id: virtudeId,
           tipo_resposta: "texto",
           resposta_texto: respostaNormalizada,
@@ -379,7 +381,7 @@ export default function VirtudeRespostaTexto({
       try {
         await processarGamificacaoAposAtividade({
           supabase,
-          usuarioId: user.id,
+          usuarioId: perfil.id,
           materiaId: VIRTUDES_MATERIA_ID,
           atividadeId: virtudeId,
           dataReferencia: obterDataAtualSaoPaulo(),
@@ -403,14 +405,14 @@ export default function VirtudeRespostaTexto({
       try {
         const ganhouNovaJoia = await concederJoiaVirtudeDiaria({
           supabase,
-          usuarioId: user.id,
+          usuarioId: perfil.id,
           materiaId: VIRTUDES_MATERIA_ID,
         });
 
         if (ganhouNovaJoia) {
           try {
             setMandalaPendente(
-              await concederMandalaDiaria({ supabase, usuarioId: user.id })
+              await concederMandalaDiaria({ supabase, usuarioId: perfil.id })
             );
           } catch (erroMandala) {
             console.error("Erro ao verificar a Mandala de Virtudes:", erroMandala);

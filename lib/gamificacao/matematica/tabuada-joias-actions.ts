@@ -276,6 +276,14 @@ export async function alterarMetaTabuada(params: {
   tabuadas: number[];
 }): Promise<ResultadoSincronizacaoJoiaTabuada> {
   const { supabase, usuarioId } = params;
+  // Revalida a conta responsável e o perfil antes da alteração.
+  const { obterContextoPerfis } = await import("@/lib/perfis/perfil-client");
+  const { podeAlterarMetaAtual, META_SOMENTE_RESPONSAVEL } = await import("@/lib/perfis/perfis-core");
+  const contexto = await obterContextoPerfis(true);
+  if (!contexto.perfilAtivo || !podeAlterarMetaAtual(contexto) || contexto.perfilAtivo.id !== usuarioId) {
+    throw new Error(META_SOMENTE_RESPONSAVEL);
+  }
+  const perfilId = contexto.perfilAtivo.id;
   const tabuadas = normalizarListaTabuadas(params.tabuadas);
 
   if (!usuarioId) {
@@ -289,6 +297,7 @@ export async function alterarMetaTabuada(params: {
   const { data, error } = await supabase.rpc(
     "fn_alterar_meta_tabuada",
     {
+      p_usuario_id: perfilId,
       p_tabuadas: tabuadas,
     }
   );

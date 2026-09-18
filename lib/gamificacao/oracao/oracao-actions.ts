@@ -4,6 +4,7 @@
    Imports
 ========================================================= */
 
+import { requirePerfil, requireResponsavelMeta } from "@/lib/perfis/perfil-server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   concederJoiaMateria,
@@ -111,20 +112,6 @@ function obterDataHoraSaoPauloIso(): string {
    Autenticação
 ========================================================= */
 
-async function getUsuarioLogado() {
-  const supabase = await getSupabaseServerClient();
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error("Usuário não identificado.");
-  }
-
-  return { supabase, user };
-}
 
 /* =========================================================
    Funções auxiliares
@@ -185,8 +172,8 @@ async function buscarMinutosOracaoHojeInterno(
 
 export async function buscarMinutosOracaoHoje() {
   try {
-    const { supabase, user } = await getUsuarioLogado();
-    return await buscarMinutosOracaoHojeInterno(supabase, user.id);
+    const { supabase, perfilId } = await requirePerfil();
+    return await buscarMinutosOracaoHojeInterno(supabase, perfilId);
   } catch (error) {
     registrarErroDev("Erro ao identificar usuário nas orações:", error);
     return 0;
@@ -333,8 +320,8 @@ async function buscarSaldoItensJardimInterno(
 
 export async function buscarSaldoItensJardimHoje() {
   try {
-    const { supabase, user } = await getUsuarioLogado();
-    return await buscarSaldoItensJardimInterno(supabase, user.id);
+    const { supabase, perfilId } = await requirePerfil();
+    return await buscarSaldoItensJardimInterno(supabase, perfilId);
   } catch (error) {
     registrarErroDev("Erro ao buscar saldo acumulado do jardim:", error);
     return 0;
@@ -413,12 +400,12 @@ async function sincronizarCreditosJardimHojeInterno(
 }
 
 async function sincronizarCreditosJardimHoje() {
-  const { supabase, user } = await getUsuarioLogado();
-  const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, user.id);
+  const { supabase, perfilId } = await requirePerfil();
+  const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, perfilId);
 
   return await sincronizarCreditosJardimHojeInterno(
     supabase,
-    user.id,
+    perfilId,
     minutosHoje,
   );
 }
@@ -628,13 +615,14 @@ async function sincronizarJoiaEspiritualComMeta(params: {
    Alteração da meta de oração
 ========================================================= */
 
-export async function alterarMetaOracao(novaMeta: number) {
-  if (!Number.isFinite(novaMeta) || novaMeta < 1 || novaMeta > 180) {
+export async function alterarMetaOracao(novaMeta: number, perfilEsperadoId: string) {
+  if (!Number.isInteger(novaMeta) || novaMeta < 1 || novaMeta > 180) {
     throw new Error("A meta deve estar entre 1 e 180 minutos.");
   }
 
   try {
-    const { supabase, user } = await getUsuarioLogado();
+    const { supabase, perfilId } = await requireResponsavelMeta();
+    if (perfilId !== perfilEsperadoId) throw new Error("O perfil selecionado mudou. Reabra a gestão de metas.");
 
     /*
      * A RPC:
@@ -645,6 +633,7 @@ export async function alterarMetaOracao(novaMeta: number) {
     const { data, error } = await (supabase as any).rpc(
       "fn_alterar_meta_usuario",
       {
+        p_usuario_id: perfilId,
         p_materia_id: MATERIA_ESPIRITUAL_ID,
         p_nova_meta: novaMeta,
       },
@@ -663,7 +652,7 @@ export async function alterarMetaOracao(novaMeta: number) {
 
     const minutosHoje = await buscarMinutosOracaoHojeInterno(
       supabase,
-      user.id,
+      perfilId,
     );
 
     /*
@@ -673,13 +662,13 @@ export async function alterarMetaOracao(novaMeta: number) {
     const resultadoGamificacao =
       await sincronizarJoiaEspiritualComMeta({
         supabase,
-        usuarioId: user.id,
+        usuarioId: perfilId,
         minutosHoje,
         metaDiariaForcada: metaConfirmada,
       });
 
     registrarInfoDev("[ORAÇÃO] Meta alterada", {
-      usuarioId: user.id,
+      usuarioId: perfilId,
       metaAnterior,
       metaNova: metaConfirmada,
       minutosHoje,
@@ -746,12 +735,12 @@ function calcularDiferencaDiasIso(
 
 export async function buscarStatusSaudeJardim(): Promise<StatusSaudeJardim> {
   try {
-    const { supabase, user } = await getUsuarioLogado();
+    const { supabase, perfilId } = await requirePerfil();
 
     const { data: sequencia, error } = await supabase
       .from("next_sequencia_dias_usuario")
       .select("dias_seguidos, ultima_data_atividade")
-      .eq("usuario_id", user.id)
+      .eq("usuario_id", perfilId)
       .eq("materia_id", MATERIA_ESPIRITUAL_ID)
       .maybeSingle();
 
@@ -854,12 +843,12 @@ export async function registrarMomentoOracao(minutos: number) {
   }
 
   try {
-    const { supabase, user } = await getUsuarioLogado();
+    const { supabase, perfilId } = await requirePerfil();
 
     const { data: sessao, error } = await supabase
       .from("next_sessoes_atividade")
       .insert({
-        usuario_id: user.id,
+        usuario_id: perfilId,
         atividade_id: ATIVIDADE_ORACAO_ID,
         materia_id: MATERIA_ESPIRITUAL_ID,
         assunto_id: ASSUNTO_ORACAO_ID,
@@ -876,11 +865,11 @@ export async function registrarMomentoOracao(minutos: number) {
       throw error;
     }
 
-    const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, user.id);
+    const minutosHoje = await buscarMinutosOracaoHojeInterno(supabase, perfilId);
 
     const sequenciaEspiritual = await atualizarSequenciaEspiritualAposOracao(
       supabase,
-      user.id,
+      perfilId,
     );
 
 
@@ -888,12 +877,12 @@ export async function registrarMomentoOracao(minutos: number) {
     const resultadoConquista =
       await sincronizarJoiaEspiritualComMeta({
         supabase,
-        usuarioId: user.id,
+        usuarioId: perfilId,
         minutosHoje,
       });
 
     registrarInfoDev("[ORAÇÃO] Registro concluído", {
-      usuarioId: user.id,
+      usuarioId: perfilId,
       sessaoId: sessao.id,
       minutosInformados: minutos,
       minutosHoje,
@@ -930,16 +919,16 @@ export async function registrarMomentoOracao(minutos: number) {
 ========================================================= */
 
 export async function registrarResgateItemJardim(itemTipo: string) {
-  const { supabase, user } = await getUsuarioLogado();
+  const { supabase, perfilId } = await requirePerfil();
 
-  const saldoAtual = await buscarSaldoItensJardimInterno(supabase, user.id);
+  const saldoAtual = await buscarSaldoItensJardimInterno(supabase, perfilId);
 
   if (saldoAtual <= 0) {
     throw new Error("Você não tem créditos disponíveis para plantar.");
   }
 
   const { error } = await supabase.from("next_movimentacoes_moeda").insert({
-    usuario_id: user.id,
+    usuario_id: perfilId,
     materia_id: MATERIA_ESPIRITUAL_ID,
     atividade_id: ATIVIDADE_ORACAO_ID,
     quantidade: 1,

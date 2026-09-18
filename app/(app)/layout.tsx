@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 function ProtectedAppLayout({
@@ -10,13 +10,17 @@ function ProtectedAppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { loading, isAuthenticated } = useAuth();
+  const pathname = usePathname();
+  const { loading, isAuthenticated, perfilAtivoId, erroPerfil } = useAuth();
+  const exigePerfil = !pathname.startsWith("/professor");
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.replace("/login");
+    } else if (!loading && exigePerfil && !perfilAtivoId && !erroPerfil) {
+      router.replace("/perfis");
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, perfilAtivoId, erroPerfil, exigePerfil, router]);
 
   if (loading) {
     return (
@@ -29,11 +33,17 @@ function ProtectedAppLayout({
     );
   }
 
-  if (!isAuthenticated) {
+  if (erroPerfil) {
+    return <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white" role="alert">
+      <p>{erroPerfil}</p><a href="/perfis" className="text-amber-300 underline">Escolher perfil novamente</a>
+    </div>;
+  }
+
+  if (!isAuthenticated || (exigePerfil && !perfilAtivoId)) {
     return null;
   }
 
-  return <>{children}</>;
+  return <React.Fragment key={exigePerfil ? perfilAtivoId : "conta"}>{children}</React.Fragment>;
 }
 
 export default function AppLayout({
@@ -41,8 +51,9 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   return (
-    <AuthProvider>
+    <AuthProvider exigirPerfil={!pathname.startsWith("/professor")}>
       <ProtectedAppLayout>{children}</ProtectedAppLayout>
     </AuthProvider>
   );

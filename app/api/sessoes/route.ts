@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requirePerfil } from "@/lib/perfis/perfil-server";
 import { processarGamificacaoAposAtividade } from "@/lib/gamificacao/geral/gamificacao-actions";
 import { concederJoiaGeografia } from "@/lib/gamificacao/geografia/geografia-joias-actions";
 import { concederJoiaTabuada } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
        Autenticação e leitura do corpo
     --------------------------------------------------------- */
 
-    const { supabase, user } = await requireAuth({ redirectToLogin: false });
+    const { supabase, perfilId } = await requirePerfil();
     const body = (await request.json()) as BodyType;
 
     const atividade_id = body.atividade_id?.trim();
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     const dataExecucao = obterDataHoraExecucaoSaoPaulo();
 
     const payloadSessao: SessaoPayload = {
-      usuario_id: user.id,
+      usuario_id: perfilId,
       atividade_id,
       materia_id,
       assunto_id,
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
 
     const resultadoConquista = await processarConquistaJoia({
       supabase,
-      usuarioId: user.id,
+      usuarioId: perfilId,
       materiaId: materia_id,
     });
 
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
     try {
       const resultadoGamificacao = await processarGamificacaoAposAtividade({
         supabase,
-        usuarioId: user.id,
+        usuarioId: perfilId,
         materiaId: materia_id,
         atividadeId: atividade_id,
         sessaoAtividadeId: sessaoSalva.id,
@@ -310,6 +310,9 @@ export async function POST(request: Request) {
       return erroJson("Usuário não autenticado.", 401);
     }
 
+    if (error instanceof Error && error.message === "PERFIL_NAO_SELECIONADO") {
+      return erroJson("Selecione um perfil válido antes de registrar a atividade.", 403);
+    }
     return erroJson("Erro interno ao processar a sessão.", 500);
   }
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 import { useRouter } from "next/navigation";
 import {
   NovaTarefaForm,
@@ -21,7 +24,7 @@ export default function NovaTarefaPage() {
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);
@@ -45,11 +48,11 @@ export default function NovaTarefaPage() {
       }
 
       const {
-        data: { user },
+        data: { perfil },
         error: erroAuth,
-      } = await supabase.auth.getUser();
+      } = await buscarPerfilAtivo();
 
-      if (erroAuth || !user) {
+      if (erroAuth || !perfil) {
         console.error("Usuário não autenticado:", erroAuth);
         router.replace("/login");
         return;
@@ -58,7 +61,7 @@ export default function NovaTarefaPage() {
       const dataHoje = obterDataHojeLocal();
 
       const payload = {
-        usuario_id: user.id,
+        usuario_id: perfil.id,
         titulo: tituloLimpo,
         descricao: descricaoLimpa || null,
         recorrente: values.recorrente,

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { obterPerfilAtivoId } from "@/lib/perfis/perfil-client";
 
 const MATERIA_ESPIRITUAL_ID =
   "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
@@ -33,15 +34,7 @@ function getInicioAnoLocal() {
 
 export async function buscarResumoDashboardOracao(usuarioId?: string) {
   if (!usuarioId) {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error || !user) {
-      throw error ?? new Error("Usuário não identificado.");
-    }
-    usuarioId = user.id;
+    usuarioId = await obterPerfilAtivoId();
   }
 
   const { inicio, fim } = getIntervaloHojeLocal();

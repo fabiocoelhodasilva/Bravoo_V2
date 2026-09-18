@@ -1,6 +1,6 @@
 "use server";
 
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePerfil } from "@/lib/perfis/perfil-server";
 
 const MATERIA_ESPIRITUAL_ID =
   "a9f1c2b3-7e44-4d11-9f6a-3c2b8e7d1111";
@@ -102,21 +102,12 @@ function maiorDataIso(...datas: string[]) {
  * naturalmente a fazer parte da janela de dias completos.
  */
 export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
-  const supabase = await getSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: erroUsuario,
-  } = await supabase.auth.getUser();
-
-  if (erroUsuario || !user) {
-    throw new Error("Usuário não identificado.");
-  }
+  const { supabase, perfilId, perfil, conta } = await requirePerfil();
 
   const hoje = obterDataSaoPaulo(new Date());
   const ontem = adicionarDiasDataIso(hoje, -1);
   const inicioJanelaMovel = adicionarDiasDataIso(hoje, -DIAS_JANELA_JARDIM);
-  const dataCadastro = obterDataSaoPaulo(new Date(user.created_at));
+  const dataCadastro = obterDataSaoPaulo(new Date(perfil.criado_em ?? conta.created_at));
 
   /**
    * A janela começa na data MAIS RECENTE entre:
@@ -158,7 +149,7 @@ export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
   const { data: joias, error } = await supabase
     .from("next_joias_usuario")
     .select("data_conquista")
-    .eq("usuario_id", user.id)
+    .eq("usuario_id", perfilId)
     .eq("materia_id", MATERIA_ESPIRITUAL_ID)
     .gte("data_conquista", inicioConsulta)
     .lt("data_conquista", fimConsultaExclusivo)

@@ -1,17 +1,17 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
 import HomeFeatureCard from "@/components/ui/HomeFeatureCard";
-import { supabase } from "@/lib/supabase/client";
 
 export default function BrasilMenuPage() {
   const router = useRouter();
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);

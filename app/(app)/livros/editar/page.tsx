@@ -1,5 +1,6 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -15,7 +16,7 @@ const CACHE_PREFIX = "bravoo_livros_usuario_";
 export default function EditarLivroPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { perfilAtivo, loading } = useAuth();
 
   const livroId = searchParams.get("id");
 
@@ -26,7 +27,7 @@ export default function EditarLivroPage() {
 
   const handleLogout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await encerrarSessao();
     } catch (error) {
       console.error("Erro ao sair:", error);
     } finally {
@@ -39,7 +40,7 @@ export default function EditarLivroPage() {
     async function carregarLivro() {
       if (loading) return;
 
-      if (!user?.id) {
+      if (!perfilAtivo?.id) {
         setErro("Usuário não autenticado.");
         setCarregandoLivro(false);
         return;
@@ -58,7 +59,7 @@ export default function EditarLivroPage() {
             "id, titulo, autor, total_paginas, classificacao, dt_inicio, dt_fim"
           )
           .eq("id", livroId)
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", perfilAtivo.id)
           .single();
 
         if (error) {
@@ -88,11 +89,11 @@ export default function EditarLivroPage() {
     }
 
     void carregarLivro();
-  }, [livroId, loading, user?.id]);
+  }, [livroId, loading, perfilAtivo?.id]);
 
   const handleSubmit = useCallback(
     async (values: NovoLivroFormValues) => {
-      if (!user?.id) {
+      if (!perfilAtivo?.id) {
         throw new Error("Usuário não autenticado.");
       }
 
@@ -115,14 +116,14 @@ export default function EditarLivroPage() {
           dt_fim: values.dtFim || null,
         })
         .eq("id", livroId)
-        .eq("usuario_id", user.id);
+        .eq("usuario_id", perfilAtivo.id);
 
       if (error) {
         throw error;
       }
 
       try {
-        sessionStorage.removeItem(`${CACHE_PREFIX}${user.id}`);
+        sessionStorage.removeItem(`${CACHE_PREFIX}${perfilAtivo.id}`);
       } catch {
         // Evita quebrar o fluxo caso o sessionStorage esteja indisponível.
       }
@@ -130,7 +131,7 @@ export default function EditarLivroPage() {
       router.push("/livros");
       router.refresh();
     },
-    [livroId, router, user?.id]
+    [livroId, router, perfilAtivo?.id]
   );
 
   if (loading || carregandoLivro) {
@@ -141,7 +142,7 @@ export default function EditarLivroPage() {
     );
   }
 
-  if (!user) {
+  if (!perfilAtivo) {
     return null;
   }
 

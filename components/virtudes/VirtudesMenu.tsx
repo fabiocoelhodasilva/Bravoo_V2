@@ -1,5 +1,8 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -217,18 +220,18 @@ export default function VirtudesMenu() {
     async function carregarAmetistasSemana() {
       try {
         const {
-          data: { user },
+          data: { perfil },
           error,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
-        if (error || !user) {
+        if (error || !perfil) {
           if (!cancelado) setJoiasSemana({});
           return;
         }
 
         const resultado = await carregarJoiasSemana({
           supabase,
-          usuarioId: user.id,
+          usuarioId: perfil.id,
           materiaId: MATERIA_VIRTUDES_ID,
           dataInicio: formatIsoDateLocal(inicioSemana),
           dataFim: formatIsoDateLocal(fimSemana),
@@ -262,11 +265,11 @@ export default function VirtudesMenu() {
     async function carregarUltimasVisualizacoes() {
       try {
         const {
-          data: { user },
+          data: { perfil },
           error: erroUsuario,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
-        if (erroUsuario || !user) {
+        if (erroUsuario || !perfil) {
           if (!cancelado) {
             setUltimasVisualizacoes({});
           }
@@ -277,7 +280,7 @@ export default function VirtudesMenu() {
         const { data, error } = await supabase
           .from("next_virtudes_respostas")
           .select("virtude_id, concluido_em")
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", perfil.id)
           .not("concluido_em", "is", null)
           .order("concluido_em", { ascending: false });
 
@@ -400,7 +403,7 @@ export default function VirtudesMenu() {
 
   async function handleLogout() {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         console.error("Erro ao fazer logout:", error);

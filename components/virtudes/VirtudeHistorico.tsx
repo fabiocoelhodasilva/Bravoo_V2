@@ -1,5 +1,7 @@
 "use client";
 
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -63,15 +65,15 @@ export default function VirtudeHistorico({
 
       try {
         const {
-          data: { user },
+          data: { perfil },
           error: erroUsuario,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
         if (erroUsuario) {
           throw erroUsuario;
         }
 
-        if (!user) {
+        if (!perfil) {
           if (!cancelado) {
             setConclusoes([]);
             setErro("Sua sessão não foi encontrada.");
@@ -83,7 +85,7 @@ export default function VirtudeHistorico({
         const { data, error } = await supabase
           .from("next_virtudes_respostas")
           .select("id, concluido_em, tipo_resposta, resposta_texto")
-          .eq("usuario_id", user.id)
+          .eq("usuario_id", perfil.id)
           .eq("virtude_id", virtudeId)
           .not("concluido_em", "is", null)
           .order("concluido_em", { ascending: false });

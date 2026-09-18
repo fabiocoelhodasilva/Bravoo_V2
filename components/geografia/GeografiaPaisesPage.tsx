@@ -1,11 +1,11 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderInterno from "@/components/ui/HeaderInterno";
 import InstrucaoTemporaria from "@/components/geografia/InstrucaoTemporaria";
-import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import type { RegiaoConfig, PaisItem } from "@/lib/geografia/regioes-config";
 
@@ -307,7 +307,7 @@ export default function GeografiaPaisesPage({ config }: Props) {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await encerrarSessao();
     router.replace("/login");
   }
 

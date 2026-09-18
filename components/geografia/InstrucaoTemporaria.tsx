@@ -1,7 +1,8 @@
 "use client";
 
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
 import AnimacaoGestoGlobo from "./AnimacaoGestoGlobo";
 
 type Props = {
@@ -54,18 +55,18 @@ export default function InstrucaoTemporaria({
 
       try {
         const {
-          data: { user },
+          data: { perfil },
           error,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
         if (!componenteAtivo) return;
 
-        if (error || !user?.created_at) {
+        if (error || !perfil?.criado_em) {
           setUsuarioPodeVer(false);
           return;
         }
 
-        const dataCadastroEmMs = new Date(user.created_at).getTime();
+        const dataCadastroEmMs = new Date(perfil.criado_em).getTime();
 
         if (Number.isNaN(dataCadastroEmMs)) {
           setUsuarioPodeVer(false);

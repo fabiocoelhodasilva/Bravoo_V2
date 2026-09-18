@@ -11,10 +11,6 @@ function preparar() {
   let falhar = false;
   let numeroResumo = 1;
   const supabase = {
-    auth: { async getUser() {
-      chamadas.auth++;
-      return { data: { user: { id: "aluno-teste" } }, error: null };
-    } },
     from(tabela) {
       const consulta = { tabela, filtros: [] };
       const builder = {};
@@ -41,6 +37,10 @@ function preparar() {
     },
   };
   const mocks = {
+    "@/lib/perfis/perfil-client": { async obterPerfilAtivoId() {
+      chamadas.auth++;
+      return "aluno-teste";
+    } },
     "@/lib/supabase/client": { supabase },
     "@/lib/gamificacao/oracao/oracao-dashboard-client": {
       async buscarResumoDashboardOracao(usuarioId) {

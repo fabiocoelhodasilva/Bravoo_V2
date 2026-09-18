@@ -1,5 +1,8 @@
 "use client";
 
+import { encerrarSessao } from "@/lib/perfis/perfil-client";
+import { buscarPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -334,20 +337,20 @@ export default function MeuDiaPage() {
         setCarregando(true);
 
         const {
-          data: { user },
+          data: { perfil },
           error: erroAuth,
-        } = await supabase.auth.getUser();
+        } = await buscarPerfilAtivo();
 
-        if (erroAuth || !user) {
+        if (erroAuth || !perfil) {
           router.replace("/login");
           return;
         }
 
         if (!componenteAtivoRef.current) return;
 
-        setUsuarioId(user.id);
+        setUsuarioId(perfil.id);
 
-        const cache = carregarMeuDiaDoCache(user.id, dataReferencia);
+        const cache = carregarMeuDiaDoCache(perfil.id, dataReferencia);
 
         if (cache) {
           setTarefas(cache.tarefas);
@@ -364,12 +367,12 @@ export default function MeuDiaPage() {
           joiasSemanaAtualizadas,
         ] = await Promise.all([
           supabase.rpc("fn_next_meu_dia_status", {
-            p_usuario_id: user.id,
+            p_usuario_id: perfil.id,
             p_data: dataReferencia,
           }),
-          carregarTotalTopazios(user.id),
-          carregarDiasSeguidosMeuDia(user.id),
-          carregarJoiasSemanaMeuDia(user.id, dataReferencia),
+          carregarTotalTopazios(perfil.id),
+          carregarDiasSeguidosMeuDia(perfil.id),
+          carregarJoiasSemanaMeuDia(perfil.id, dataReferencia),
         ]);
 
         if (!componenteAtivoRef.current) return;
@@ -396,7 +399,7 @@ export default function MeuDiaPage() {
         setDiasSeguidos(diasSeguidosAtualizado);
         setJoiasSemana(joiasSemanaAtualizadas);
 
-        salvarMeuDiaNoCache(user.id, dataReferencia, {
+        salvarMeuDiaNoCache(perfil.id, dataReferencia, {
           tarefas: tarefasFormatadas,
           totalTopazios: totalTopaziosAtualizado,
           diasSeguidos: diasSeguidosAtualizado,
@@ -430,7 +433,7 @@ export default function MeuDiaPage() {
 
   const handleLogout = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await encerrarSessao();
 
       if (error) {
         registrarErroDev("Erro ao fazer logout:", error);

@@ -1,5 +1,7 @@
 "use client";
 
+import { obterPerfilAtivo } from "@/lib/perfis/perfil-client";
+
 /* =========================================================
    Imports
 ========================================================= */
@@ -386,12 +388,9 @@ export default function StudentDashboard_Resumo() {
               setCarregandoDashboard(true);
             }
 
-            const {
-              data: { session },
-            } =
-              await supabase.auth.getSession();
+            const perfil = await obterPerfilAtivo();
 
-            if (!session?.user) {
+            if (!perfil) {
               aplicarDadosDashboard({
                 diasSeguidos: 0,
                 totalMandalas: 0,
@@ -410,7 +409,7 @@ export default function StudentDashboard_Resumo() {
                 )
                 .eq(
                   "usuario_id",
-                  session.user.id
+                  perfil.id
                 )
                 .in(
                   "materia_id",

@@ -21,13 +21,13 @@ type CategoriaOption = {
 
 export default function NovoObjetivoPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { perfilAtivo, loading } = useAuth();
 
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
 
   useEffect(() => {
-    if (loading || !user?.id) return;
+    if (loading || !perfilAtivo?.id) return;
 
     async function initializePage() {
       try {
@@ -41,7 +41,7 @@ export default function NovoObjetivoPage() {
     }
 
     void initializePage();
-  }, [loading, user?.id]);
+  }, [loading, perfilAtivo?.id]);
 
   async function handleLogout() {
     try {
@@ -81,7 +81,7 @@ export default function NovoObjetivoPage() {
     );
   }
 
-  if (!user) {
+  if (!perfilAtivo) {
     return null;
   }
 
