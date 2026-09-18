@@ -16,10 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   definirPerfilAtivo,
   encerrarSessao,
-  obterContextoPerfis,
 } from "@/lib/perfis/perfil-client";
-
-import type { Perfil } from "@/lib/perfis/perfis-core";
 
 type Props = {
   /**
@@ -35,15 +32,11 @@ type Props = {
 export default function HeaderInterno(_props: Props) {
   const router = useRouter();
 
-  const { perfilAtivoId, perfilAtivo } = useAuth();
+  const { perfilAtivoId, perfilAtivo, perfis, legado } = useAuth();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const [menuAberto, setMenuAberto] = useState(false);
-  const [perfis, setPerfis] = useState<Perfil[]>([]);
-  const [legado, setLegado] = useState(false);
-  const [carregandoPerfis, setCarregandoPerfis] =
-    useState(false);
   const [trocandoPerfilId, setTrocandoPerfilId] =
     useState<string | null>(null);
   const [erroMenu, setErroMenu] = useState("");
@@ -131,36 +124,10 @@ export default function HeaderInterno(_props: Props) {
      Abrir / fechar menu do perfil
   ========================================================= */
 
-  async function abrirOuFecharMenu() {
-    if (menuAberto) {
-      setMenuAberto(false);
-      return;
-    }
-
-    setMenuAberto(true);
+  function abrirOuFecharMenu() {
+    // A lista já foi carregada pelo AuthProvider antes de exibir o header.
+    setMenuAberto((aberto) => !aberto);
     setErroMenu("");
-
-    if (perfis.length > 0) {
-      return;
-    }
-
-    try {
-      setCarregandoPerfis(true);
-
-      const contexto =
-        await obterContextoPerfis(true);
-
-      setPerfis(contexto.perfis);
-      setLegado(contexto.legado);
-    } catch (error) {
-      setErroMenu(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível carregar os perfis."
-      );
-    } finally {
-      setCarregandoPerfis(false);
-    }
   }
 
   /* =========================================================
@@ -291,14 +258,7 @@ export default function HeaderInterno(_props: Props) {
 
               {/* Perfis */}
               <div className="p-2">
-                {carregandoPerfis && (
-                  <div className="px-3 py-4 text-center text-xs text-white/45">
-                    Carregando perfis...
-                  </div>
-                )}
-
-                {!carregandoPerfis &&
-                  perfis.map((perfil) => {
+                {perfis.map((perfil) => {
                     const ativo =
                       perfil.id ===
                       perfilAtivoId;

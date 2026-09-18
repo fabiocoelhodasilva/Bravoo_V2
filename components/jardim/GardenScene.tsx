@@ -141,7 +141,6 @@ export default function GardenScene() {
         </>
       )}
 
-      {/* No mapa a navegação inferior some: o mapa vira a tela principal da jornada. */}
       {vista !== "mapa" && (
         <BottomNavJardim
           ativo={vista === "progresso" ? "progresso" : "oracao"}

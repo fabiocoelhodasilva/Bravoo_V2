@@ -12,18 +12,23 @@ type AuthContextType = {
   contaId: string | null;
   perfilAtivo: Perfil | null;
   perfilAtivoId: string | null;
+  perfis: Perfil[];
+  legado: boolean;
   erroPerfil: string | null;
   loading: boolean;
   isAuthenticated: boolean;
 };
 const AuthContext = createContext<AuthContextType>({
   session: null, user: null, contaId: null, perfilAtivo: null, perfilAtivoId: null,
+  perfis: [], legado: false,
   erroPerfil: null, loading: true, isAuthenticated: false,
 });
 
 export function AuthProvider({ children, exigirPerfil = true }: { children: ReactNode; exigirPerfil?: boolean }) {
   const [session, setSession] = useState<Session | null>(null);
   const [perfilAtivo, setPerfilAtivo] = useState<Perfil | null>(null);
+  const [perfis, setPerfis] = useState<Perfil[]>([]);
+  const [legado, setLegado] = useState(false);
   const [erroPerfil, setErroPerfil] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +46,8 @@ export function AuthProvider({ children, exigirPerfil = true }: { children: Reac
       const pedido = ++versao;
       limparCachesDePerfil();
       setPerfilAtivo(null);
+      setPerfis([]);
+      setLegado(false);
       setErroPerfil(null);
       setLoading(true);
       try {
@@ -48,7 +55,11 @@ export function AuthProvider({ children, exigirPerfil = true }: { children: Reac
           await fetch("/api/perfil", { method: "DELETE" });
         } else if (exigirPerfil) {
           const contexto = await obterContextoPerfis(true);
-          if (mounted && pedido === versao) setPerfilAtivo(contexto.perfilAtivo);
+          if (mounted && pedido === versao) {
+            setPerfilAtivo(contexto.perfilAtivo);
+            setPerfis(contexto.perfis);
+            setLegado(contexto.legado);
+          }
         }
       } catch (error) {
         if (mounted && pedido === versao) setErroPerfil(error instanceof Error ? error.message : "Erro ao carregar perfil.");
@@ -71,8 +82,11 @@ export function AuthProvider({ children, exigirPerfil = true }: { children: Reac
     }
     function verificarAoVoltar() {
       if (document.visibilityState !== "visible" || !exigirPerfil || !contaAtualId) return;
+      const pedido = versao;
       void obterContextoPerfis(true).then((contexto) => {
-        if (!mounted) return;
+        if (!mounted || pedido !== versao) return;
+        setPerfis(contexto.perfis);
+        setLegado(contexto.legado);
         setPerfilAtivo((anterior) => {
           if (anterior?.id !== contexto.perfilAtivo?.id) window.location.replace("/aluno");
           return anterior;
@@ -91,9 +105,9 @@ export function AuthProvider({ children, exigirPerfil = true }: { children: Reac
 
   const value = useMemo(() => ({
     session, user: session?.user ?? null, contaId: session?.user.id ?? null,
-    perfilAtivo, perfilAtivoId: perfilAtivo?.id ?? null, erroPerfil, loading,
+    perfilAtivo, perfilAtivoId: perfilAtivo?.id ?? null, perfis, legado, erroPerfil, loading,
     isAuthenticated: Boolean(session?.user.id),
-  }), [session, perfilAtivo, erroPerfil, loading]);
+  }), [session, perfilAtivo, perfis, legado, erroPerfil, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
