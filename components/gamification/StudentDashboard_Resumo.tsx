@@ -265,13 +265,23 @@ function calcularPersistenciaMandala(
   return diasSeguidos;
 }
 
+type StudentDashboardResumoProps = {
+  desktopEmLinha?: boolean;
+};
+
 /* =========================================================
    Skeleton
 ========================================================= */
 
-function DashboardMandalaSkeleton() {
+function DashboardMandalaSkeleton({ desktopEmLinha = false }: StudentDashboardResumoProps) {
   return (
-    <div className="w-full max-w-sm animate-pulse">
+    <div
+      className={`w-full animate-pulse ${
+        desktopEmLinha
+          ? "max-w-sm xl:max-w-none"
+          : "max-w-sm"
+      }`}
+    >
       <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
         <div className="h-[66px] rounded-[18px] bg-white/10" />
         <div className="h-[66px] rounded-[18px] bg-white/10" />
@@ -280,9 +290,15 @@ function DashboardMandalaSkeleton() {
       <div className="hidden rounded-[26px] border border-white/10 bg-white/[0.04] p-4 sm:block">
         <div className="mb-4 h-4 w-32 rounded-full bg-white/10" />
 
-        <div className="flex flex-col gap-3">
-          <div className="h-[106px] rounded-2xl bg-white/10" />
-          <div className="h-[106px] rounded-2xl bg-white/10" />
+        <div
+          className={
+            desktopEmLinha
+              ? "flex flex-col gap-3 xl:grid xl:grid-cols-2"
+              : "flex flex-col gap-3"
+          }
+        >
+          <div className="h-[106px] rounded-2xl bg-white/10 xl:h-[86px]" />
+          <div className="h-[106px] rounded-2xl bg-white/10 xl:h-[86px]" />
         </div>
       </div>
     </div>
@@ -293,7 +309,7 @@ function DashboardMandalaSkeleton() {
    Componente principal
 ========================================================= */
 
-export default function StudentDashboard_Resumo() {
+export default function StudentDashboard_Resumo({ desktopEmLinha = false }: StudentDashboardResumoProps) {
   const carregamentoEmAndamentoRef =
     useRef<Promise<void> | null>(null);
 
@@ -576,7 +592,7 @@ export default function StudentDashboard_Resumo() {
     carregandoDashboard &&
     !temDadosIniciais
   ) {
-    return <DashboardMandalaSkeleton />;
+    return <DashboardMandalaSkeleton desktopEmLinha={desktopEmLinha} />;
   }
 
   return (
@@ -585,6 +601,7 @@ export default function StudentDashboard_Resumo() {
       totalJoias={totalMandalas}
       nomeJoia="Mandalas"
       imagemJoia={IMAGEM_MANDALA}
+      desktopEmLinha={desktopEmLinha}
     />
   );
 }

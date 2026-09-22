@@ -7,6 +7,7 @@ type MateriaResumoDashboardPadraoProps = {
   nomeJoia: string;
   imagemJoia?: string;
   emojiJoia?: string;
+  desktopEmLinha?: boolean;
 };
 
 export default function MateriaResumoDashboardPadrao({
@@ -16,6 +17,7 @@ export default function MateriaResumoDashboardPadrao({
   nomeJoia,
   imagemJoia,
   emojiJoia = "💎",
+  desktopEmLinha = false,
 }: MateriaResumoDashboardPadraoProps) {
   return (
     <section className="w-full">
@@ -89,7 +91,13 @@ export default function MateriaResumoDashboardPadrao({
           {titulo}
         </p>
 
-        <div className="flex flex-col gap-3">
+        <div
+          className={
+            desktopEmLinha
+              ? "flex flex-col gap-3 xl:grid xl:grid-cols-2 xl:gap-3"
+              : "flex flex-col gap-3"
+          }
+        >
           <div className="flex min-h-[106px] items-center gap-4 rounded-2xl border border-[#e9891d]/20 bg-[#e9891d]/10 px-4 py-3">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#e9891d]/25 bg-black/25 text-4xl shadow-[0_0_18px_rgba(233,137,29,0.18)]">
               🔥

@@ -101,8 +101,11 @@ function maiorDataIso(...datas: string[]) {
  * Assim, amanhã o dia de hoje deixa de ser "bônus de hoje" e passa
  * naturalmente a fazer parte da janela de dias completos.
  */
-export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
+export async function buscarPontuacaoJardim(identidade?: { contaId: string; perfilId: string }): Promise<ResumoPontuacaoJardim> {
   const { supabase, perfilId, perfil, conta } = await requirePerfil();
+  if (identidade && (identidade.contaId !== conta.id || identidade.perfilId !== perfilId)) {
+    throw new Error("O perfil selecionado mudou.");
+  }
 
   const hoje = obterDataSaoPaulo(new Date());
   const ontem = adicionarDiasDataIso(hoje, -1);
@@ -219,4 +222,10 @@ export async function buscarPontuacaoJardim(): Promise<ResumoPontuacaoJardim> {
     hoje,
     diasHistoricos,
   };
+}
+
+/** Resposta mínima para o mapa, mantendo o cálculo acima como única fonte. */
+export async function buscarEstadoJardim(identidade: { contaId: string; perfilId: string }) {
+  const { pontuacao, hoje } = await buscarPontuacaoJardim(identidade);
+  return { pontuacao, hoje };
 }

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getEstadoJardimUsuario, lerEstadoJardim, invalidarEstadoJardim, observarInvalidacaoJardim, tempoAteViradaJardim } from "@/lib/gamificacao/jardim/jardim-estado-client";
 import JardinsMapaPanel from "./JardinsMapaPanel";
 import BottomNavJardim from "./BottomNavJardim";
 import OracaoDashboardPanel from "./OracaoDashboardPanel";
@@ -14,11 +16,13 @@ const RESUMO_PADRAO = { minutosHoje: 0, minutosAno: 0, metaDiaria: 5, persistenc
 
 export default function GardenScene() {
   const router = useRouter();
+  const { contaId, perfilAtivoId } = useAuth();
   // Uma única área, sem novas rotas nem entradas adicionais no histórico.
   const [vista, setVista] = useState<Vista>("mapa");
   const [carregador] = useState(criarCarregadorJardim);
   const [resumoOracao, setResumoOracao] = useState<ResumoOracao | null>(null);
-  const [pontuacaoJardim, setPontuacaoJardim] = useState<number | null>(null);
+  const [pontuacaoJardim, setPontuacaoJardim] = useState<number | null>(() =>
+    contaId && perfilAtivoId ? lerEstadoJardim({ contaId, perfilId: perfilAtivoId })?.pontuacao ?? null : null);
   const [usuarioJardimId, setUsuarioJardimId] = useState<string | null>(null);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
   const [carregandoPontuacao, setCarregandoPontuacao] = useState(true);
@@ -44,21 +48,22 @@ export default function GardenScene() {
     }
   }, [carregador]);
 
-  const carregarPontuacao = useCallback(async () => {
+  const carregarPontuacao = useCallback(async (silencioso = false) => {
+    if (!contaId || !perfilAtivoId) return;
     const versao = geracao.current;
     setCarregandoPontuacao(true);
     try {
-      const resultado = await carregador.pontuacao();
+      const resultado = await getEstadoJardimUsuario({ contaId, perfilId: perfilAtivoId });
       if (versao !== geracao.current) return;
       setPontuacaoJardim(resultado.pontuacao);
       setErroPontuacao(false);
     } catch (error) {
-      if (versao === geracao.current) setErroPontuacao(true);
+      if (versao === geracao.current && !silencioso) setErroPontuacao(true);
       console.error("Erro ao carregar pontuação do jardim:", error);
     } finally {
       if (versao === geracao.current) setCarregandoPontuacao(false);
     }
-  }, [carregador]);
+  }, [contaId, perfilAtivoId]);
 
   useEffect(() => {
     let ativo = true;
@@ -70,6 +75,32 @@ export default function GardenScene() {
     void carregador.preloadProgresso();
     return () => { ativo = false; };
   }, [carregador, carregarPontuacao, carregarResumo]);
+
+  useEffect(() => {
+    let ativo = true;
+    let timer: number;
+    const atualizar = () => {
+      // Agrupa os eventos síncronos de oração/joia antes de reutilizar a consulta.
+      void Promise.resolve().then(() => {
+        if (ativo && document.visibilityState === "visible") void carregarPontuacao(true);
+      });
+    };
+    const agendarVirada = () => {
+      timer = window.setTimeout(() => {
+        atualizar();
+        agendarVirada();
+      }, tempoAteViradaJardim());
+    };
+    agendarVirada();
+    const pararObservacao = observarInvalidacaoJardim(atualizar);
+    document.addEventListener("visibilitychange", atualizar);
+    return () => {
+      ativo = false;
+      window.clearTimeout(timer);
+      pararObservacao();
+      document.removeEventListener("visibilitychange", atualizar);
+    };
+  }, [carregarPontuacao]);
 
   // O catálogo continua responsável pela seleção e pelo limite visual do cenário.
   const imagensJardim = useMemo(
@@ -100,6 +131,10 @@ export default function GardenScene() {
   async function atualizarAposOracaoRegistrada() {
     geracao.current += 1;
     carregador.invalidar();
+    invalidarEstadoJardim();
+    // O painel emite também o evento de joia nesta mesma chamada síncrona.
+    // Inicia a leitura depois dele, para não invalidar o pedido recém-iniciado.
+    await Promise.resolve();
     setRevisaoProgresso((valor) => valor + 1);
     void carregador.preloadProgresso();
     await Promise.all([carregarResumo(), carregarPontuacao()]);

@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 import MandalaVooCalendario from "../gamification/MandalaVooCalendario";
 import Header from "../ui/Header";
@@ -171,6 +173,9 @@ function usuarioTemAteDezDias(
 ========================================================= */
 
 export default function StudentDashboard() {
+  const router = useRouter();
+  const { contaId, perfilAtivoId } = useAuth();
+  const [dashboardPronto, setDashboardPronto] = useState(false);
   const componenteAtivoRef = useRef(true);
   const carregandoDashboardRef = useRef(false);
 
@@ -300,8 +305,28 @@ export default function StudentDashboard() {
       console.error("Erro ao carregar dashboard do perfil:", error);
     } finally {
       carregandoDashboardRef.current = false;
+      if (componenteAtivoRef.current) setDashboardPronto(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!dashboardPronto || !contaId || !perfilAtivoId) return;
+    let ativo = true;
+    const preparar = () => {
+      if (!ativo) return;
+      void import("@/lib/gamificacao/jardim/jardim-estado-client").then(async ({ getEstadoJardimUsuario }) => {
+        if (!ativo) return;
+        await getEstadoJardimUsuario({ contaId, perfilId: perfilAtivoId });
+      }).catch(() => { /* Best effort: a Home nunca depende do Jardim. */ });
+      router.prefetch("/jardim");
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preparar);
+      return () => { ativo = false; window.cancelIdleCallback(id); };
+    }
+    const timer = window.setTimeout(preparar, 1000);
+    return () => { ativo = false; window.clearTimeout(timer); };
+  }, [dashboardPronto, contaId, perfilAtivoId, router]);
 
   /* =========================================================
      Carregamento inicial e atualização ao voltar para a tela
@@ -552,182 +577,140 @@ export default function StudentDashboard() {
   ]);
 
   /* =========================================================
-     Renderização
+     Renderização auxiliar
   ========================================================= */
 
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center font-sans pb-8">
-      <Header />
+  function renderCalendarioSemanal(
+    desktop = false
+  ) {
+    return (
+      <section
+        className={`w-full rounded-[22px] px-2 py-3 sm:px-3 ${
+          desktop
+            ? "xl:rounded-[20px] xl:px-3 xl:py-2"
+            : ""
+        }`}
+        style={{
+          background:
+            "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
+          border:
+            "1px solid rgba(255,255,255,0.08)",
+          boxShadow:
+            "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
+        }}
+      >
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => navegarSemana(-1)}
+            aria-label="Semana anterior"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+            style={{
+              borderColor: "#7df2c299",
+              boxShadow:
+                "0 0 18px #7df2c255",
+            }}
+          >
+            ‹
+          </button>
 
-      <MandalaVooCalendario />
-      {mostrarPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-5 bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111] px-6 py-8 text-center shadow-2xl">
-            <button
-              type="button"
-              onClick={() =>
-                setMostrarPopup(false)
-              }
-              className="absolute right-4 top-4 text-2xl font-bold text-white/70 hover:text-white"
-              aria-label="Fechar mensagem da mandala"
-            >
-              ×
-            </button>
+          <div className="grid min-w-0 flex-1 grid-cols-7 gap-0.5 sm:gap-2">
+            {diasDaSemana.map((dia) => {
+              const ehHoje =
+                dia.iso === hojeIso;
 
-            <h2 className="bg-gradient-to-r from-[var(--color-4)] via-[var(--color-2)] to-[var(--color-5)] bg-clip-text text-3xl font-extrabold leading-tight text-transparent">
-              Faça as atividades por matéria para
-              conquistar as joias!
-            </h2>
+              const imagemMandalaDia =
+                mandalasSemana[dia.iso];
 
-            <p className="mt-5 text-lg font-semibold leading-relaxed text-white/90">
-              Conquiste as joias e complete sua
-              mandala de hoje.
-            </p>
-          </div>
-        </div>
-      )}
-
-      <h1 className="mb-6 mt-2 text-center text-3xl font-extrabold leading-tight sm:text-4xl">
-        <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
-          Olá
-        </span>
-
-        {nomeUsuario && (
-          <>
-            {" "}
-            <span className="bg-gradient-to-r from-[var(--color-5)] via-[#4fc3ff] to-[var(--color-4)] bg-clip-text text-transparent">
-              {nomeUsuario}
-            </span>
-          </>
-        )}
-
-        <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
-          !
-        </span>
-      </h1>
-
-      {/* =====================================================
-          Calendário semanal de Mandalas
-      ===================================================== */}
-
-      <div className="mb-6 w-full max-w-sm px-4">
-        <section
-          className="w-full rounded-[22px] px-2 py-3 sm:px-3"
-          style={{
-            background:
-              "radial-gradient(700px 220px at 0% 0%, rgba(255,255,255,0.05), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)), #0d0d0d",
-            border:
-              "1px solid rgba(255,255,255,0.08)",
-            boxShadow:
-              "0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02) inset",
-          }}
-        >
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => navegarSemana(-1)}
-              aria-label="Semana anterior"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
-              style={{
-                borderColor: "#7df2c299",
-                boxShadow:
-                  "0 0 18px #7df2c255",
-              }}
-            >
-              ‹
-            </button>
-
-            <div className="grid min-w-0 flex-1 grid-cols-7 gap-0.5 sm:gap-2">
-              {diasDaSemana.map((dia) => {
-                const ehHoje =
-                  dia.iso === hojeIso;
-
-                const imagemMandalaDia =
-                  mandalasSemana[dia.iso];
-
-                return (
-                  <div
-                    key={dia.iso}
-                    className="flex min-w-0 flex-col items-center justify-center rounded-[14px] px-0.5 py-1 sm:py-2"
+              return (
+                <div
+                  key={dia.iso}
+                  className={`flex min-w-0 flex-col items-center justify-center rounded-[14px] px-0.5 py-1 sm:py-2 ${
+                    desktop ? "xl:py-1" : ""
+                  }`}
+                >
+                  <span
+                    className={`mb-1 text-[0.58rem] font-semibold sm:mb-2 sm:text-[0.72rem] ${
+                      desktop ? "xl:mb-1 xl:text-[0.64rem]" : ""
+                    } ${
+                      ehHoje
+                        ? "text-[var(--color-2)]"
+                        : "text-white/42"
+                    }`}
                   >
-                    <span
-                      className={`mb-1 text-[0.58rem] font-semibold sm:mb-2 sm:text-[0.72rem] ${
-                        ehHoje
-                          ? "text-[var(--color-2)]"
-                          : "text-white/42"
-                      }`}
-                    >
-                      {dia.diaCurto}
-                    </span>
+                    {dia.diaCurto}
+                  </span>
 
-                    <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
-                        ehHoje
-                          ? "scale-[1.06] text-[var(--color-2)]"
-                          : "text-white/88"
-                      }`}
-                      style={{
-                        background: ehHoje
-                          ? "rgba(233,137,29,0.18)"
-                          : "transparent",
-                        borderColor: ehHoje
-                          ? "rgba(233,137,29,0.82)"
-                          : "transparent",
-                        boxShadow: ehHoje
-                          ? "0 0 18px rgba(233,137,29,0.45)"
-                          : "none",
-                      }}
-                    >
-                      {dia.diaNumero}
-                    </span>
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
+                      desktop
+                        ? "xl:h-9 xl:w-9 xl:text-[0.82rem]"
+                        : ""
+                    } ${
+                      ehHoje
+                        ? "scale-[1.06] text-[var(--color-2)]"
+                        : "text-white/88"
+                    }`}
+                    style={{
+                      background: ehHoje
+                        ? "rgba(233,137,29,0.18)"
+                        : "transparent",
+                      borderColor: ehHoje
+                        ? "rgba(233,137,29,0.82)"
+                        : "transparent",
+                      boxShadow: ehHoje
+                        ? "0 0 18px rgba(233,137,29,0.45)"
+                        : "none",
+                    }}
+                  >
+                    {dia.diaNumero}
+                  </span>
 
-                    <span data-mandala-dia={dia.iso} className="mt-0.5 flex h-5 items-center justify-center sm:h-6">
-                      {imagemMandalaDia && (
-                        <img
-                          src="/imagens/joias/mandala_5.png"
-                          alt="Mandala conquistada"
-                          className="h-6 w-6 object-contain sm:h-7 sm:w-7"
-                          draggable={false}
-                        />
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navegarSemana(1)}
-              aria-label="Próxima semana"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
-              style={{
-                borderColor: "#7df2c299",
-                boxShadow:
-                  "0 0 18px #7df2c255",
-              }}
-            >
-              ›
-            </button>
+                  <span
+                    data-mandala-dia={dia.iso}
+                    className={`mt-0.5 flex h-5 items-center justify-center sm:h-6 ${
+                      desktop ? "xl:h-4" : ""
+                    }`}
+                  >
+                    {imagemMandalaDia && (
+                      <img
+                        src="/imagens/joias/mandala_5.png"
+                        alt="Mandala conquistada"
+                        className={`h-6 w-6 object-contain sm:h-7 sm:w-7 ${
+                          desktop
+                            ? "xl:h-5 xl:w-5"
+                            : ""
+                        }`}
+                        draggable={false}
+                      />
+                    )}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </section>
-      </div>
 
-      {/* =====================================================
-          Painel geral de Persistência e Mandalas
-      ===================================================== */}
+          <button
+            type="button"
+            onClick={() => navegarSemana(1)}
+            aria-label="Próxima semana"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+            style={{
+              borderColor: "#7df2c299",
+              boxShadow:
+                "0 0 18px #7df2c255",
+            }}
+          >
+            ›
+          </button>
+        </div>
+      </section>
+    );
+  }
 
-      <div className="mb-6 w-full max-w-sm px-4">
-        <StudentDashboard_Resumo />
-      </div>
-
-      {/* =====================================================
-          Matérias
-          Mobile: 2 colunas x 3 linhas
-          Desktop: preserva o layout atual em coluna
-      ===================================================== */}
-
-      <div className="grid w-full max-w-sm grid-cols-2 gap-2 px-4 sm:flex sm:flex-col sm:gap-5">
+  function renderBotoesMaterias() {
+    return (
+      <div className="grid w-full grid-cols-2 gap-2 xl:gap-2.5">
         <HomeFeatureCard
           title="Minha Jornada"
           href="/meu-dia"
@@ -793,16 +776,258 @@ export default function StudentDashboard() {
           }
         />
 
-       
-      </div>
 
-      {carregarResumo && (
-        <div className="mt-6 flex w-full justify-center px-4 sm:mt-8">
-          <JornadaResumo
-            joiasConquistadas={joiasConquistadasHoje}
-          />
+      </div>
+    );
+  }
+
+  /* =========================================================
+     Renderização
+  ========================================================= */
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans">
+      <Header />
+
+      <MandalaVooCalendario />
+
+      {mostrarPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111] px-6 py-8 text-center shadow-2xl">
+            <button
+              type="button"
+              onClick={() =>
+                setMostrarPopup(false)
+              }
+              className="absolute right-4 top-4 text-2xl font-bold text-white/70 hover:text-white"
+              aria-label="Fechar mensagem da mandala"
+            >
+              ×
+            </button>
+
+            <h2 className="bg-gradient-to-r from-[var(--color-4)] via-[var(--color-2)] to-[var(--color-5)] bg-clip-text text-3xl font-extrabold leading-tight text-transparent">
+              Faça as atividades por matéria para
+              conquistar as joias!
+            </h2>
+
+            <p className="mt-5 text-lg font-semibold leading-relaxed text-white/90">
+              Conquiste as joias e complete sua
+              mandala de hoje.
+            </p>
+          </div>
         </div>
       )}
+
+      {/* =====================================================
+          MOBILE / TABLET
+          Mantém a organização que já ficou boa.
+      ===================================================== */}
+
+      <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col items-center px-4 pb-8 pt-2 xl:hidden">
+        <h1 className="mb-6 mt-2 text-center text-3xl font-extrabold leading-tight sm:text-4xl">
+          <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+            Olá
+          </span>
+
+          {nomeUsuario && (
+            <>
+              {" "}
+              <span className="bg-gradient-to-r from-[var(--color-5)] via-[#4fc3ff] to-[var(--color-4)] bg-clip-text text-transparent">
+                {nomeUsuario}
+              </span>
+            </>
+          )}
+
+          <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+            !
+          </span>
+        </h1>
+
+        <div className="mb-6 w-full">
+          {renderCalendarioSemanal(false)}
+        </div>
+
+        <div className="mb-6 w-full">
+          <StudentDashboard_Resumo />
+        </div>
+
+        {renderBotoesMaterias()}
+
+        {carregarResumo && (
+          <div className="mt-6 flex w-full justify-center sm:mt-8">
+            <JornadaResumo
+              joiasConquistadas={joiasConquistadasHoje}
+            />
+          </div>
+        )}
+      </main>
+
+      {/* =====================================================
+          DESKTOP
+          Esquerda: saudação + calendário + gamificação + mandala
+          Direita: matérias
+          Mobile permanece independente e inalterado.
+      ===================================================== */}
+
+      <main className="hidden h-[100dvh] w-full overflow-hidden xl:block xl:pt-[48px]">
+        <div className="mx-auto flex h-[calc(100dvh-48px)] w-full max-w-[1240px] items-start px-6 pb-2 pt-3">
+          <div className="grid w-full grid-cols-[1.06fr_0.94fr] gap-5">
+
+            {/* =================================================
+                BLOCO ESQUERDO
+            ================================================= */}
+
+            <section
+              className="relative overflow-hidden rounded-[28px] border border-white/[0.075] bg-[#08090b] p-5"
+              style={{
+                boxShadow:
+                  "0 22px 60px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.015) inset",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-24 left-1/2 h-[330px] w-[430px] -translate-x-1/2 rounded-full bg-[#d8a000]/[0.045] blur-[80px]"
+              />
+
+              <div className="relative">
+                {/* Saudação */}
+                <h1 className="mb-4 text-center text-[2.55rem] font-extrabold leading-none">
+                  <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+                    Olá
+                  </span>
+
+                  {nomeUsuario && (
+                    <>
+                      {" "}
+                      <span className="bg-gradient-to-r from-[var(--color-5)] via-[#4fc3ff] to-[var(--color-4)] bg-clip-text text-transparent">
+                        {nomeUsuario}
+                      </span>
+                    </>
+                  )}
+
+                  <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
+                    !
+                  </span>
+                </h1>
+
+                {/* Calendário */}
+                <div className="mb-3.5 w-full">
+                  {renderCalendarioSemanal(true)}
+                </div>
+
+                {/* Persistência + Mandalas */}
+                <div className="mb-3.5 w-full">
+                  <StudentDashboard_Resumo
+                    desktopEmLinha
+                  />
+                </div>
+
+                {/* Mandala */}
+                <div className="relative flex min-h-[255px] items-center justify-center overflow-hidden rounded-[22px] border border-white/[0.055] bg-black/20 px-4 py-2">
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute h-[250px] w-[250px] rounded-full bg-[#d8a000]/[0.075] blur-[55px]"
+                  />
+
+                  {carregarResumo && (
+                    <div className="relative flex w-full items-center justify-center">
+                      <div className="scale-[1.17]">
+                        <JornadaResumo
+                          joiasConquistadas={joiasConquistadasHoje}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* =================================================
+                BLOCO DIREITO — MATÉRIAS
+                Sem frase/título acima dos botões.
+            ================================================= */}
+
+            <section
+              className="flex min-w-0 items-center rounded-[28px] border border-white/[0.075] bg-[#08090b] p-6"
+              style={{
+                boxShadow:
+                  "0 22px 60px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.015) inset",
+              }}
+            >
+              <div className="w-full">
+                <div className="grid grid-cols-2 gap-5 [&>*]:min-w-0 [&>a]:!h-[104px] [&>button]:!h-[104px] [&>a]:!text-[1.05rem] [&>button]:!text-[1.05rem]">
+                  <HomeFeatureCard
+                    title="Minha Jornada"
+                    href="/meu-dia"
+                    prefetch={true}
+                    compactMobile
+                    colorClass="bg-[var(--color-2)] hover:brightness-110"
+                    joiaCor={
+                      temJoiaMeuDiaHoje
+                        ? "laranja"
+                        : undefined
+                    }
+                  />
+
+                  <HomeFeatureCard
+                    title="Espiritual"
+                    href="/jardim"
+                    prefetch={false}
+                    compactMobile
+                    colorClass="bg-[var(--color-1)] hover:brightness-110"
+                    joiaCor={
+                      temJoiaEspiritualHoje
+                        ? "vermelha"
+                        : undefined
+                    }
+                  />
+
+                  <HomeFeatureCard
+                    title="Geografia"
+                    href="/geografia"
+                    prefetch={false}
+                    compactMobile
+                    colorClass="bg-[var(--color-5)] hover:brightness-110"
+                    joiaCor={
+                      temJoiaGeografiaHoje
+                        ? "azul"
+                        : undefined
+                    }
+                  />
+
+                  <HomeFeatureCard
+                    title="Matemática"
+                    href="/matematica"
+                    prefetch={false}
+                    compactMobile
+                    colorClass="bg-[var(--color-4)] hover:brightness-110"
+                    joiaCor={
+                      temJoiaMatematicaHoje
+                        ? "verde"
+                        : undefined
+                    }
+                  />
+
+                  <HomeFeatureCard
+                    title="Virtudes"
+                    href="/virtudes"
+                    prefetch={false}
+                    compactMobile
+                    colorClass="bg-[var(--color-6)] hover:brightness-110"
+                    joiaCor={
+                      temJoiaVirtudesHoje
+                        ? "roxa"
+                        : undefined
+                    }
+                  />
+
+
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

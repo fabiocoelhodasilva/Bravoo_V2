@@ -9,6 +9,7 @@ export const EVENTO_PERFIL_ALTERADO = "bravoo:perfil-alterado";
 /** Remove somente caches de dados da Bravoo, preservando preferências do navegador. */
 export function limparCachesDePerfil() {
   contextoPendente = undefined;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("bravoo:cache-perfil-limpo"));
   try {
     for (const chave of Object.keys(sessionStorage)) {
       if (chave.startsWith("cache_") || chave.startsWith("bravoo_") || chave.startsWith("bravoo:")) {
