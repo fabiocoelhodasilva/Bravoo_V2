@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { X } from "lucide-react";
-import { MAPA_JARDINS, REQUISITO_FLORES, getProgressoCaminhada } from "@/lib/gamificacao/jardim/jardins-config";
+import {
+  MAPA_JARDINS,
+  REQUISITO_FLORES,
+  getEstadoJornadaJardim,
+  getProgressoCaminhada,
+} from "@/lib/gamificacao/jardim/jardins-config";
 
 type Props = {
   pontuacao: number | null;
@@ -22,7 +27,8 @@ export default function JardinsMapaPanel({ pontuacao, usuarioId, carregando, err
   const closeRef = useRef<HTMLButtonElement>(null);
   const pronto = !carregando && !erro && pontuacao !== null;
   const passos = getProgressoCaminhada(pontuacao ?? 0);
-  const desbloqueado = pronto && passos >= REQUISITO_FLORES;
+  const estadoJornada = getEstadoJornadaJardim(pontuacao ?? 0);
+  const floresAtivo = pronto && estadoJornada.jardimAtual === "flores";
 
   useEffect(() => {
     const anterior = document.activeElement as HTMLElement | null;
@@ -31,7 +37,7 @@ export default function JardinsMapaPanel({ pontuacao, usuarioId, carregando, err
   }, []);
 
   useEffect(() => {
-    if (!desbloqueado || !usuarioId) return;
+    if (!floresAtivo || !usuarioId) return;
     const chave = `bravoo:jardins:flores:celebrado:${usuarioId}`;
 
     try {
@@ -54,7 +60,7 @@ export default function JardinsMapaPanel({ pontuacao, usuarioId, carregando, err
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [desbloqueado, usuarioId]);
+  }, [floresAtivo, usuarioId]);
 
   return (
     <section
@@ -97,7 +103,10 @@ export default function JardinsMapaPanel({ pontuacao, usuarioId, carregando, err
                 key={versao}
                 versao={versao}
                 passos={passos}
-                comemorando={desbloqueado && comemorando}
+                jardimAtual={estadoJornada.jardimAtual}
+                progressoNoJardim={estadoJornada.progressoNoJardim}
+                totalPassos={estadoJornada.totalPassos}
+                comemorando={floresAtivo && comemorando}
                 onEntrarJardim={onEntrarJardim}
               />
             ))}
@@ -221,29 +230,44 @@ export default function JardinsMapaPanel({ pontuacao, usuarioId, carregando, err
 
 }
 
-function MapaOverlay({ versao, passos, comemorando, onEntrarJardim }: {
+function MapaOverlay({
+  versao,
+  passos,
+  jardimAtual,
+  progressoNoJardim,
+  totalPassos,
+  comemorando,
+  onEntrarJardim,
+}: {
   versao: "mobile" | "desktop";
   passos: number;
+  jardimAtual: "deserto" | "flores";
+  progressoNoJardim: number;
+  totalPassos: number;
   comemorando: boolean;
   onEntrarJardim: () => void;
 }) {
   const configBase = MAPA_JARDINS[versao];
 
+  /*
+   * Mantemos as calibrações que já estavam aprovadas para o Deserto.
+   *
+   * No MOBILE, o halo do Jardim das Flores foi reposicionado com base
+   * na captura real: o jardim fica mais abaixo do que a coordenada antiga.
+   *
+   * No DESKTOP, mantemos por enquanto a calibração anterior até fazermos
+   * um ajuste visual específico em uma captura desktop.
+   */
   const config =
     versao === "desktop"
       ? {
           ...configBase,
           flores: {
             ...configBase.flores,
-            x: 60.28,
-            y: 15.87,
-            width: 31,
-            height: 24,
-          },
-          cadeado: {
-            ...configBase.cadeado,
-            x: 59.91,
-            y: 14.79,
+            x: 51.5,
+            y: 22.5,
+            width: 35,
+            height: 28,
           },
           deserto: {
             ...configBase.deserto,
@@ -257,15 +281,10 @@ function MapaOverlay({ versao, passos, comemorando, onEntrarJardim }: {
           ...configBase,
           flores: {
             ...configBase.flores,
-            x: 60.5,
-            y: 22.5,
-            width: 54,
-            height: 18,
-          },
-          cadeado: {
-            ...configBase.cadeado,
-            x: 59.64,
-            y: 20.66,
+            x: 49.5,
+            y: 36.8,
+            width: 48,
+            height: 14,
           },
           deserto: {
             ...configBase.deserto,
@@ -276,90 +295,107 @@ function MapaOverlay({ versao, passos, comemorando, onEntrarJardim }: {
           },
         };
 
-  const bloqueado = passos < REQUISITO_FLORES;
+  const floresAtivo = jardimAtual === "flores";
   const flores = config.flores;
-  const cadeado = config.cadeado;
 
-  // Destaque visual do jardim atual, com calibração final aprovada.
+  /*
+   * O usuário só muda para o Jardim das Flores depois do 11/11.
+   *
+   * Portanto:
+   * 11 pontos -> halo continua no Jardim do Deserto.
+   * 12 pontos -> halo vai para o Jardim das Flores.
+   * 20 pontos -> continua no Jardim das Flores, mostrando 9/8.
+   */
   const jardimAtualVisual: Ponto =
-    bloqueado
-      ? versao === "desktop"
+    floresAtivo
+      ? flores
+      : versao === "desktop"
         ? { x: 47.57, y: 86.8, width: 47, height: 45 }
-        : { x: 50.18, y: 75.33, width: 83, height: 29 }
-      : flores;
+        : { x: 50.18, y: 75.33, width: 83, height: 29 };
 
-  // Rótulo discreto do próximo jardim, sem bola preta e sem cadeado.
+  /*
+   * O rótulo do Jardim das Flores fica acima do jardim.
+   * Quando ainda estamos no Deserto, mostra "Bloqueado".
+   * Quando Flores é o jardim atual, mostra o progresso real,
+   * inclusive 9/8, 10/8, 11/8 etc.
+   */
   const floresLabel: Ponto =
     versao === "desktop"
-      ? { x: 53, y: 15.5 }
-      : { x: 52.5, y: 31.5 };
+      ? { x: 51.5, y: 18.2 }
+      : { x: 50, y: 29.5 };
 
-  return <div className={`mapa-overlay ${versao}`}>
-    {/* Próximo jardim: rótulo discreto, sem máscara preta e sem cadeado. */}
-    <div
-      className={`proximo-jardim-label ${!bloqueado ? "desbloqueado" : ""}`}
-      style={posicao(floresLabel)}
-      role="status"
-    >
-      <strong>Jardim das Flores</strong>
-      <small>
-        {bloqueado
-          ? "Bloqueado"
-          : comemorando
-            ? "Desbloqueado!"
-            : "Desbloqueado"}
-      </small>
-    </div>
+  const progressoDeserto = Math.min(passos, REQUISITO_FLORES);
 
-    {!bloqueado && comemorando && (
+  return (
+    <div className={`mapa-overlay ${versao}`}>
       <div
-        className="area flores-livre flash"
-        style={posicao(flores)}
-        aria-hidden="true"
-      />
-    )}
+        className={`proximo-jardim-label ${floresAtivo ? "desbloqueado" : ""}`}
+        style={posicao(floresLabel)}
+        role="status"
+      >
+        <strong>Jardim das Flores</strong>
 
-    {/* O halo mantém a posição aprovada e toda sua área permite entrar pelo teclado/toque. */}
-    <button
-      type="button"
-      className="local-atual-halo"
-      style={posicao(jardimAtualVisual)}
-      onClick={onEntrarJardim}
-      aria-label="Você está aqui. Entrar no jardim atual"
-    >
-      <span>Você está aqui<small>Entrar no jardim</small></span>
-    </button>
+        <small>
+          {!floresAtivo
+            ? "Bloqueado"
+            : comemorando
+              ? "Desbloqueado!"
+              : `${progressoNoJardim} de ${totalPassos} passos`}
+        </small>
+      </div>
 
-    {/* Jardim atual: mostra o progresso sem poluir o caminho com 11 bolinhas */}
-    <div
-      className="area deserto"
-      style={posicao(config.deserto)}
-    >
-      <div className="jardim-atual-card">
-        <strong>
-          {bloqueado ? "Jardim do Deserto" : "Jardim do Deserto · Concluído"}
-        </strong>
-
-        <span>
-          {Math.min(passos, REQUISITO_FLORES)} de {REQUISITO_FLORES} passos
-        </span>
-
+      {floresAtivo && comemorando && (
         <div
-          className="barra-progresso"
-          aria-label={`${Math.min(passos, REQUISITO_FLORES)} de ${REQUISITO_FLORES} passos`}
-        >
+          className="area flores-livre flash"
+          style={posicao(flores)}
+          aria-hidden="true"
+        />
+      )}
+
+      <button
+        type="button"
+        className="local-atual-halo"
+        style={posicao(jardimAtualVisual)}
+        onClick={onEntrarJardim}
+        aria-label="Você está aqui. Entrar no jardim atual"
+      >
+        <span>
+          Você está aqui
+          <small>Entrar no jardim</small>
+        </span>
+      </button>
+
+      <div
+        className="area deserto"
+        style={posicao(config.deserto)}
+      >
+        <div className="jardim-atual-card">
+          <strong>
+            {floresAtivo
+              ? "Jardim do Deserto · Concluído"
+              : "Jardim do Deserto"}
+          </strong>
+
+          <span>
+            {progressoDeserto} de {REQUISITO_FLORES} passos
+          </span>
+
           <div
-            className="barra-progresso-preenchimento"
-            style={{
-              width: `${Math.min(
-                100,
-                (Math.min(passos, REQUISITO_FLORES) / REQUISITO_FLORES) * 100,
-              )}%`,
-            }}
-          />
+            className="barra-progresso"
+            aria-label={`${progressoDeserto} de ${REQUISITO_FLORES} passos`}
+          >
+            <div
+              className="barra-progresso-preenchimento"
+              style={{
+                width: `${Math.min(
+                  100,
+                  (progressoDeserto / REQUISITO_FLORES) * 100,
+                )}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
-    </div>
     <style jsx>{`
       .mapa-overlay { position:absolute; inset:0; pointer-events:none; }
       .mobile { display:none; } @media(max-width:767px) { .mobile {display:block;} .desktop {display:none;} }
@@ -565,5 +601,6 @@ function MapaOverlay({ versao, passos, comemorando, onEntrarJardim }: {
         .local-atual-halo,.flash { animation:none; }
       }
     `}</style>
-  </div>;
+  </div>
+  );
 }
