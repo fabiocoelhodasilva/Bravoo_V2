@@ -11,12 +11,6 @@ const MATERIA_ESPIRITUAL_ID =
  */
 const DATA_INICIO_NOVA_REGRA_JARDIM = "2026-09-14";
 
-/**
- * Quantidade máxima de dias COMPLETOS anteriores a hoje
- * considerados no histórico do Jardim.
- */
-const DIAS_JANELA_JARDIM = 11;
-
 export type DiaHistoricoJardim = {
   data: string;
   metaCumprida: boolean;
@@ -35,7 +29,7 @@ export type ResumoPontuacaoJardim = {
   metaCumpridaHoje: boolean;
   bonusHoje: 0 | 1;
 
-  /** Início efetivo da janela histórica. Mantido também por compatibilidade. */
+  /** Início efetivo do histórico. Mantido também por compatibilidade. */
   dataInicio: string;
 
   /** Último dia completo analisado. É sempre ontem quando houver histórico. */
@@ -46,7 +40,7 @@ export type ResumoPontuacaoJardim = {
 
   /**
    * Diagnóstico do que o algoritmo enxergou em cada dia completo.
-   * No máximo 11 dias e nunca inclui hoje.
+   * Inclui todo o período válido e nunca inclui hoje.
    */
   diasHistoricos: DiaHistoricoJardim[];
 };
@@ -85,7 +79,7 @@ function maiorDataIso(...datas: string[]) {
  * Ela representa que a meta de oração daquele dia foi cumprida.
  *
  * REGRAS DO HISTÓRICO
- * - considera no máximo os 11 dias completos anteriores a hoje;
+ * - considera todos os dias completos desde o início efetivo da regra;
  * - nunca considera datas anteriores a 14/09/2026;
  * - nunca considera datas anteriores ao cadastro do usuário;
  * - dia completo com joia espiritual: +1;
@@ -94,12 +88,12 @@ function maiorDataIso(...datas: string[]) {
  * - a ordem dos dias importa porque o piso zero é aplicado dia a dia.
  *
  * REGRA DE HOJE
- * - hoje não faz parte dos 11 dias históricos;
+ * - hoje não faz parte do histórico de dias completos;
  * - se ainda não ganhou a joia hoje: +0 e nenhuma punição;
  * - se ganhou a joia hoje: +1 imediatamente.
  *
  * Assim, amanhã o dia de hoje deixa de ser "bônus de hoje" e passa
- * naturalmente a fazer parte da janela de dias completos.
+ * naturalmente a fazer parte do histórico de dias completos.
  */
 export async function buscarPontuacaoJardim(identidade?: { contaId: string; perfilId: string }): Promise<ResumoPontuacaoJardim> {
   const { supabase, perfilId, perfil, conta } = await requirePerfil();
@@ -109,17 +103,14 @@ export async function buscarPontuacaoJardim(identidade?: { contaId: string; perf
 
   const hoje = obterDataSaoPaulo(new Date());
   const ontem = adicionarDiasDataIso(hoje, -1);
-  const inicioJanelaMovel = adicionarDiasDataIso(hoje, -DIAS_JANELA_JARDIM);
   const dataCadastro = obterDataSaoPaulo(new Date(perfil.criado_em ?? conta.created_at));
 
   /**
-   * A janela começa na data MAIS RECENTE entre:
-   * - hoje - 11 dias;
+   * O histórico começa na data MAIS RECENTE entre:
    * - 14/09/2026;
    * - data de cadastro do usuário.
    */
   const dataInicio = maiorDataIso(
-    inicioJanelaMovel,
     DATA_INICIO_NOVA_REGRA_JARDIM,
     dataCadastro,
   );
