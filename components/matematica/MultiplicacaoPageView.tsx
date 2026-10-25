@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase/client";
 import { salvarSessaoAtividade } from "@/lib/sessoes/sessoes-service";
 import { tabuadaAtingiuPercentualMinimo } from "@/lib/gamificacao/matematica/tabuada-rules";
 import {
+  alterarMetaTabuada,
   buscarMetaTabuada,
   META_TABUADA_PADRAO,
 } from "@/lib/gamificacao/matematica/tabuada-joias-actions";
@@ -144,6 +145,10 @@ export default function MultiplicacaoPageView() {
   const [tabuadasMetaHoje, setTabuadasMetaHoje] = useState<number[]>([
     ...META_TABUADA_PADRAO,
   ]);
+  const [editandoMeta, setEditandoMeta] = useState(false);
+  const [tabuadasMetaEdicao, setTabuadasMetaEdicao] = useState<number[]>([]);
+  const [salvandoMeta, setSalvandoMeta] = useState(false);
+  const [mensagemMeta, setMensagemMeta] = useState<string | null>(null);
   const [processandoRodada, setProcessandoRodada] = useState(false);
   const [resultadoAquecimento, setResultadoAquecimento] =
     useState<ResultadoAquecimento | null>(null);
@@ -975,6 +980,80 @@ export default function MultiplicacaoPageView() {
     limparEstadoDaTabuada(tabuadaSelecionada);
   }
 
+  /* =========================================================
+     Edição livre da meta diária de Matemática
+  ========================================================= */
+
+  function iniciarEdicaoMeta() {
+    setTabuadasMetaEdicao([...tabuadasMetaHoje]);
+    setMensagemMeta(null);
+    setEditandoMeta(true);
+  }
+
+  function cancelarEdicaoMeta() {
+    setTabuadasMetaEdicao([]);
+    setMensagemMeta(null);
+    setEditandoMeta(false);
+  }
+
+  function alternarTabuadaNaMeta(numero: number) {
+    setMensagemMeta(null);
+    setTabuadasMetaEdicao((atuais) => {
+      if (atuais.includes(numero)) {
+        if (atuais.length === 1) return atuais;
+        return atuais.filter((item) => item !== numero);
+      }
+
+      return [...atuais, numero].sort((a, b) => a - b);
+    });
+  }
+
+  async function salvarMetaEdicao() {
+    if (!usuarioId || salvandoMeta || tabuadasMetaEdicao.length === 0) return;
+
+    setSalvandoMeta(true);
+    setMensagemMeta(null);
+
+    try {
+      const resultado = await alterarMetaTabuada({
+        supabase,
+        usuarioId,
+        tabuadas: tabuadasMetaEdicao,
+      });
+
+      const novaMeta = resultado.tabuadasMeta;
+      setTabuadasMetaHoje(novaMeta);
+
+      if (!novaMeta.includes(tabuadaSelecionada)) {
+        const proximaTabuada = novaMeta.find(
+          (numero) => !tabuadasConcluidasHoje.includes(numero)
+        ) ?? novaMeta[0] ?? 2;
+
+        setModoRevisao(false);
+        setResumoRevisao(null);
+        setRespostasRevisao({});
+        setRodada("ordem");
+        setOrdemMultiplicadores(MULTIPLICADORES);
+        setTabuadaSelecionada(proximaTabuada);
+        limparEstadoDaTabuada(proximaTabuada);
+        inicioRodadaRef.current = Date.now();
+      }
+
+      setEditandoMeta(false);
+      setTabuadasMetaEdicao([]);
+      setMensagemMeta("Meta atualizada!");
+    } catch (error) {
+      console.error("Erro ao atualizar a meta de tabuada:", error);
+      setMensagemMeta(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar a meta. Tente novamente."
+      );
+    } finally {
+      setSalvandoMeta(false);
+    }
+  }
+
   function trocarTabuada(numero: number) {
     setResultadoAquecimento(null);
     setModoRevisao(false);
@@ -1094,14 +1173,31 @@ export default function MultiplicacaoPageView() {
         <section className="mb-5 w-full rounded-[22px] border border-white/10 bg-[#101010] px-3 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#f1e6a7]">
-              Meta de Hoje
+              Minha meta de hoje
             </p>
 
-            <span className="text-[11px] text-white/50">Meta definida pelo responsável</span>
+            {!editandoMeta && (
+              <button
+                type="button"
+                onClick={iniciarEdicaoMeta}
+                className="rounded-full border border-[var(--color-5)]/50 px-3 py-1.5 text-[11px] font-extrabold text-[var(--color-5)] transition hover:bg-[var(--color-5)]/10"
+              >
+                Editar meta
+              </button>
+            )}
           </div>
 
+          {editandoMeta && (
+            <p className="mt-2 text-[11px] leading-relaxed text-white/55">
+              Toque nas tabuadas para adicionar ou remover da sua meta.
+            </p>
+          )}
+
           <div className="mt-3 grid grid-cols-8 gap-1.5">
-            {tabuadasMetaHoje.map((numero) => {
+            {(editandoMeta ? TABUADAS : tabuadasMetaHoje).map((numero) => {
+              const incluidaNaMeta = editandoMeta
+                ? tabuadasMetaEdicao.includes(numero)
+                : true;
               const selecionada = numero === tabuadaSelecionada;
               const tentadaHoje = tabuadasTentadasHoje.includes(numero);
               const concluidaHoje = tabuadasConcluidasHoje.includes(numero);
@@ -1110,10 +1206,21 @@ export default function MultiplicacaoPageView() {
                 <button
                   key={numero}
                   type="button"
-                  onClick={() => selecionarTabuada(numero, tentadaHoje)}
+                  onClick={() =>
+                    editandoMeta
+                      ? alternarTabuadaNaMeta(numero)
+                      : selecionarTabuada(numero, tentadaHoje)
+                  }
+                  disabled={
+                    editandoMeta &&
+                    incluidaNaMeta &&
+                    tabuadasMetaEdicao.length === 1
+                  }
                   className={[
                     "relative flex h-[40px] w-full items-center justify-center rounded-[10px] border px-0 text-[13px] font-extrabold transition-all duration-200",
-                    concluidaHoje
+                    editandoMeta && !incluidaNaMeta
+                      ? "border-white/10 bg-white/[0.02] text-white/30"
+                      : concluidaHoje
                       ? "border-[var(--color-4)]/70 bg-[rgba(93,198,161,0.22)] text-[var(--color-4)] shadow-[0_0_14px_rgba(93,198,161,0.15)]"
                       : tentadaHoje
                         ? "border-[var(--color-1)]/70 bg-[rgba(201,74,74,0.20)] text-[#f58f8f] shadow-[0_0_14px_rgba(201,74,74,0.12)]"
@@ -1121,14 +1228,50 @@ export default function MultiplicacaoPageView() {
                     selecionada
                       ? "ring-2 ring-white/65 ring-offset-1 ring-offset-black"
                       : "",
+                    editandoMeta && !incluidaNaMeta ? "opacity-55" : "",
                   ].join(" ")}
+                  aria-pressed={editandoMeta ? incluidaNaMeta : selecionada}
+                  aria-label={
+                    editandoMeta
+                      ? `${incluidaNaMeta ? "Remover" : "Adicionar"} tabuada do ${numero} da meta`
+                      : `Abrir tabuada do ${numero}`
+                  }
                 >
-                  {numero}x
+                  {numero}x{editandoMeta && (incluidaNaMeta ? " ✓" : " +")}
                 </button>
               );
             })}
           </div>
 
+          {editandoMeta && (
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={cancelarEdicaoMeta}
+                disabled={salvandoMeta}
+                className="flex-1 rounded-full border border-white/15 px-4 py-2 text-xs font-extrabold text-white/70 transition hover:bg-white/5 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={salvarMetaEdicao}
+                disabled={salvandoMeta || tabuadasMetaEdicao.length === 0}
+                className="flex-1 rounded-full bg-[var(--color-4)] px-4 py-2 text-xs font-extrabold text-black transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {salvandoMeta ? "Salvando..." : "Salvar meta"}
+              </button>
+            </div>
+          )}
+
+          {mensagemMeta && (
+            <p
+              role="status"
+              className={`mt-2 text-center text-[11px] font-bold ${editandoMeta ? "text-[var(--color-1)]" : "text-[var(--color-4)]"}`}
+            >
+              {mensagemMeta}
+            </p>
+          )}
 
         </section>
 

@@ -276,19 +276,18 @@ export async function alterarMetaTabuada(params: {
   tabuadas: number[];
 }): Promise<ResultadoSincronizacaoJoiaTabuada> {
   const { supabase, usuarioId } = params;
-  // Revalida a conta responsável e o perfil antes da alteração.
+  // Confirma que a alteração se aplica somente ao perfil atualmente ativo.
   const { obterContextoPerfis } = await import("@/lib/perfis/perfil-client");
-  const { podeAlterarMetaAtual, META_SOMENTE_RESPONSAVEL } = await import("@/lib/perfis/perfis-core");
   const contexto = await obterContextoPerfis(true);
-  if (!contexto.perfilAtivo || !podeAlterarMetaAtual(contexto) || contexto.perfilAtivo.id !== usuarioId) {
-    throw new Error(META_SOMENTE_RESPONSAVEL);
+  if (
+    !usuarioId ||
+    !contexto.perfilAtivo ||
+    contexto.perfilAtivo.id !== usuarioId
+  ) {
+    throw new Error("O perfil ativo não corresponde ao usuário da meta.");
   }
   const perfilId = contexto.perfilAtivo.id;
   const tabuadas = normalizarListaTabuadas(params.tabuadas);
-
-  if (!usuarioId) {
-    throw new Error("Usuário não identificado.");
-  }
 
   if (tabuadas.length === 0) {
     throw new Error("Selecione pelo menos uma tabuada.");
