@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   LogOut,
+  ShieldCheck,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -16,6 +17,13 @@ import {
   definirPerfilAtivo,
   encerrarSessao,
 } from "@/lib/perfis/perfil-client";
+
+/* =========================================================
+   Acesso administrativo exclusivo da conta do Fabio
+========================================================= */
+
+const ADMIN_CONTA_ID =
+  "b172f971-7b1c-4183-b790-ec6aafae4b9c";
 
 interface HeaderProps {
   extraItems?: Array<{
@@ -31,7 +39,13 @@ export default function Header({
   extraItems = [],
   onLogoutClick,
 }: HeaderProps) {
-  const { perfilAtivoId, perfilAtivo, perfis, legado } = useAuth();
+  const {
+    contaId,
+    perfilAtivoId,
+    perfilAtivo,
+    perfis,
+    legado,
+  } = useAuth();
 
   function obterSiglaPerfil(nome?: string | null) {
     const primeiroNome = nome?.trim().split(/\s+/)[0] ?? "";
@@ -353,6 +367,18 @@ export default function Header({
                 ================================================= */}
 
                 <div className="border-t border-white/[0.07] p-2">
+
+                  {/* Administração — visível somente na conta autorizada */}
+                  {contaId === ADMIN_CONTA_ID && (
+                    <Link
+                      href="/admin/indicadores"
+                      onClick={() => setMenuAberto(false)}
+                      className="flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-sm text-[#f0a33f] transition hover:bg-[#e9891d]/10 hover:text-[#ffc36b]"
+                    >
+                      <ShieldCheck size={17} />
+                      Administração
+                    </Link>
+                  )}
 
                   {/* Gerenciar perfis */}
                   {!legado && (
