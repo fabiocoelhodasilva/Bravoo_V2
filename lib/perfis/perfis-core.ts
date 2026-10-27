@@ -61,9 +61,9 @@ export function selecionarPerfilPermitido(perfis: Perfil[], perfilId: unknown) {
   return perfil;
 }
 
-/** Somente a conta responsável vinculada ao perfil pode gerenciar suas metas. */
+/** Permite alterar a meta quando há um perfil ativo selecionado na conta. */
 export function podeAlterarMetaAtual(contexto: ContextoPerfis) {
-  return !contexto.legado && contexto.perfilAtivo?.conta_id === contexto.contaId;
+  return contexto.perfilAtivo !== null;
 }
 
-export const META_SOMENTE_RESPONSAVEL = "Somente a conta responsável pode alterar as metas deste perfil.";
+export const META_SOMENTE_RESPONSAVEL = "Selecione um perfil ativo para alterar a meta.";
