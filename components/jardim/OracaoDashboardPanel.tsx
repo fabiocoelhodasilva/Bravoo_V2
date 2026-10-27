@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import {
+  alterarMetaOracao,
   registrarMomentoOracao,
 } from "@/lib/gamificacao/oracao/oracao-actions";
 import JoiaConquistadaModal from "@/components/gamification/JoiaConquistadaModal";
@@ -43,6 +45,7 @@ export default function OracaoDashboardPanel({
   onResumoAtualizado,
   onOracaoRegistrada,
 }: OracaoDashboardPanelProps) {
+  const { perfilAtivoId } = useAuth();
   const [minutosHoje, setMinutosHoje] = useState(
     dadosIniciais?.minutosHoje ?? 0
   );
@@ -57,6 +60,10 @@ export default function OracaoDashboardPanel({
   );
   const carregando = dadosIniciaisCarregando || !dadosIniciais || erroCarregamento;
   const [salvando, setSalvando] = useState(false);
+  const [metaModalAberto, setMetaModalAberto] = useState(false);
+  const [novaMeta, setNovaMeta] = useState(String(META_PADRAO_ORACAO));
+  const [salvandoMeta, setSalvandoMeta] = useState(false);
+  const [erroMeta, setErroMeta] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
   const [modalJoiaConquistadaAberto, setModalJoiaConquistadaAberto] =
     useState(false);
@@ -106,6 +113,78 @@ export default function OracaoDashboardPanel({
       await onOracaoRegistrada?.();
     } catch (error) {
       console.error("Erro ao atualizar jardim apos registro salvo:", error);
+    }
+  }
+
+  function abrirModalMeta() {
+    setNovaMeta(String(metaSegura));
+    setErroMeta("");
+    setMetaModalAberto(true);
+  }
+
+  async function salvarMetaOracao() {
+    if (salvandoMeta) return;
+
+    const metaNumerica = Number(novaMeta);
+
+    if (!Number.isInteger(metaNumerica) || metaNumerica < 1 || metaNumerica > 180) {
+      setErroMeta("Escolha uma meta entre 1 e 180 minutos.");
+      return;
+    }
+
+    if (!perfilAtivoId) {
+      setErroMeta("Não foi possível identificar o perfil ativo. Reabra o painel e tente novamente.");
+      return;
+    }
+
+    try {
+      setSalvandoMeta(true);
+      setErroMeta("");
+
+      const resultado = await alterarMetaOracao(metaNumerica, perfilAtivoId);
+
+      if (!montadoRef.current) return;
+
+      setMetaDiaria(resultado.metaDiaria);
+      setMinutosHoje(resultado.minutosHoje);
+      setMetaModalAberto(false);
+      onResumoAtualizado?.({
+        minutosHoje: resultado.minutosHoje,
+        minutosAno,
+        metaDiaria: resultado.metaDiaria,
+        persistenciaDias,
+      });
+
+      if (
+        !resultado.joiaConquistada &&
+        (resultado.joiaRemovida || resultado.mandalaConquistada || resultado.mandalaRemovida)
+      ) {
+        notificarDashboardSobreJoia();
+      }
+
+      mostrarConquista(resultado.joiaConquistada, resultado.mandalaConquistada);
+      await atualizarJardimAposConquista();
+
+      if (!resultado.joiaConquistada && !resultado.mandalaConquistada) {
+        setMensagem(
+          resultado.joiaRemovida || resultado.mandalaRemovida
+            ? "Meta atualizada. A joia e a mandala de hoje foram recalculadas."
+            : "Meta de oração atualizada!",
+        );
+
+        setTimeout(() => {
+          if (montadoRef.current) setMensagem("");
+        }, 2500);
+      }
+    } catch (error) {
+      console.error("Erro ao alterar meta de oração:", error);
+      setErroMeta(
+        error instanceof Error
+          ? error.message.replace("FALHA_META_ORACAO: ", "")
+          : "Não foi possível salvar a nova meta. Tente novamente.",
+      );
+    } finally {
+      if (montadoRef.current) setSalvandoMeta(false);
     }
   }
 
@@ -187,7 +266,14 @@ export default function OracaoDashboardPanel({
               Meta de oração do dia
             </div>
 
-            <span className="text-[10px] text-white/60">Meta definida pelo responsável</span>
+            <button
+              type="button"
+              onClick={abrirModalMeta}
+              disabled={carregando || salvando || salvandoMeta}
+              className="shrink-0 text-[10px] font-bold text-[#f1d27a] underline decoration-[#f1d27a]/40 underline-offset-2 transition hover:text-white disabled:cursor-wait disabled:opacity-50"
+            >
+              Alterar meta
+            </button>
           </div>
 
           {/* Ícone um pouco mais baixo; o título começa alinhado à esquerda dele */}
@@ -247,6 +333,71 @@ export default function OracaoDashboardPanel({
           </div>
         </div>
       </div>
+
+      {/* Modal para alterar a meta diária de oração */}
+      {metaModalAberto && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/35 px-4 backdrop-blur-[2px]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-modal-meta-oracao"
+            className="w-full max-w-[340px] rounded-[26px] border border-[#f1d27a]/25 bg-gradient-to-br from-[#2d2415]/95 via-[#1b1711]/95 to-[#172018]/95 p-5 text-white shadow-[0_20px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+          >
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-[#f1d27a]/25 bg-[#f1d27a]/10 text-3xl">
+              🎯
+            </div>
+
+            <h3 id="titulo-modal-meta-oracao" className="text-center text-[1.05rem] font-black">
+              Alterar meta de oração
+            </h3>
+            <p className="mt-1 text-center text-[0.78rem] font-medium text-white/60">
+              A nova meta vale hoje e recalcula sua joia e mandala.
+            </p>
+
+            <label htmlFor="nova-meta-oracao" className="mt-5 block text-left text-xs font-bold text-white/75">
+              Minutos por dia
+            </label>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                id="nova-meta-oracao"
+                type="number"
+                min={1}
+                max={180}
+                step={1}
+                value={novaMeta}
+                onChange={(event) => setNovaMeta(event.target.value)}
+                disabled={salvandoMeta}
+                autoFocus
+                className="w-full rounded-xl border border-[#f1d27a]/25 bg-black/25 px-4 py-3 text-center text-xl font-black text-white outline-none focus:border-[#f1d27a]/70"
+              />
+              <span className="text-sm font-semibold text-white/55">min</span>
+            </div>
+
+            {erroMeta && (
+              <p role="alert" className="mt-3 text-left text-xs font-semibold text-[#ffaaa5]">
+                {erroMeta}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => void salvarMetaOracao()}
+              disabled={salvandoMeta}
+              className="mt-5 w-full rounded-2xl border border-[#5dc6a1]/35 bg-[#5dc6a1]/85 px-5 py-3 text-sm font-black text-white transition hover:bg-[#5dc6a1] disabled:cursor-wait disabled:opacity-50"
+            >
+              {salvandoMeta ? "Salvando..." : "Salvar meta"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetaModalAberto(false)}
+              disabled={salvandoMeta}
+              className="mt-2 w-full rounded-[14px] border border-white/10 bg-black/18 py-2.5 text-[0.78rem] font-bold text-white/65 transition hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal para registrar o tempo da oração */}
       {modalAberto && (
