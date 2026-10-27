@@ -270,9 +270,23 @@ export default function OracaoDashboardPanel({
               type="button"
               onClick={abrirModalMeta}
               disabled={carregando || salvando || salvandoMeta}
-              className="shrink-0 text-[10px] font-bold text-[#f1d27a] underline decoration-[#f1d27a]/40 underline-offset-2 transition hover:text-white disabled:cursor-wait disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#f1d27a]/35 bg-[#f1d27a]/10 px-3 py-1.5 text-[10px] font-extrabold text-[#f1d27a] shadow-[0_0_14px_rgba(241,210,122,0.08)] transition hover:border-[#f1d27a]/70 hover:bg-[#f1d27a] hover:text-[#241b0c] active:scale-95 disabled:cursor-wait disabled:opacity-50"
             >
-              Alterar meta
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="h-3 w-3"
+              >
+                <path
+                  d="m12.8 3.2 4 4M4 16l2.9-.6L16 6.3a1.4 1.4 0 0 0-2-2l-9.1 9.1L4 16Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.6"
+                />
+              </svg>
+              Editar meta
             </button>
           </div>
 
