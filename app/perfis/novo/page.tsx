@@ -4,52 +4,6 @@ import { useRef, useState } from "react";
 import { criarPerfil } from "./actions";
 import { definirPerfilAtivo } from "@/lib/perfis/perfil-client";
 
-function formatarDataNascimento(valor: string) {
-  const numeros = valor.replace(/\D/g, "").slice(0, 8);
-
-  if (numeros.length <= 2) return numeros;
-  if (numeros.length <= 4) {
-    return `${numeros.slice(0, 2)}/${numeros.slice(2)}`;
-  }
-
-  return `${numeros.slice(0, 2)}/${numeros.slice(2, 4)}/${numeros.slice(4)}`;
-}
-
-function converterDataNascimentoParaISO(valor: string) {
-  if (!valor.trim()) return "";
-
-  const partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor);
-  if (!partes) {
-    throw new Error("Digite a data no formato DD/MM/AAAA.");
-  }
-
-  const dia = Number(partes[1]);
-  const mes = Number(partes[2]);
-  const ano = Number(partes[3]);
-  const data = new Date(0);
-  data.setUTCHours(0, 0, 0, 0);
-  data.setUTCFullYear(ano, mes - 1, dia);
-
-  if (
-    data.getUTCFullYear() !== ano ||
-    data.getUTCMonth() !== mes - 1 ||
-    data.getUTCDate() !== dia
-  ) {
-    throw new Error("Digite uma data de nascimento válida.");
-  }
-
-  const hoje = new Date();
-  const hojeUTC = new Date(0);
-  hojeUTC.setUTCHours(0, 0, 0, 0);
-  hojeUTC.setUTCFullYear(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-
-  if (data > hojeUTC) {
-    throw new Error("A data de nascimento não pode estar no futuro.");
-  }
-
-  return `${partes[3]}-${partes[2]}-${partes[1]}`;
-}
-
 export default function NovoPerfilPage() {
   const [nome, setNome] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
@@ -65,8 +19,7 @@ export default function NovoPerfilPage() {
     setSalvando(true);
     setErro("");
     try {
-      const nascimentoISO = converterDataNascimentoParaISO(dataNascimento);
-      const perfilId = perfilCriado ?? (await criarPerfil({ nome, dataNascimento: nascimentoISO })).perfilId;
+      const perfilId = perfilCriado ?? (await criarPerfil({ nome, dataNascimento })).perfilId;
       setPerfilCriado(perfilId);
       // Em caso de falha na seleção, a próxima tentativa reutiliza o perfil criado.
       await definirPerfilAtivo(perfilId);
@@ -86,16 +39,7 @@ export default function NovoPerfilPage() {
             <input required maxLength={120} value={nome} onChange={(event) => setNome(event.target.value)} className="mt-2 w-full rounded-lg border border-white/20 bg-black p-3" />
           </label>
           <label className="block">Data de nascimento (opcional)
-            <input
-              type="text"
-              inputMode="numeric"
-              autoComplete="bday"
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-              value={dataNascimento}
-              onChange={(event) => setDataNascimento(formatarDataNascimento(event.target.value))}
-              className="mt-2 w-full rounded-lg border border-white/20 bg-black p-3"
-            />
+            <input type="date" value={dataNascimento} onChange={(event) => setDataNascimento(event.target.value)} className="mt-2 w-full rounded-lg border border-white/20 bg-black p-3" />
           </label>
         </fieldset>
         {perfilCriado && <p>Perfil criado. Falta concluir a seleção para entrar.</p>}
