@@ -897,7 +897,10 @@ export default function StudentDashboard() {
 
           {/* Conquistas em uma linha de largura total */}
           <div className="w-full">
-            <StudentDashboard_Resumo desktopEmLinha />
+            <StudentDashboard_Resumo
+              desktopEmLinha
+              joiasMandalaHoje={joiasConquistadasHoje}
+            />
           </div>
 
           {/* Acessos organizados em duas colunas */}
@@ -954,28 +957,23 @@ export default function StudentDashboard() {
               }
             />
 
-            <HomeFeatureCard
-              title="Virtudes"
-              href="/virtudes"
-              prefetch={false}
-              compactMobile
-              colorClass="bg-[var(--color-6)] hover:brightness-110"
-              joiaCor={
-                temJoiaVirtudesHoje
-                  ? "roxa"
-                  : undefined
-              }
-            />
-          </div>
-
-          {/* Mandala mantida, agora abaixo dos acessos no desktop */}
-          {carregarResumo && (
-            <div className="flex w-full justify-center py-2">
-              <JornadaResumo
-                joiasConquistadas={joiasConquistadasHoje}
-              />
+            <div className="col-span-2 flex justify-center">
+              <div className="w-[calc(50%-0.5rem)] [&>a]:!h-[132px] [&>button]:!h-[132px]">
+                <HomeFeatureCard
+                  title="Virtudes"
+                  href="/virtudes"
+                  prefetch={false}
+                  compactMobile
+                  colorClass="bg-[var(--color-6)] hover:brightness-110"
+                  joiaCor={
+                    temJoiaVirtudesHoje
+                      ? "roxa"
+                      : undefined
+                  }
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </main>
     </div>

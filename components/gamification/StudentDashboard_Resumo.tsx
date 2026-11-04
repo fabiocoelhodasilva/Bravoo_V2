@@ -267,6 +267,7 @@ function calcularPersistenciaMandala(
 
 type StudentDashboardResumoProps = {
   desktopEmLinha?: boolean;
+  joiasMandalaHoje?: string[];
 };
 
 /* =========================================================
@@ -309,7 +310,10 @@ function DashboardMandalaSkeleton({ desktopEmLinha = false }: StudentDashboardRe
    Componente principal
 ========================================================= */
 
-export default function StudentDashboard_Resumo({ desktopEmLinha = false }: StudentDashboardResumoProps) {
+export default function StudentDashboard_Resumo({
+  desktopEmLinha = false,
+  joiasMandalaHoje = [],
+}: StudentDashboardResumoProps) {
   const carregamentoEmAndamentoRef =
     useRef<Promise<void> | null>(null);
 
@@ -601,7 +605,9 @@ export default function StudentDashboard_Resumo({ desktopEmLinha = false }: Stud
       totalJoias={totalMandalas}
       nomeJoia="Mandalas"
       imagemJoia={IMAGEM_MANDALA}
+      titulo={desktopEmLinha ? "Suas conquistas" : undefined}
       desktopEmLinha={desktopEmLinha}
+      joiasMandalaHoje={joiasMandalaHoje}
     />
   );
 }

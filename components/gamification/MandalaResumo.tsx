@@ -1,5 +1,6 @@
 type MandalaResumoProps = {
   joiasConquistadas: string[];
+  compacto?: boolean;
 };
 
 /* =========================================================
@@ -35,6 +36,7 @@ const MATERIAS_MANDALA = [
 
 export default function MandalaResumo({
   joiasConquistadas,
+  compacto = false,
 }: MandalaResumoProps) {
   const total = MATERIAS_MANDALA.length;
 
@@ -68,7 +70,9 @@ export default function MandalaResumo({
     <div className="w-full px-0 py-2">
       <div className="flex w-full flex-col items-center">
         <div
-          className={`relative flex h-52 w-52 items-center justify-center ${
+          className={`relative flex items-center justify-center ${
+            compacto ? "h-32 w-32" : "h-52 w-52"
+          } ${
             mandalaConquistada
               ? "mandala-conquistada"
               : ""
@@ -94,12 +98,16 @@ export default function MandalaResumo({
           {mandalaConquistada && (
             <>
               <div
-                className="mandala-estrela-pulso pointer-events-none absolute inset-[-28px]"
+                className={`mandala-estrela-pulso pointer-events-none absolute ${
+                  compacto ? "inset-[-16px]" : "inset-[-28px]"
+                }`}
                 aria-hidden="true"
               />
 
               <div
-                className="mandala-aurora-pulso pointer-events-none absolute inset-[-18px] rounded-full"
+                className={`mandala-aurora-pulso pointer-events-none absolute rounded-full ${
+                  compacto ? "inset-[-10px]" : "inset-[-18px]"
+                }`}
                 aria-hidden="true"
               />
             </>
@@ -159,7 +167,9 @@ export default function MandalaResumo({
                 ? "Mandala conquistada"
                 : "Progresso da Mandala"
             }
-            className={`relative z-10 h-[11.5rem] w-[11.5rem] object-contain ${
+            className={`relative z-10 object-contain ${
+              compacto ? "h-24 w-24" : "h-[11.5rem] w-[11.5rem]"
+            } ${
               mandalaConquistada
                 ? "mandala-imagem-conquistada"
                 : "drop-shadow-[0_0_24px_rgba(255,210,0,0.75)]"
