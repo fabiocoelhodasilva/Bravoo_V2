@@ -869,9 +869,9 @@ export default function StudentDashboard() {
       ===================================================== */}
 
       <main className="hidden min-h-[calc(100dvh-64px)] w-full xl:block">
-        <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-6 pb-8 pt-3 2xl:px-8">
-          {/* Saudação alinhada à direita no cabeçalho do conteúdo */}
-          <h1 className="text-right text-[1.85rem] font-extrabold leading-tight">
+        <div className="mx-auto flex w-full max-w-[1332px] flex-col gap-4 px-6 pb-8 pt-3 2xl:px-8">
+          {/* Saudação centralizada no desktop */}
+          <h1 className="text-center text-[1.85rem] font-extrabold leading-tight">
             <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
               Olá
             </span>
