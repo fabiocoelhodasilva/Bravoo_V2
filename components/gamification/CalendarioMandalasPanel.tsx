@@ -101,14 +101,14 @@ export default function CalendarioMandalasPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-3 py-5 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/[0.08] px-3 py-5"
       onClick={onClose}
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-label="Calendário mensal de Mandalas"
-        className="relative max-h-[min(90dvh,680px)] w-full max-w-[560px] overflow-y-auto rounded-[26px] border border-[#f2cf7a]/25 bg-gradient-to-br from-[#302719]/95 via-[#1d1a14]/95 to-[#201915]/95 p-4 text-white shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-5"
+        className="relative max-h-[min(90dvh,680px)] w-[min(84vw,390px)] overflow-y-auto rounded-[26px] border border-[#f2cf7a]/25 bg-gradient-to-br from-[#302719]/68 via-[#1d1a14]/58 to-[#201915]/64 p-3.5 text-white shadow-[0_18px_55px_rgba(0,0,0,0.32)] backdrop-blur-md"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -127,7 +127,7 @@ export default function CalendarioMandalasPanel({
           </p>
         </header>
 
-        <div className="mt-4 rounded-[20px] border border-white/10 bg-black/20 p-3 sm:p-4">
+        <div className="mt-3 rounded-[20px] border border-white/10 bg-black/18 p-3 shadow-inner backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -153,11 +153,11 @@ export default function CalendarioMandalasPanel({
             </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-7 gap-1.5 sm:gap-2">
+          <div className="mt-2.5 grid grid-cols-7 gap-x-1 gap-y-1">
             {NOMES_DIAS.map((dia, indice) => (
               <div
                 key={`${dia}-${indice}`}
-                className="py-1 text-center text-[0.65rem] font-bold text-white/45 sm:text-xs"
+                className="text-center text-[0.5rem] font-bold text-white/35"
               >
                 {dia}
               </div>
@@ -165,7 +165,7 @@ export default function CalendarioMandalasPanel({
 
             {diasCalendario.map((item, indice) => {
               if (!item) {
-                return <div key={`vazio-${indice}`} className="h-10 sm:h-14" />;
+                return <div key={`vazio-${indice}`} className="h-[36px]" />;
               }
 
               const conquistou = diasConquistados.has(item.iso);
@@ -175,7 +175,7 @@ export default function CalendarioMandalasPanel({
                 <div
                   key={item.iso}
                   aria-label={`${item.numero}${conquistou ? ", Mandala conquistada" : ""}`}
-                  className={`relative flex h-10 flex-col items-center justify-center gap-0.5 rounded-[10px] border text-xs font-bold sm:h-14 sm:rounded-xl sm:text-sm ${
+                  className={`relative flex h-[36px] flex-col items-center justify-start gap-0.5 rounded-[9px] border pt-[4px] text-[0.6rem] font-bold ${
                     item.futuro
                       ? "border-white/[0.04] bg-white/[0.015] text-white/25"
                       : conquistou
@@ -188,9 +188,9 @@ export default function CalendarioMandalasPanel({
                     <Image
                       src={IMAGEM_MANDALA}
                       alt="Mandala conquistada"
-                      width={18}
-                      height={18}
-                      className="h-[17px] w-[17px] object-contain drop-shadow-[0_0_5px_rgba(242,207,122,0.8)] sm:h-5 sm:w-5"
+                      width={17}
+                      height={17}
+                      className="h-[17px] w-[17px] object-contain drop-shadow-[0_0_5px_rgba(242,207,122,0.8)]"
                     />
                   )}
                 </div>
