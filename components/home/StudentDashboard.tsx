@@ -669,7 +669,7 @@ export default function StudentDashboard() {
                   <span
                     data-mandala-dia={dia.iso}
                     className={`mt-0.5 flex h-5 items-center justify-center sm:h-6 ${
-                      desktop ? "xl:h-4" : ""
+                      desktop ? "xl:h-[26px]" : ""
                     }`}
                   >
                     {imagemMandalaDia && (
@@ -678,7 +678,7 @@ export default function StudentDashboard() {
                         alt="Mandala conquistada"
                         className={`h-6 w-6 object-contain sm:h-7 sm:w-7 ${
                           desktop
-                            ? "xl:h-5 xl:w-5"
+                            ? "xl:h-[26px] xl:w-[26px]"
                             : ""
                         }`}
                         draggable={false}
