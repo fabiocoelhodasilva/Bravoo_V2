@@ -904,7 +904,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* Acessos organizados em três colunas no desktop */}
-          <div className="grid w-full grid-cols-3 gap-4 [&>*]:min-w-0 [&>a]:!h-[120px] [&>button]:!h-[120px] [&>a]:!text-[1.25rem] [&>button]:!text-[1.25rem] [&>a_span]:!text-[1.25rem] [&>button_span]:!text-[1.25rem]">
+          <div className="grid w-full grid-cols-3 gap-4 [&>*]:min-w-0 [&>a]:!h-[108px] [&>button]:!h-[108px] [&>a]:!text-[1.25rem] [&>button]:!text-[1.25rem] [&>a_span]:!text-[1.25rem] [&>button_span]:!text-[1.25rem]">
             <HomeFeatureCard
               title="Minha Jornada"
               href="/meu-dia"
