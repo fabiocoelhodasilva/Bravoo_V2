@@ -629,10 +629,8 @@ export default function StudentDashboard_Resumo({
         titulo={desktopEmLinha ? "Suas conquistas" : undefined}
         desktopEmLinha={desktopEmLinha}
         joiasMandalaHoje={joiasMandalaHoje}
-        onAbrirCalendarioMandalas={
-          desktopEmLinha
-            ? () => setCalendarioMandalasAberto(true)
-            : undefined
+        onAbrirCalendarioMandalas={() =>
+          setCalendarioMandalasAberto(true)
         }
       />
 

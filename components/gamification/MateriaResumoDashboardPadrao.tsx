@@ -56,7 +56,25 @@ export default function MateriaResumoDashboardPadrao({
         </div>
 
         <div
-          className="rounded-[18px] border px-3 py-3"
+          role="button"
+          tabIndex={onAbrirCalendarioMandalas ? 0 : -1}
+          aria-disabled={!onAbrirCalendarioMandalas}
+          aria-label="Abrir calendário mensal de Mandalas"
+          onClick={onAbrirCalendarioMandalas}
+          onKeyDown={(event) => {
+            if (
+              onAbrirCalendarioMandalas &&
+              (event.key === "Enter" || event.key === " ")
+            ) {
+              event.preventDefault();
+              onAbrirCalendarioMandalas();
+            }
+          }}
+          className={`rounded-[18px] border px-3 py-3 ${
+            onAbrirCalendarioMandalas
+              ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7cc9ed]"
+              : ""
+          }`}
           style={{
             background:
               "radial-gradient(160px 90px at 10% 0%, rgba(93,198,161,0.16), transparent 65%), linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), #0b1518",
