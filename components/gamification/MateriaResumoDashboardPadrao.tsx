@@ -11,6 +11,7 @@ type MateriaResumoDashboardPadraoProps = {
   emojiJoia?: string;
   desktopEmLinha?: boolean;
   joiasMandalaHoje?: string[];
+  onAbrirCalendarioMandalas?: () => void;
 };
 
 export default function MateriaResumoDashboardPadrao({
@@ -22,6 +23,7 @@ export default function MateriaResumoDashboardPadrao({
   emojiJoia = "💎",
   desktopEmLinha = false,
   joiasMandalaHoje = [],
+  onAbrirCalendarioMandalas,
 }: MateriaResumoDashboardPadraoProps) {
   return (
     <section className="w-full">
@@ -91,7 +93,7 @@ export default function MateriaResumoDashboardPadrao({
 
       {/* Desktop/tablet: dashboard maior */}
       <div className="hidden rounded-[26px] border border-white/10 bg-[#101010] p-4 shadow-[0_0_30px_rgba(0,0,0,0.45)] sm:block xl:p-3">
-        <p className="mb-4 text-sm font-black uppercase tracking-[0.16em] text-[#f1e6a7] xl:mb-2">
+        <p className="mb-4 text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7] xl:mb-2 xl:text-sm">
           {titulo}
         </p>
 
@@ -108,7 +110,7 @@ export default function MateriaResumoDashboardPadrao({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-black uppercase tracking-wide text-white">
+              <p className="text-[11px] font-black uppercase tracking-wide text-white xl:text-[13px]">
                 Persistência
               </p>
 
@@ -117,14 +119,24 @@ export default function MateriaResumoDashboardPadrao({
                   {diasSeguidos}
                 </span>
 
-                <span className="pb-[6px] text-base font-bold text-white/70">
+                <span className="pb-[6px] text-sm font-bold text-white/70 xl:text-base">
                   dias seguidos
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="relative min-h-[106px] overflow-hidden rounded-2xl border border-[#3d7a99]/35 bg-gradient-to-br from-[#3d7a99]/35 via-[#1d4f7a]/18 to-black/20 px-4 py-2 xl:min-h-[128px] xl:px-3">
+          <button
+            type="button"
+            onClick={onAbrirCalendarioMandalas}
+            disabled={!onAbrirCalendarioMandalas}
+            aria-label="Abrir calendário mensal de Mandalas"
+            className={`relative min-h-[106px] w-full overflow-hidden rounded-2xl border border-[#3d7a99]/35 bg-gradient-to-br from-[#3d7a99]/35 via-[#1d4f7a]/18 to-black/20 px-4 py-2 text-left xl:min-h-[128px] xl:px-3 ${
+              onAbrirCalendarioMandalas
+                ? "cursor-pointer transition hover:border-[#7cc9ed]/55 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7cc9ed]"
+                : "cursor-default"
+            }`}
+          >
             <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#3d7a99]/25 blur-2xl" />
 
             <div className="relative flex items-center gap-4">
@@ -151,7 +163,7 @@ export default function MateriaResumoDashboardPadrao({
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-black uppercase tracking-wide text-white">
+                <p className="text-[11px] font-black uppercase tracking-wide text-white xl:text-[13px]">
                   Joias
                 </p>
 
@@ -160,13 +172,13 @@ export default function MateriaResumoDashboardPadrao({
                     {totalJoias}
                   </span>
 
-                  <span className="pb-[6px] text-base font-bold text-white/70">
+                  <span className="pb-[6px] text-sm font-bold text-white/70 xl:text-base">
                     {nomeJoia}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </section>

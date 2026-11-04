@@ -15,6 +15,7 @@ import {
 
 import { supabase } from "@/lib/supabase/client";
 import MateriaResumoDashboardPadrao from "@/components/gamification/MateriaResumoDashboardPadrao";
+import CalendarioMandalasPanel from "@/components/gamification/CalendarioMandalasPanel";
 
 /* =========================================================
    IDs fixos das cinco áreas da Mandala
@@ -71,6 +72,7 @@ type RegistroJoia = {
 type DashboardMandala = {
   diasSeguidos: number;
   totalMandalas: number;
+  datasComMandala: string[];
   atualizadoEm: number;
 };
 
@@ -108,6 +110,7 @@ function lerCacheDashboardMandala():
     if (
       !Number.isFinite(cache.diasSeguidos) ||
       !Number.isFinite(cache.totalMandalas) ||
+      !Array.isArray(cache.datasComMandala) ||
       !Number.isFinite(cache.atualizadoEm)
     ) {
       return null;
@@ -326,6 +329,12 @@ export default function StudentDashboard_Resumo({
   const [totalMandalas, setTotalMandalas] =
     useState(0);
 
+  const [datasComMandala, setDatasComMandala] =
+    useState<string[]>([]);
+
+  const [calendarioMandalasAberto, setCalendarioMandalasAberto] =
+    useState(false);
+
   const [
     carregandoDashboard,
     setCarregandoDashboard,
@@ -350,6 +359,10 @@ export default function StudentDashboard_Resumo({
 
         setTotalMandalas(
           dados.totalMandalas
+        );
+
+        setDatasComMandala(
+          dados.datasComMandala
         );
 
         setTemDadosIniciais(true);
@@ -414,6 +427,7 @@ export default function StudentDashboard_Resumo({
               aplicarDadosDashboard({
                 diasSeguidos: 0,
                 totalMandalas: 0,
+              datasComMandala: [],
               });
 
               return;
@@ -457,6 +471,7 @@ export default function StudentDashboard_Resumo({
 
               totalMandalas:
                 datasComMandala.length,
+              datasComMandala,
             });
           } catch (error) {
             if (
@@ -473,6 +488,7 @@ export default function StudentDashboard_Resumo({
               aplicarDadosDashboard({
                 diasSeguidos: 0,
                 totalMandalas: 0,
+                datasComMandala: [],
               });
             }
           } finally {
@@ -509,6 +525,10 @@ export default function StudentDashboard_Resumo({
 
       setTotalMandalas(
         cache.totalMandalas
+      );
+
+      setDatasComMandala(
+        cache.datasComMandala
       );
 
       setTemDadosIniciais(true);
@@ -600,14 +620,28 @@ export default function StudentDashboard_Resumo({
   }
 
   return (
-    <MateriaResumoDashboardPadrao
-      diasSeguidos={diasSeguidos}
-      totalJoias={totalMandalas}
-      nomeJoia="Mandalas"
-      imagemJoia={IMAGEM_MANDALA}
-      titulo={desktopEmLinha ? "Suas conquistas" : undefined}
-      desktopEmLinha={desktopEmLinha}
-      joiasMandalaHoje={joiasMandalaHoje}
-    />
+    <>
+      <MateriaResumoDashboardPadrao
+        diasSeguidos={diasSeguidos}
+        totalJoias={totalMandalas}
+        nomeJoia="Mandalas"
+        imagemJoia={IMAGEM_MANDALA}
+        titulo={desktopEmLinha ? "Suas conquistas" : undefined}
+        desktopEmLinha={desktopEmLinha}
+        joiasMandalaHoje={joiasMandalaHoje}
+        onAbrirCalendarioMandalas={
+          desktopEmLinha
+            ? () => setCalendarioMandalasAberto(true)
+            : undefined
+        }
+      />
+
+      {calendarioMandalasAberto && (
+        <CalendarioMandalasPanel
+          datasComMandala={datasComMandala}
+          onClose={() => setCalendarioMandalasAberto(false)}
+        />
+      )}
+    </>
   );
 }
