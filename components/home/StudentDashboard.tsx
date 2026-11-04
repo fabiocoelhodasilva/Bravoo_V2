@@ -604,7 +604,7 @@ export default function StudentDashboard() {
             type="button"
             onClick={() => navegarSemana(-1)}
             aria-label="Semana anterior"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9 xl:h-11 xl:w-11 xl:text-[1.5rem]"
             style={{
               borderColor: "#7df2c299",
               boxShadow:
@@ -631,7 +631,7 @@ export default function StudentDashboard() {
                 >
                   <span
                     className={`mb-1 text-[0.58rem] font-semibold sm:mb-2 sm:text-[0.72rem] ${
-                      desktop ? "xl:mb-1 xl:text-[0.64rem]" : ""
+                      desktop ? "xl:mb-2 xl:text-[0.95rem]" : ""
                     } ${
                       ehHoje
                         ? "text-[var(--color-2)]"
@@ -644,7 +644,7 @@ export default function StudentDashboard() {
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-full border text-[0.78rem] font-bold transition sm:h-10 sm:w-10 sm:text-[0.95rem] ${
                       desktop
-                        ? "xl:h-9 xl:w-9 xl:text-[0.82rem]"
+                        ? "xl:h-11 xl:w-11 xl:text-[1.2rem]"
                         : ""
                     } ${
                       ehHoje
@@ -694,7 +694,7 @@ export default function StudentDashboard() {
             type="button"
             onClick={() => navegarSemana(1)}
             aria-label="Próxima semana"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[#103a30]/65 text-[1.25rem] text-white/80 transition hover:bg-white/[0.06] active:scale-[0.96] sm:h-9 sm:w-9 xl:h-11 xl:w-11 xl:text-[1.5rem]"
             style={{
               borderColor: "#7df2c299",
               boxShadow:
@@ -871,7 +871,7 @@ export default function StudentDashboard() {
       <main className="hidden min-h-[calc(100dvh-64px)] w-full xl:block">
         <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-6 pb-8 pt-3 2xl:px-8">
           {/* Saudação alinhada à direita no cabeçalho do conteúdo */}
-          <h1 className="text-right text-[1.55rem] font-extrabold leading-tight">
+          <h1 className="text-right text-[1.85rem] font-extrabold leading-tight">
             <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
               Olá
             </span>
@@ -903,8 +903,8 @@ export default function StudentDashboard() {
             />
           </div>
 
-          {/* Acessos organizados em duas colunas */}
-          <div className="grid w-full grid-cols-2 gap-4 [&>*]:min-w-0 [&>a]:!h-[132px] [&>button]:!h-[132px]">
+          {/* Acessos organizados em três colunas no desktop */}
+          <div className="grid w-full grid-cols-3 gap-4 [&>*]:min-w-0 [&>a]:!h-[120px] [&>button]:!h-[120px] [&>a]:!text-[1.25rem] [&>button]:!text-[1.25rem] [&>a_span]:!text-[1.25rem] [&>button_span]:!text-[1.25rem]">
             <HomeFeatureCard
               title="Minha Jornada"
               href="/meu-dia"
@@ -957,22 +957,18 @@ export default function StudentDashboard() {
               }
             />
 
-            <div className="col-span-2 flex justify-center">
-              <div className="w-[calc(50%-0.5rem)] [&>a]:!h-[132px] [&>button]:!h-[132px]">
-                <HomeFeatureCard
-                  title="Virtudes"
-                  href="/virtudes"
-                  prefetch={false}
-                  compactMobile
-                  colorClass="bg-[var(--color-6)] hover:brightness-110"
-                  joiaCor={
-                    temJoiaVirtudesHoje
-                      ? "roxa"
-                      : undefined
-                  }
-                />
-              </div>
-            </div>
+            <HomeFeatureCard
+              title="Virtudes"
+              href="/virtudes"
+              prefetch={false}
+              compactMobile
+              colorClass="bg-[var(--color-6)] hover:brightness-110"
+              joiaCor={
+                temJoiaVirtudesHoje
+                  ? "roxa"
+                  : undefined
+              }
+            />
           </div>
         </div>
       </main>

@@ -91,14 +91,14 @@ export default function MateriaResumoDashboardPadrao({
 
       {/* Desktop/tablet: dashboard maior */}
       <div className="hidden rounded-[26px] border border-white/10 bg-[#101010] p-4 shadow-[0_0_30px_rgba(0,0,0,0.45)] sm:block xl:p-3">
-        <p className="mb-4 text-[12px] font-black uppercase tracking-[0.16em] text-[#f1e6a7] xl:mb-2">
+        <p className="mb-4 text-sm font-black uppercase tracking-[0.16em] text-[#f1e6a7] xl:mb-2">
           {titulo}
         </p>
 
         <div
           className={
             desktopEmLinha
-              ? "flex flex-col gap-3 xl:grid xl:grid-cols-2 xl:gap-3"
+                ? "flex flex-col gap-3 xl:grid xl:grid-cols-2 xl:gap-4"
               : "flex flex-col gap-3"
           }
         >
@@ -108,7 +108,7 @@ export default function MateriaResumoDashboardPadrao({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-black uppercase tracking-wide text-white">
+              <p className="text-[13px] font-black uppercase tracking-wide text-white">
                 Persistência
               </p>
 
@@ -117,7 +117,7 @@ export default function MateriaResumoDashboardPadrao({
                   {diasSeguidos}
                 </span>
 
-                <span className="pb-[6px] text-sm font-bold text-white/70">
+                <span className="pb-[6px] text-base font-bold text-white/70">
                   dias seguidos
                 </span>
               </div>
@@ -151,7 +151,7 @@ export default function MateriaResumoDashboardPadrao({
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black uppercase tracking-wide text-white">
+                <p className="text-[13px] font-black uppercase tracking-wide text-white">
                   Joias
                 </p>
 
@@ -160,7 +160,7 @@ export default function MateriaResumoDashboardPadrao({
                     {totalJoias}
                   </span>
 
-                  <span className="pb-[6px] text-sm font-bold text-white/70">
+                  <span className="pb-[6px] text-base font-bold text-white/70">
                     {nomeJoia}
                   </span>
                 </div>
