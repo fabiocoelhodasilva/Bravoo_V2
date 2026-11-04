@@ -24,11 +24,45 @@ export default function MandalaVooCalendario() {
     let iniciou = false;
     const observer = new MutationObserver(tentarIniciar);
 
+    function elementoVisivel(elemento: HTMLElement) {
+      const rect = elemento.getBoundingClientRect();
+      const estilo = window.getComputedStyle(elemento);
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        estilo.display !== "none" &&
+        estilo.visibility !== "hidden" &&
+        estilo.visibility !== "collapse"
+      );
+    }
+
     function tentarIniciar() {
       if (iniciou) return;
-      origem = document.querySelector<HTMLImageElement>('[data-mandala-origem="completa"]');
-      destino = document.querySelector<HTMLElement>(`[data-mandala-dia="${data}"]`);
-      if (!origem || !destino || !destino.querySelector("img") || !origem.complete || !origem.naturalWidth) return;
+      origem = Array.from(
+        document.querySelectorAll<HTMLImageElement>(
+          '[data-mandala-origem="completa"]',
+        ),
+      ).find(
+        (imagem) =>
+          elementoVisivel(imagem) &&
+          imagem.complete &&
+          imagem.naturalWidth > 0,
+      ) ?? null;
+
+      destino = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `[data-mandala-dia="${data}"]`,
+        ),
+      ).find((elemento) => {
+        const imagem = elemento.querySelector("img");
+        return (
+          elementoVisivel(elemento) &&
+          imagem instanceof HTMLImageElement &&
+          elementoVisivel(imagem)
+        );
+      }) ?? null;
+
+      if (!origem || !destino) return;
       iniciou = true;
       observer.disconnect();
       const inicio = origem.getBoundingClientRect();
