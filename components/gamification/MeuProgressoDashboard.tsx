@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { obterPerfilAtivo } from "@/lib/perfis/perfil-client";
 import { supabase } from "@/lib/supabase/client";
 import BotaoVoltar from "@/components/ui/BotaoVoltar";
@@ -186,11 +186,29 @@ export default function MeuProgressoDashboard() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [tentativa, setTentativa] = useState(0);
-  const [mostrarModalPremium, setMostrarModalPremium] = useState(false);
+  const [mostrarAvisoDesenvolvimento, setMostrarAvisoDesenvolvimento] = useState(false);
+  const avisoTimerRef = useRef<number | null>(null);
   const [mostrarCalendarioMandalas, setMostrarCalendarioMandalas] = useState(false);
   const [datasComMandala, setDatasComMandala] = useState<string[]>([]);
   const [carregandoCalendario, setCarregandoCalendario] = useState(false);
   const [erroCalendario, setErroCalendario] = useState("");
+
+  const exibirAvisoDesenvolvimento = useCallback(() => {
+    setMostrarAvisoDesenvolvimento(true);
+    if (avisoTimerRef.current !== null) {
+      window.clearTimeout(avisoTimerRef.current);
+    }
+    avisoTimerRef.current = window.setTimeout(() => {
+      setMostrarAvisoDesenvolvimento(false);
+      avisoTimerRef.current = null;
+    }, 3200);
+  }, []);
+
+  useEffect(() => () => {
+    if (avisoTimerRef.current !== null) {
+      window.clearTimeout(avisoTimerRef.current);
+    }
+  }, []);
 
   const abrirCalendarioMandalas = useCallback(async () => {
     if (carregandoCalendario) return;
@@ -375,7 +393,7 @@ export default function MeuProgressoDashboard() {
             </p>
             <button
               type="button"
-              onClick={() => setMostrarModalPremium(true)}
+              onClick={exibirAvisoDesenvolvimento}
               className="inline-flex w-full max-w-[300px] shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#e9891d] to-[#e6b73f] px-4 py-3 text-sm font-extrabold text-[#21170b] shadow-[0_6px_18px_rgba(230,183,63,0.16)] transition hover:brightness-110 active:scale-[0.98] sm:w-auto sm:max-w-none"
             >
               <span>Raio X Bravoo (Premium)</span>
@@ -387,47 +405,22 @@ export default function MeuProgressoDashboard() {
         <BotaoVoltar />
       </div>
 
-      {mostrarModalPremium && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setMostrarModalPremium(false);
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-raio-x-premium"
-            className="w-full max-w-md rounded-3xl border border-[#e6b73f]/35 bg-gradient-to-br from-[#152027] to-[#11100c] p-6 text-center shadow-[0_20px_70px_rgba(0,0,0,0.6)]"
-          >
-            <span className="inline-flex rounded-full border border-[#e6b73f]/30 bg-[#e6b73f]/10 px-3 py-1 text-xs font-black tracking-[0.12em] text-[#f5d77b]">
-              BRAVOO PREMIUM
-            </span>
-            <h2 id="titulo-raio-x-premium" className="mt-4 text-2xl font-extrabold text-white">
-              Raio X Bravoo
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/70">
-              A análise detalhada da sua evolução será uma experiência Premium do Bravoo.
-            </p>
-            <button
-              type="button"
-              onClick={() => setMostrarModalPremium(false)}
-              className="mt-6 rounded-xl bg-[#e6b73f] px-6 py-3 text-sm font-black text-[#241a0c] transition hover:brightness-110 active:scale-[0.98]"
-            >
-              Entendi
-            </button>
-          </section>
-        </div>
-      )}
-
       {mostrarCalendarioMandalas && (
         <CalendarioMandalasPanel
           datasComMandala={datasComMandala}
           onClose={() => setMostrarCalendarioMandalas(false)}
         />
+      )}
+
+      {mostrarAvisoDesenvolvimento && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-4 bottom-5 z-[120] mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border border-[#e9891d]/25 bg-[#151719]/95 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_35px_rgba(0,0,0,0.55)] backdrop-blur-md"
+        >
+          <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-[#e9891d]" />
+          <span>Funcionalidade em desenvolvimento.</span>
+        </div>
       )}
     </main>
   );
