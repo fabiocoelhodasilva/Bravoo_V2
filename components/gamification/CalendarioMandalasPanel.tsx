@@ -108,7 +108,7 @@ export default function CalendarioMandalasPanel({
         role="dialog"
         aria-modal="true"
         aria-label="Calendário mensal de Mandalas"
-        className="relative max-h-[min(90dvh,680px)] w-[min(84vw,390px)] overflow-y-auto rounded-[26px] border border-[#f2cf7a]/25 bg-gradient-to-br from-[#302719]/68 via-[#1d1a14]/58 to-[#201915]/64 p-3.5 text-white shadow-[0_18px_55px_rgba(0,0,0,0.32)] backdrop-blur-md"
+        className="relative max-h-[min(90dvh,680px)] w-[min(84vw,390px)] overflow-y-auto rounded-[26px] border border-[#27758b]/45 bg-gradient-to-br from-[#10232d]/95 via-[#0d171d]/95 to-[#0b1115]/95 p-3.5 text-white shadow-[0_18px_55px_rgba(0,0,0,0.42),0_0_28px_rgba(39,117,139,0.12)] backdrop-blur-md"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -127,7 +127,7 @@ export default function CalendarioMandalasPanel({
           </p>
         </header>
 
-        <div className="mt-3 rounded-[20px] border border-white/10 bg-black/18 p-3 shadow-inner backdrop-blur-sm">
+        <div className="mt-3 rounded-[20px] border border-[#27758b]/30 bg-[#08141a]/55 p-3 shadow-inner backdrop-blur-sm">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -179,7 +179,7 @@ export default function CalendarioMandalasPanel({
                     item.futuro
                       ? "border-white/[0.04] bg-white/[0.015] text-white/25"
                       : conquistou
-                        ? "border-[#f2cf7a]/40 bg-[#e9891d]/[0.12] text-white shadow-[inset_0_0_14px_rgba(233,137,29,0.08)]"
+                        ? "border-[#53b8d0]/55 bg-[#27758b]/[0.24] text-white shadow-[inset_0_0_14px_rgba(39,117,139,0.2)]"
                         : "border-white/[0.09] bg-white/[0.025] text-white/65"
                   } ${hoje ? "ring-1 ring-[#f2cf7a]/80 ring-offset-1 ring-offset-transparent" : ""}`}
                 >

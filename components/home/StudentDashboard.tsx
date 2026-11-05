@@ -776,6 +776,14 @@ export default function StudentDashboard() {
           }
         />
 
+        <HomeFeatureCard
+          title="Meu Progresso"
+          href="/progresso"
+          prefetch={false}
+          compactMobile
+          colorClass="border border-[#d8a44b]/35 bg-gradient-to-br from-[#303438] to-[#1f2225] !text-white hover:border-[#d8a44b]/65 hover:brightness-110"
+        />
+
 
       </div>
     );
@@ -968,6 +976,14 @@ export default function StudentDashboard() {
                   ? "roxa"
                   : undefined
               }
+            />
+
+            <HomeFeatureCard
+              title="Meu Progresso"
+              href="/progresso"
+              prefetch={false}
+              compactMobile
+              colorClass="border border-[#d8a44b]/35 bg-gradient-to-br from-[#303438] to-[#1f2225] !text-white hover:border-[#d8a44b]/65 hover:brightness-110"
             />
           </div>
         </div>
