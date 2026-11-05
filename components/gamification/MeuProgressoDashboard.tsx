@@ -287,16 +287,16 @@ export default function MeuProgressoDashboard() {
   return (
     <main className="min-h-[calc(100dvh-64px)] bg-black px-4 pb-8 pt-12 font-sans text-white sm:px-6 sm:pb-3 xl:px-8">
       <div className="mx-auto w-full max-w-[1180px]">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+        <header className="mb-4 flex items-center justify-between gap-2 sm:mb-6 sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="whitespace-nowrap text-xl font-extrabold tracking-tight sm:text-4xl">
               <span className="bg-gradient-to-r from-[var(--color-2)] via-[#ffb347] to-[var(--color-2)] bg-clip-text text-transparent">
                 Meu Progresso
               </span>
             </h1>
           </div>
           <div
-            className="grid w-full max-w-[210px] grid-cols-2 gap-1 rounded-[16px] border border-white/10 bg-black/20 p-1 sm:w-[190px]"
+            className="grid w-[128px] shrink-0 grid-cols-2 gap-1 rounded-[16px] border border-white/10 bg-black/20 p-1 sm:w-[190px]"
             role="group"
             aria-label="Período do gráfico"
           >
@@ -329,7 +329,7 @@ export default function MeuProgressoDashboard() {
             disabled={carregandoCalendario}
             aria-label="Abrir calendário de Mandalas"
             aria-busy={carregandoCalendario}
-            className="flex min-h-[104px] w-full items-center gap-4 rounded-2xl border border-[#27758b]/45 bg-[linear-gradient(135deg,#10232d_0%,#0d171d_58%,#0b1115_100%)] p-4 text-left shadow-[0_10px_30px_rgba(0,0,0,0.32)] transition hover:border-[#3ba2bb]/70 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ba2bb] disabled:cursor-wait sm:gap-5 sm:p-5"
+            className="flex min-h-[94px] w-full items-center gap-4 rounded-2xl border border-[#27758b]/45 bg-[linear-gradient(135deg,#10232d_0%,#0d171d_58%,#0b1115_100%)] px-4 py-3 text-left shadow-[0_10px_30px_rgba(0,0,0,0.32)] transition hover:border-[#3ba2bb]/70 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3ba2bb] disabled:cursor-wait sm:min-h-[104px] sm:gap-5 sm:p-5"
           >
             <img
               src={IMAGEM_MANDALA}
@@ -351,7 +351,7 @@ export default function MeuProgressoDashboard() {
         <section className="rounded-[26px] border border-white/10 bg-gradient-to-br from-[#131719]/95 via-[#0d1113]/95 to-[#15120d]/95 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.38)] sm:p-5 xl:p-6">
           <div className="mb-2 flex items-center justify-between gap-3 px-1 sm:px-2">
             <div>
-              <h2 className="text-base font-extrabold sm:text-lg">Joias conquistadas por área de desenvolvimento</h2>
+              <h2 className="text-base font-extrabold sm:text-lg">Joias conquistadas</h2>
             </div>
             {carregando && <span className="text-xs text-white/50">Atualizando…</span>}
           </div>
