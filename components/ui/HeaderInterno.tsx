@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   LogOut,
+  ShieldCheck,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -17,6 +18,13 @@ import {
   definirPerfilAtivo,
   encerrarSessao,
 } from "@/lib/perfis/perfil-client";
+
+/* =========================================================
+   Acesso administrativo exclusivo da conta do Fabio
+========================================================= */
+
+const ADMIN_CONTA_ID =
+  "b172f971-7b1c-4183-b790-ec6aafae4b9c";
 
 type Props = {
   /**
@@ -32,7 +40,7 @@ type Props = {
 export default function HeaderInterno(_props: Props) {
   const router = useRouter();
 
-  const { perfilAtivoId, perfilAtivo, perfis, legado } = useAuth();
+  const { contaId, perfilAtivoId, perfilAtivo, perfis, legado } = useAuth();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -356,6 +364,17 @@ export default function HeaderInterno(_props: Props) {
               ================================================= */}
 
               <div className="border-t border-white/[0.07] p-2">
+
+                {contaId === ADMIN_CONTA_ID && (
+                  <Link
+                    href="/admin/indicadores"
+                    onClick={() => setMenuAberto(false)}
+                    className="flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-sm text-[#f0a33f] transition hover:bg-[#e9891d]/10 hover:text-[#ffc36b]"
+                  >
+                    <ShieldCheck size={17} />
+                    Administração
+                  </Link>
+                )}
 
                 {!legado && (
                   <Link
